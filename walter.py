@@ -358,7 +358,7 @@ class Modem:
                     if b == SMALLER_THAN and self._http_current_profile < WALTER_MODEM_MAX_HTTP_PROFILES:
                         # FIXME: modem might block longer than cmd timeout,
                         # will lead to retry, error etc - fix properly
-                        self._parser_data.raw_chunk_size = _http_context_set[_http_current_profile].content_length + len("\r\nOK\r\n")
+                        self._parser_data.raw_chunk_size = self._http_context_set[self._http_current_profile].content_length + len("\r\nOK\r\n")
                         self._parser_data.state = _walter.ModemRspParserState.RAW
                     else:
                         self._parser_data.state = _walter.ModemRspParserState.DATA
@@ -613,7 +613,8 @@ class Modem:
                 cmd.rsp.type = _walter.ModemRspType.HTTP_RESPONSE
                 cmd.rsp.http_response = _walter.ModemHttpResponse()
                 cmd.rsp.http_response.http_status = self._http_context_set[self._http_current_profile].http_status
-                cmd.rsp.http_response.data = at_rsp[3:]         # skip <<<
+                cmd.rsp.http_response.data = at_rsp[3:self._http_context_set[self._http_current_profile].content_length + 3]         # skip <<<
+                cmd.rsp.http_response.content_type = self._http_context_set[self._http_current_profile].content_type
 
                 # the complete handler will reset the state,
                 # even if we never received <<< but got an error instead
@@ -621,7 +622,7 @@ class Modem:
         elif at_rsp.startswith("+SQNHTTPRING: "):
             profile_id_str, http_status_str, content_type, content_length_str = at_rsp[len("+SQNHTTPRING: "):].decode().split(',')
             profile_id = int(profile_id_str)
-            http_status = int(http_status)
+            http_status = int(http_status_str)
             content_length = int(content_length_str)
 
             if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
@@ -641,8 +642,7 @@ class Modem:
             # remember ring info
             self._http_context_set[profile_id].state = _walter.ModemHttpContextState.GOT_RING
             self._http_context_set[profile_id].http_status = http_status
-            if self._http_context_set[profile_id].content_type:
-                self._http_context_set[profile_id].content_type = content_type
+            self._http_context_set[profile_id].content_type = content_type
             self._http_context_set[profile_id].content_length = content_length
 
         elif at_rsp.startswith("+SQNHTTPCONNECT: "):
@@ -663,7 +663,8 @@ class Modem:
                 self._http_context_set[profile_id].connected = False
 
         elif at_rsp.startswith("+SQNHTTPSH: "):
-            profile_id = int(at_rsp[len('+SQNHTTPSH: '):].decode())
+            profile_id_str, _ = at_rsp[len('+SQNHTTPSH: '):].decode().split(',')
+            profile_id = int(profile_id_str)
 
             if profile_id < WALTER_MODEM_MAX_HTTP_PROFILES:
                 self._http_context_set[profile_id].connected = False
@@ -804,7 +805,7 @@ class Modem:
 #        else:
 #            print('process rsp without preceding cmd: ' + str(at_rsp))
 
-        if not cmd or not cmd.at_rsp or cmd.type == _walter.ModemCmdType.TX or cmd.at_rsp != at_rsp:
+        if not cmd or not cmd.at_rsp or cmd.type == _walter.ModemCmdType.TX or cmd.at_rsp != at_rsp[:len(cmd.at_rsp)]:
             return
 
         await self._finish_queue_cmd(cmd, result)
@@ -1502,7 +1503,7 @@ class Modem:
         return gnss_fix_waiter.gnss_fix
 
     async def http_did_ring(self, profile_id):
-        if _http_current_profile != 0xff:
+        if self._http_current_profile != 0xff:
             return error_rsp(_walter.ModemState.ERROR)
 
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
@@ -1574,7 +1575,7 @@ class Modem:
 
         return self._http_context_set[profile_id].connected;
 
-    async def http_query(profile_id, query_cmd, uri):
+    async def http_query(self, profile_id, query_cmd, uri):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
             return error_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
@@ -1588,5 +1589,5 @@ class Modem:
                 ctx.state = _walter.ModemHttpContextState.EXPECT_RING
 
         return await self._run_cmd("AT+SQNHTTPQRY={},{},{}".format(profile_id, query_cmd, modem_string(uri)),
-            b"OK", None, complete_handler, self._http_context_set[modem._http_current_profile],
+            b"OK", None, complete_handler, self._http_context_set[profile_id],
             _walter.ModemCmdType.TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)

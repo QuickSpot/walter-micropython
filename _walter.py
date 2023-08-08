@@ -538,6 +538,7 @@ class ModemHttpResponse:
         self.http_status = 0
         self.content_length = 0
         self.data = b''
+        self.content_type = ''
 
 
 class ModemRsp:

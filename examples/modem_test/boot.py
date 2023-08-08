@@ -43,9 +43,11 @@ import _walter
 
 SERV_ADDR = "64.225.64.140"
 SERV_PORT = 1999
+HTTP_PROFILE = 1
 modem = None
 ctx_id = None
 counter = 0
+http_receive_attempts_left = 0
 
 
 async def setup():
@@ -195,11 +197,21 @@ async def setup():
 
     print("Connected to UDP server %s:%d" % (SERV_ADDR, SERV_PORT))
 
+    # Configure http profile for a simple test
+    rsp = await modem.http_config_profile(HTTP_PROFILE, "coap.bluecherry.io")
+    if rsp.result != _walter.ModemState.OK:
+        print('Could not configure http profile')
+        return False
+
+    print("Successfully configured the http profile")
+
     return True
 
 
 async def loop():
     global counter
+
+    # UDP test
 
     data_buf = bytearray(network.WLAN().config('mac'))
     data_buf.append(counter >> 8)
@@ -214,6 +226,33 @@ async def loop():
     counter += 1
 
     await uasyncio.sleep(10)
+
+    # HTTP test
+
+    global http_receive_attempts_left
+
+    if http_receive_attempts_left == 0:
+        rsp = await modem.http_query(HTTP_PROFILE, _walter.ModemHttpQueryCmd.GET, '/')
+        if rsp.result != _walter.ModemState.OK:
+            print('http query failed')
+            return False
+
+        print('http query performed')
+        http_receive_attempts_left = 3
+
+    else:
+        http_receive_attempts_left -= 1
+
+        rsp = await modem.http_did_ring(HTTP_PROFILE)
+        if rsp.result ==_walter.ModemState.OK:
+            http_receive_attempts_left = 0
+
+            print('http status code: %d' % rsp.http_response.http_status)
+            print('content type: %s' % rsp.http_response.content_type)
+            print(rsp.http_response.data)
+
+        else:
+            print('http response not yet received')
 
     return True
 
