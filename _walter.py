@@ -298,32 +298,6 @@ class ModemOperatorFormat:
     NUMERIC = 2
     
 
-"""This enumeration represents the different bands that the modem
- can support. The enum can be used as a mask over the 'bands' member in a 
- band selection configuration to check if the band is configured.
- """
-class WalterModemBand:
-    WALTER_MODEM_BAND_B1 = 0x00001
-    WALTER_MODEM_BAND_B2 = 0x00002
-    WALTER_MODEM_BAND_B3 = 0x00004
-    WALTER_MODEM_BAND_B4 = 0x00008
-    WALTER_MODEM_BAND_B5 = 0x00010
-    WALTER_MODEM_BAND_B8 = 0x00020
-    WALTER_MODEM_BAND_B12 = 0x00040
-    WALTER_MODEM_BAND_B13 = 0x00080
-    WALTER_MODEM_BAND_B14 = 0x00100
-    WALTER_MODEM_BAND_B17 = 0x00200
-    WALTER_MODEM_BAND_B18 = 0x00400
-    WALTER_MODEM_BAND_B19 = 0x00800
-    WALTER_MODEM_BAND_B20 = 0x01000
-    WALTER_MODEM_BAND_B25 = 0x02000
-    WALTER_MODEM_BAND_B26 = 0x04000
-    WALTER_MODEM_BAND_B28 = 0x08000
-    WALTER_MODEM_BAND_B66 = 0x10000
-    WALTER_MODEM_BAND_B71 = 0x20000
-    WALTER_MODEM_BAND_B85 = 0x40000
-
-
 """The state of a socket."""
 class ModemSocketState:
     FREE = 0
@@ -529,7 +503,7 @@ class ModemBandSelection:
         B25, B26, B28, B66, B71, B85. For example to check if B1 is configured
         one must do 'bands & 0x01'
         """
-        self.bands = 0
+        self.bands = []
         
 
 class ModemHttpResponse:

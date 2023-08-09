@@ -76,6 +76,8 @@ async def setup():
     for band_sel in rsp.band_sel_cfg_set:
         print('rat=%d net_operator.name=[%s]' %
             (band_sel.rat, band_sel.net_operator.name))
+        for band in band_sel.bands:
+            print('  band:%d' % band)
 
     rsp = await modem.set_op_state(_walter.ModemOpState.NO_RF)
     if rsp.result != _walter.ModemState.OK:

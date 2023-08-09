@@ -206,7 +206,7 @@ def parse_gnss_time(time_str):
 
     return time_val
 
-def error_rsp(result):
+def static_rsp(result):
     rsp = _walter.ModemRsp()
     rsp.result = result
     return rsp
@@ -525,7 +525,7 @@ class Modem:
 
             bsel = _walter.ModemBandSelection()
 
-            if data[0] == '0':
+            if data[0] == ord('0'):
                 bsel.rat = _walter.ModemRat.LTEM
             else:
                 bsel.rat = _walter.ModemRat.NBIOT;
@@ -536,7 +536,15 @@ class Modem:
             bsel.net_operator.name = bsel_parts[0]
 
             # Parse configured bands
-            # TODO
+            bands_list = bsel_parts[1:]
+            if len(bands_list) > 1:
+                bands_list[0] = bands_list[0][1:]
+                bands_list[-1] = bands_list[-1][:-1]
+                bsel.bands = [ int(x) for x in bands_list ]
+            elif bands_list[0] != '""':
+                bsel.bands = [ int(bands_list[0][1:-1]) ]
+            else:
+                bsel.bands = []
 
             cmd.rsp.band_sel_cfg_set.append(bsel)
 
@@ -913,154 +921,6 @@ class Modem:
         await worker_task
         await user_task
 
-    ### FIXME: remove tester - but it still comes in handy for a while for porting the arduino examples
-    async def tester(self):
-        uasyncio.create_task(self._uart_reader())
-        uasyncio.create_task(self._queue_worker())
-
-        # init modem state
-        await self.reset()
-        await self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC)
-        await self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED)
-
-        # TODO: onderstaande aan gebruiker overlaten
-        # en er een aparte vrij te gebruiken publieke method van maken
-        # en in run hier alleen nog de taak van queue_worker inline uitvoeren.
-        # dan kan gebruiker ofwel uasyncio.run(modem.run())
-        # ofwel eigen runner met create_task van modem.run
-        # naast eigen task en/of andere await code in eigen runner
-        # of zelfs rechtstreeks de aangeboden debugger async method.
-
-        while True:
-            list = uselect.select([sys.stdin], [], [], 0.01)
-            if list[0]:
-                at_cmd = input('enter command:')
-
-                if at_cmd == 'rst':
-                    rsp = await self.reset()
-                elif at_cmd == 'cc':
-                    rsp = await self.check_comm()
-                elif at_cmd[:4] == 'cmee':
-                    rsp = await self.config_cme_error_reports(int(at_cmd[4:]))
-                elif at_cmd[:5] == 'cereg':
-                    rsp = await self.config_cereg_reports(int(at_cmd[5:]))
-                elif at_cmd == 'getreg':
-                    rsp = self.get_network_reg_state()
-                elif at_cmd[:4] == 'cfun':
-                    if len(at_cmd) > 4:
-                        rsp = await self.set_op_state(int(at_cmd[4:]))
-                    else:
-                        rsp = await self.get_op_state()
-                elif at_cmd == "radio":
-                    rsp = await self.get_radio_bands()
-                elif at_cmd == "simS":
-                    rsp = await self.get_sim_state()
-                elif at_cmd == "simU":
-                    rsp = await self.unlock_sim(None)
-                elif at_cmd == "snsm":
-                    rsp = await self.set_network_selection_mode(
-                        _walter.ModemNetworkSelMode.AUTOMATIC, None,
-                        _walter.ModemOperatorFormat.LONG_ALPHANUMERIC)
-                elif at_cmd == "cPdp":
-                    rsp = await self.create_PDP_context(None,
-                        _walter.ModemPDPAuthProtocol.NONE, None, None,
-                        _walter.ModemPDPType.IP, None,
-                        _walter.ModemPDPHeaderCompression.OFF,
-                        _walter.ModemPDPDataCompression.OFF,
-                        _walter.ModemPDPIPv4AddrAllocMethod.DHCP,
-                        _walter.ModemPDPRequestType.NEW_OR_HANDOVER,
-                        _walter.ModemPDPPCSCFDiscoveryMethod.AUTO, False, True,
-                        False, False, False, False)
-                elif at_cmd == "aPdp":
-                    rsp = await self.authenticate_PDP_context(1)
-                elif at_cmd == "pdpA":
-                    rsp = await self.set_PDP_context_active(True, 1)
-                elif at_cmd == "pAtt":
-                    rsp = await self.attach_PDP_context(True)
-                elif at_cmd == "pdp@":
-                    rsp = await self.get_PDP_address(1)
-                elif at_cmd == "clk":
-                    rsp = await self.get_clock()
-                elif at_cmd == "sock1":
-                    rsp = await self.create_socket(1, 300, 90, 60, 5000)
-                elif at_cmd == "sock2":
-                    rsp = await self.config_socket(1)
-                elif at_cmd == "sock3":
-                    rsp = await self.connect_socket("coap.bluecherry.io", 65535,
-                            0, _walter.ModemSocketProto.UDP,
-                            _walter.ModemSocketAcceptAnyRemote.DISABLED, 1)
-                elif at_cmd == "sock4":
-                    rsp = await self.socket_send('test', _walter.ModemRai.NO_INFO, 1)
-                elif at_cmd == "sock0":
-                    rsp = await self.close_socket(1)
-                elif at_cmd == "config_gnss":
-                    rsp = await self.config_gnss(
-                            _walter.ModemGNSSSensMode.HIGH,
-                            _walter.ModemGNSSAcqMode.COLD_WARM_START,
-                            _walter.ModemGNSSLocMode.ON_DEVICE_LOCATION)
-                elif at_cmd == "get_gnss":
-                    rsp = await self.get_gnss_assistance_status()
-                elif at_cmd == "update_gnss":
-                    rsp = await self.update_gnss_assistance(_walter.ModemGNSSAssistanceType.ALMANAC)
-                elif at_cmd == "gnss_action":
-                    rsp = await self.perform_gnss_action(_walter.ModemGNSSAction.GET_SINGLE_FIX)
-                elif at_cmd == "wait_gnss":
-                    rsp = await self.wait_for_gnss_fix()
-                else:
-                    rsp = None
-                    print('unrecognized command: [%s]' % at_cmd)
-
-                if not rsp:
-                    print('no or invalid response')
-                else:
-                    print('RESPONSE type=%d' % rsp.type)
-
-                    if rsp.type == _walter.ModemRspType.NO_DATA:
-                        print('no_data')
-                    elif rsp.type == _walter.ModemRspType.REG_STATE:
-                        print('reg_state=%d' % rsp.reg_state)
-                    elif rsp.type == _walter.ModemRspType.BANDSET_CFG_SET:
-                        for band_sel in rsp.band_sel_cfg_set:
-                            print('rat=%d net_operator.name=[%s]' %
-                                (band_sel.rat, band_sel.net_operator.name))
-                    elif rsp.type == _walter.ModemRspType.CME_ERROR:
-                        print('cme_error=%d' % rsp.cme_error)
-                    elif rsp.type == _walter.ModemRspType.OP_STATE:
-                        print('op_state=%d' % rsp.op_state)
-                    elif rsp.type == _walter.ModemRspType.SIM_STATE:
-                        print('sim_state=%d' % rsp.sim_state)
-                    elif rsp.type == _walter.ModemRspType.PDP_CTX_ID:
-                        print('pdp_ctx_id=%d' % rsp.pdp_ctx_id)
-                    elif rsp.type == _walter.ModemRspType.SOCKET_ID:
-                        print('socket_id=%d' % rsp.socket_id)
-                    elif rsp.type == _walter.ModemRspType.PDP_ADDR:
-                        for addr in rsp.pdp_address_list:
-                            print('[%s]' % addr)
-                    elif rsp.type == _walter.ModemRspType.CLOCK:
-                        print('clock=%s' % rsp.clock)
-                    elif rsp.type == _walter.ModemRspType.GNSS_ASSISTANCE_DATA:
-                        print('gnss assistance almanac: available=%d last_update=%d time_to_update=%d time_to_expire=%d' %
-                              (rsp.gnss_assistance.almanac.available,
-                               rsp.gnss_assistance.almanac.last_update,
-                               rsp.gnss_assistance.almanac.time_to_update,
-                               rsp.gnss_assistance.almanac.time_to_expire))
-                        print('gnss assistance ephemeris: available=%d last_update=%d time_to_update=%d time_to_expire=%d' %
-                              (rsp.gnss_assistance.almanac.available,
-                               rsp.gnss_assistance.almanac.last_update,
-                               rsp.gnss_assistance.almanac.time_to_update,
-                               rsp.gnss_assistance.almanac.time_to_expire))
-
-                    print('READY. (%d)' % rsp.result)
-
-            await uasyncio.sleep(1)
-
-        # of anders 'wachten' tot tasks klaar zijn:
-        #await task1
-        #await task2
-
-        # of beter: dit toepassen:
-        # https://github.com/peterhinch/micropython-async/blob/master/v3/docs/TUTORIAL.md#224-a-typical-firmware-app
-
     async def reset(self):
         reset_pin = Pin(WALTER_MODEM_PIN_RESET, Pin.OUT)
         reset_pin.off()
@@ -1169,10 +1029,7 @@ class Modem:
                 break
 
         if _ctx == None:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_FREE_PDP_CONTEXT
-            rsp.auth_type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_FREE_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
         
@@ -1220,18 +1077,12 @@ class Modem:
         try:
             _ctx = self._pdp_ctx_set[context_id - 1]
         except:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_SUCH_PDP_CONTEXT
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
 
         if _ctx.auth_proto == _walter.ModemPDPAuthProtocol.NONE:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.OK
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.OK)
 
         return await self._run_cmd("AT+CGAUTH={},{},{},{}".format(
             _ctx.id, _ctx.auth_proto, modem_string(_ctx.auth_user),
@@ -1243,12 +1094,12 @@ class Modem:
 
     async def set_PDP_context_active(self, active = True, context_id = -1):
         try:
-            _ctx = self._pdp_ctx_set[context_id - 1]
+            if context_id == -1:
+                _ctx = self._pdp_ctx
+            else:
+                _ctx = self._pdp_ctx_set[context_id - 1]
         except:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_SUCH_PDP_CONTEXT
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
 
@@ -1280,12 +1131,12 @@ class Modem:
 
     async def get_PDP_address(self, context_id = -1):
         try:
-            _ctx = self._pdp_ctx_set[context_id - 1]
+            if context_id == -1:
+                _ctx = self._pdp_ctx
+            else:
+                _ctx = self._pdp_ctx_set[context_id - 1]
         except:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_SUCH_PDP_CONTEXT
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
 
@@ -1298,12 +1149,12 @@ class Modem:
     async def create_socket(self, pdp_context_id = -1, mtu = 300, exchange_timeout = 90,
             conn_timeout = 60, send_delay_ms = 5000):
         try:
-            _ctx = self._pdp_ctx_set[pdp_context_id - 1]
+            if pdp_context_id == -1:
+                _ctx = self._pdp_ctx
+            else:
+                _ctx = self._pdp_ctx_set[pdp_context_id - 1]
         except:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_SUCH_PDP_CONTEXT
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
 
@@ -1315,10 +1166,7 @@ class Modem:
                 break
 
         if _socket == None:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_FREE_SOCKET
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_FREE_SOCKET)
 
         self._socket = _socket
 
@@ -1331,7 +1179,7 @@ class Modem:
         async def complete_handler(result, rsp, complete_handler_arg):
             sock = complete_handler_arg
             rsp.type = _walter.ModemRspType.SOCKET_ID
-            rsp.socket_id = _socket.id
+            rsp.socket_id = sock.id
 
             if result == _walter.ModemState.OK:
                 sock.state = _walter.ModemSocketState.CREATED
@@ -1346,12 +1194,12 @@ class Modem:
 
     async def config_socket(self, socket_id = -1):
         try:
-            _socket = self._socket_set[socket_id - 1]
+            if socket_id == -1:
+                _socket = self._socket
+            else:
+                _socket = self._socket_set[socket_id - 1]
         except:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_SUCH_SOCKET
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
 
@@ -1372,12 +1220,12 @@ class Modem:
             local_port = 0, protocol = _walter.ModemSocketProto.UDP,
             accept_any_remote = _walter.ModemSocketAcceptAnyRemote.DISABLED , socket_id = -1):
         try:
-            _socket = self._socket_set[socket_id - 1]
+            if socket_id == -1:
+                _socket = self._socket
+            else:
+                _socket = self._socket_set[socket_id - 1]
         except:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_SUCH_SOCKET
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
 
@@ -1404,12 +1252,12 @@ class Modem:
 
     async def close_socket(self, socket_id = -1):
         try:
-            _socket = self._socket_set[socket_id - 1]
+            if socket_id == -1:
+                _socket = self._socket
+            else:
+                _socket = self._socket_set[socket_id - 1]
         except:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_SUCH_SOCKET
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
 
@@ -1427,12 +1275,12 @@ class Modem:
 
     async def socket_send(self, data, rai = _walter.ModemRai.NO_INFO, socket_id = -1):
         try:
-            _socket = self._socket_set[socket_id - 1]
+            if socket_id == -1:
+                _socket = self._socket
+            else:
+                _socket = self._socket_set[socket_id - 1]
         except:
-            rsp = _walter.ModemRsp()
-            rsp.result = _walter.ModemState.NO_SUCH_SOCKET
-            rsp.type = _walter.ModemRspType.NO_DATA
-            return rsp
+            return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
 
@@ -1504,25 +1352,25 @@ class Modem:
 
     async def http_did_ring(self, profile_id):
         if self._http_current_profile != 0xff:
-            return error_rsp(_walter.ModemState.ERROR)
+            return static_rsp(_walter.ModemState.ERROR)
 
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
-            return error_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
         if self._http_context_set[profile_id].state == _walter.ModemHttpContextState.IDLE:
-            return error_rsp(_walter.ModemState.NOT_EXPECTING_RING)
+            return static_rsp(_walter.ModemState.NOT_EXPECTING_RING)
 
         if self._http_context_set[profile_id].state == _walter.ModemHttpContextState.EXPECT_RING:
-            return error_rsp(_walter.ModemState.AWAITING_RING)
+            return static_rsp(_walter.ModemState.AWAITING_RING)
 
         if self._http_context_set[profile_id].state != _walter.ModemHttpContextState.GOT_RING:
-            return error_rsp(_walter.ModemState.ERROR)
+            return static_rsp(_walter.ModemState.ERROR)
 
         # ok, got ring. http context fields have been filled.
         # http status 0 means: timeout (or also disconnected apparently)
         if self._http_context_set[profile_id].http_status == 0:
             self._http_context_set[profile_id].state = _walter.ModemHttpContextState.IDLE
-            return error_rsp(_walter.ModemState.ERROR)
+            return static_rsp(_walter.ModemState.ERROR)
 
         self._http_current_profile = profile_id;
 
@@ -1537,7 +1385,7 @@ class Modem:
 
     async def http_config_profile(self, profile_id, server_name, port = 80, use_basic_auth = False, auth_user = '', auth_pass = ''):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
-            return error_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
         return await self._run_cmd("AT+SQNHTTPCFG={},{},{},{},\"{}\",\"{}\"".format(profile_id, modem_string(server_name), port, modem_bool(use_basic_auth), auth_user, auth_pass),
             b"OK", None, None, None, _walter.ModemCmdType.TX_WAIT,
@@ -1545,7 +1393,7 @@ class Modem:
 
     async def http_connect(self, profile_id):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
-            return error_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
         return await self._run_cmd("AT+SQNHTTPCONNECT={}".format(profile_id),
             b"OK", None, None, None, _walter.ModemCmdType.TX_WAIT,
@@ -1553,7 +1401,7 @@ class Modem:
 
     async def http_close(self, profile_id):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
-            return error_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
         return await self._run_cmd("AT+SQNHTTPDISCONNECT={}".format(profile_id),
             b"OK", None, None, None, _walter.ModemCmdType.TX_WAIT,
@@ -1561,7 +1409,7 @@ class Modem:
 
     def http_get_context_status(self, profile_id):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
-            return error_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
         # note: in my observation the SQNHTTPCONNECT command is to be avoided.
         # if the connection is closed by the server, you will not even
@@ -1577,10 +1425,10 @@ class Modem:
 
     async def http_query(self, profile_id, query_cmd, uri):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
-            return error_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
         if self._http_context_set[profile_id].state != _walter.ModemHttpContextState.IDLE:
-            return error_rsp(_walter.ModemState.BUSY)
+            return static_rsp(_walter.ModemState.BUSY)
 
         async def complete_handler(result, rsp, complete_handler_arg):
             ctx = complete_handler_arg
