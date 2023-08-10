@@ -47,8 +47,6 @@ SERV_ADDR = "64.225.64.140"
 SERV_PORT = 1999
 MAX_GNSS_CONFIDENCE = 500.0
 modem = None
-gnss_fix = None
-fix_rcvd = False
 ctx_id = None
 
 
@@ -88,15 +86,6 @@ async def lte_init(apn, user, password):
         return False
 
     return True
-
-
-async def wait_for_gnss_fix():
-    global gnss_fix
-    global fix_rcvd
-
-    while True:
-        gnss_fix = await modem.wait_for_gnss_fix()
-        fix_rcvd = True
 
 
 async def lte_disconnect():
@@ -309,31 +298,24 @@ async def setup():
         print("Could not configure the GNSS subsystem")
         return False
     
-    uasyncio.create_task(wait_for_gnss_fix())
-
     return True
 
 
 async def loop():
-    global fix_rcvd
-    global gnss_fix
-
     if not await update_gnss_assistance():
         print("Could not update GNSS assistance data")
         return False
 
     # Try up to 5 times to get a good fix
     for i in range(5):
-        fix_rcvd = False
         rsp = await modem.perform_gnss_action(_walter.ModemGNSSAction.GET_SINGLE_FIX)
         if rsp.result != _walter.ModemState.OK:
             print("Could not request GNSS fix")
             return False
 
-        print("Started GNSS fix")
+        print("Requested GNSS fix")
 
-        while not fix_rcvd:
-            await uasyncio.sleep(.5)
+        gnss_fix = await modem.wait_for_gnss_fix()
 
         if gnss_fix.estimated_confidence <= MAX_GNSS_CONFIDENCE:
           break
