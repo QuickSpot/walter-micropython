@@ -176,10 +176,11 @@ class ModemRspParserState:
     START_LF = 1
     DATA = 2
     DATA_PROMPT = 3
-    DATA_HTTP_START1 = 4
-    DATA_HTTP_START2 = 5
-    END_LF = 6
-    RAW = 7
+    DATA_PROMPT_HTTP = 4
+    DATA_HTTP_START1 = 5
+    DATA_HTTP_START2 = 6
+    END_LF = 7
+    RAW = 8
 
 
 """The types of command supported by the queue task."""
@@ -394,6 +395,21 @@ class ModemHttpQueryCmd:
     GET = 0
     HEAD = 1
     DELETE = 2
+
+
+"""The possible commands for a HTTP send operation."""
+class ModemHttpSendCmd:
+    POST = 0
+    PUT = 1
+
+
+"""The possible post params for a HTTP send operation."""
+class ModemHttpPostParam:
+    URL_ENCODED = 0
+    TEXT_PLAIN = 1
+    OCTET_STREAM = 2
+    FORM_DATA = 3
+    JSON = 4
 
 
 class ModemGNSSSat:

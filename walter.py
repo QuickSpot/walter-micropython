@@ -341,11 +341,23 @@ class Modem:
                     if b == SPACE:
                         self._parser_data.state = _walter.ModemRspParserState.START_CR
                         await self._queue_rx_buffer()
+                    elif b == GREATER_THAN:
+                        self._parser_data.state = _walter.ModemRspParserState.DATA_PROMPT_HTTP
                     else:
                         # state might have changed after detecting end \r
                         if self._parser_data.state == _walter.ModemRspParserState.DATA_PROMPT:
                             self._parser_data.state = _walter.ModemRspParserState.DATA
                 
+                elif self._parser_data.state == _walter.ModemRspParserState.DATA_PROMPT_HTTP:
+                    self._add_at_byte_to_buffer(b, False)
+                    if b == GREATER_THAN:
+                        self._parser_data.state = _walter.ModemRspParserState.START_CR
+                        await self._queue_rx_buffer()
+                    else:
+                        # state might have changed after detecting end \r
+                        if self._parser_data.state == _walter.ModemRspParserState.DATA_PROMPT_HTTP:
+                            self._parser_data.state = _walter.ModemRspParserState.DATA
+
                 elif self._parser_data.state == _walter.ModemRspParserState.DATA_HTTP_START1:
                     if b == SMALLER_THAN:
                         self._parser_data.state = _walter.ModemRspParserState.DATA_HTTP_START2
@@ -484,7 +496,7 @@ class Modem:
             self._reg_state = ce_reg
             # TODO: call correct handlers (also still todo in arduino version)
 
-        elif at_rsp.startswith("> "):
+        elif at_rsp.startswith("> ") or at_rsp.startswith(">>>"):
             if cmd and cmd.data and cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
                 print('TX:[%s]' % cmd.data)
                 tx_stream.write(cmd.data)
@@ -1423,7 +1435,7 @@ class Modem:
 
         return self._http_context_set[profile_id].connected;
 
-    async def http_query(self, profile_id, query_cmd, uri):
+    async def http_query(self, profile_id, uri, query_cmd = _walter.ModemHttpQueryCmd.GET):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
             return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
@@ -1438,4 +1450,21 @@ class Modem:
 
         return await self._run_cmd("AT+SQNHTTPQRY={},{},{}".format(profile_id, query_cmd, modem_string(uri)),
             b"OK", None, complete_handler, self._http_context_set[profile_id],
+            _walter.ModemCmdType.TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+
+    async def http_send(self, profile_id, uri, data, send_cmd = _walter.ModemHttpSendCmd.POST, post_param = _walter.ModemHttpPostParam.OCTET_STREAM):
+        if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+
+        if self._http_context_set[profile_id].state != _walter.ModemHttpContextState.IDLE:
+            return static_rsp(_walter.ModemState.BUSY)
+
+        async def complete_handler(result, rsp, complete_handler_arg):
+            ctx = complete_handler_arg
+
+            if result == _walter.ModemState.OK:
+                ctx.state = _walter.ModemHttpContextState.EXPECT_RING
+
+        return await self._run_cmd("AT+SQNHTTPSND={},{},{},{},{}".format(profile_id, send_cmd, modem_string(uri), len(data), post_param),
+            b"OK", data, complete_handler, self._http_context_set[profile_id],
             _walter.ModemCmdType.TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)

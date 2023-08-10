@@ -234,7 +234,7 @@ async def loop():
     global http_receive_attempts_left
 
     if http_receive_attempts_left == 0:
-        rsp = await modem.http_query(HTTP_PROFILE, _walter.ModemHttpQueryCmd.GET, '/')
+        rsp = await modem.http_query(HTTP_PROFILE, '/', _walter.ModemHttpQueryCmd.GET)
         if rsp.result != _walter.ModemState.OK:
             print('http query failed')
             return False
