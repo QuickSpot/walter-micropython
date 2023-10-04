@@ -47,6 +47,7 @@ HTTP_PROFILE = 1
 modem = None
 ctx_id = None
 counter = 0
+post_mode = False
 http_receive_attempts_left = 0
 
 
@@ -232,14 +233,21 @@ async def loop():
     # HTTP test
 
     global http_receive_attempts_left
+    global post_mode
 
     if http_receive_attempts_left == 0:
-        rsp = await modem.http_query(HTTP_PROFILE, '/', _walter.ModemHttpQueryCmd.GET)
+        if not post_mode:
+            rsp = await modem.http_query(HTTP_PROFILE, '/', _walter.ModemHttpQueryCmd.GET)
+            post_mode = True
+        else:
+            rsp = await modem.http_send(HTTP_PROFILE, '/', data_buf)
+            post_mode = False
+
         if rsp.result != _walter.ModemState.OK:
-            print('http query failed')
+            print('http query failed (next time post_mode=%d)' % post_mode)
             return False
 
-        print('http query performed')
+        print('http query performed (next time post_mode=%d)' % post_mode)
         http_receive_attempts_left = 3
 
     else:

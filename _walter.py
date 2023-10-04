@@ -270,18 +270,21 @@ class ModemPDPAuthProtocol:
 class ModemRspType:
     NO_DATA = 0
     OP_STATE = 1
-    SIM_STATE = 2
-    CME_ERROR = 3
-    PDP_CTX_ID = 4
-    BANDSET_CFG_SET = 5
-    PDP_ADDR = 6
-    SOCKET_ID = 7
-    GNSS_ASSISTANCE_DATA = 8
-    CLOCK = 9,
-    REG_STATE = 10
-    MQTT = 11
-    HTTP_RESPONSE = 12
-    COAP = 13
+    RAT = 2
+    RSSI = 3
+    SIGNAL_QUALITY = 4
+    SIM_STATE = 5
+    CME_ERROR = 6
+    PDP_CTX_ID = 7
+    BANDSET_CFG_SET = 8
+    PDP_ADDR = 9
+    SOCKET_ID = 10
+    GNSS_ASSISTANCE_DATA = 11
+    CLOCK = 12
+    MQTT = 13
+    HTTP_RESPONSE = 14
+    COAP = 15
+    REG_STATE = 50
 
 
 """The supported network selection modes."""
@@ -289,7 +292,7 @@ class ModemNetworkSelMode:
     AUTOMATIC = 0
     MANUAL = 1
     UNREGISTER = 2
-    MANUAL_AUTO_FALLBACK = 3
+    MANUAL_AUTO_FALLBACK = 4
 
 
 """The supported netowrk operator formats. """
@@ -388,6 +391,7 @@ class ModemGNSSFixStatus:
 class ModemGNSSAssistanceType:
     ALMANAC = 0
     REALTIME_EPHEMERIS = 1
+    PREDICTED_EPHEMERIS = 2
 
 
 """The possible commands for a HTTP query operation."""
@@ -410,6 +414,7 @@ class ModemHttpPostParam:
     OCTET_STREAM = 2
     FORM_DATA = 3
     JSON = 4
+    UNSPECIFIED = 99
 
 
 class ModemGNSSSat:
@@ -491,7 +496,10 @@ class ModemGNSSAssistance:
         
         """Real-time ephemeris data details. Use this kind of assistance 
         data for the fastest and most power efficient GNSS fix."""
-        self.ephemeris = ModemGNSSAssistanceTypeDetails() 
+        self.realtime_ephemeris = ModemGNSSAssistanceTypeDetails() 
+
+        """Predicted ephemeris data details."""
+        self.predicted_ephemeris = ModemGNSSAssistanceTypeDetails() 
  
 
 class ModemOperator:
@@ -531,6 +539,16 @@ class ModemHttpResponse:
         self.content_type = ''
 
 
+class ModemSignalQuality:
+    """This class groups the RSRQ and RSPR signal quality parameters."""
+    def __init__(self):
+        """The RSRQ in 10ths of dB"""
+        self.rsrq = None
+
+        """The RSPR in dBm"""
+        self.rsrp = None
+
+
 class ModemRsp:
     """This class represents a response 
     """
@@ -541,11 +559,11 @@ class ModemRsp:
         """The data type of the response"""
         self.type = ModemRspType.NO_DATA
         
-        """The operational state of the modem."""
-        self.op_state = None
-        
         """The network registration state of the modem."""
         self.reg_state = None
+        
+        """The operational state of the modem."""
+        self.op_state = None
         
         """The state of the SIM card"""
         self.sim_state = None
@@ -556,6 +574,15 @@ class ModemRsp:
         """The ID of a PDP context."""
         self.pdp_ctx_id = None
         
+        """The radio access technology"""
+        self.rat = None
+
+        """The RSSI of the signal in dBm"""
+        self.rssi = None
+
+        """Signal quality"""
+        self.signal_quality = None
+
         """The band selection configuration set."""
         self.band_sel_cfg_set = None
         
@@ -571,8 +598,12 @@ class ModemRsp:
         """Unix timestamp of the current time and date in the modem."""
         self.clock = None
 
+        """ TODO  mqtt_data"""
+
         """HTTP response"""
         self.http_response = None
+
+        """ TODO  coap_response"""
 
 
 class ModemCmd:

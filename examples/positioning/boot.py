@@ -45,12 +45,13 @@ import _walter
 
 SERV_ADDR = "64.225.64.140"
 SERV_PORT = 1999
-MAX_GNSS_CONFIDENCE = 500.0
+MAX_GNSS_CONFIDENCE = 100.0
+RADIO_TECHNOLOGY = _walter.ModemRat.LTEM
 modem = None
 ctx_id = None
 
 
-async def lte_init(apn, user, password):
+async def lte_init(apn, user = None, password = None):
     # create pdp context
     if user:
         rsp = await modem.create_PDP_context(apn,
@@ -121,7 +122,9 @@ async def lte_connect():
     # Wait for the network to become available */
     rsp = modem.get_network_reg_state()
     while rsp.reg_state != _walter.ModemNetworkRegState.REGISTERED_HOME and rsp.reg_state != _walter.ModemNetworkRegState.REGISTERED_ROAMING:
-        await uasyncio.sleep(.1)
+        await uasyncio.sleep(1)
+        rsp = await modem.get_rssi()
+        print('rssi: %d' % (rsp.rssi))
         rsp = modem.get_network_reg_state()
 
     # Stabilization time
@@ -178,9 +181,9 @@ def check_assistance_data(rsp):
         print("Almanac data is not available.")
         update_almanac = True
 
-    if rsp.gnss_assistance.ephemeris.available:
-        print("Real-time ephemeris data is available and should be updated within %ds" % rsp.gnss_assistance.ephemeris.time_to_update)
-        if rsp.gnss_assistance.ephemeris.time_to_update <= 0:
+    if rsp.gnss_assistance.realtime_ephemeris.available:
+        print("Real-time ephemeris data is available and should be updated within %ds" % rsp.gnss_assistance.realtime_ephemeris.time_to_update)
+        if rsp.gnss_assistance.realtime_ephemeris.time_to_update <= 0:
             update_ephemeris = True
     else:
         print("Real-time ephemeris data is not available.")
@@ -276,6 +279,14 @@ async def setup():
     print("Walter Positioning v0.0.1")
 
     print("Walter's MAC is: %s" % ubinascii.hexlify(network.WLAN().config('mac'),':').decode())
+
+    rsp = await modem.get_rat()
+    if rsp.result != _walter.ModemState.OK or rsp.type != _walter.ModemRspType.RAT:
+        print('Could not retrieve radio access technology')
+    else:
+        if rsp.rat != RADIO_TECHNOLOGY:
+            await modem.set_rat(RADIO_TECHNOLOGY)
+            print('Switched modem radio technology')
 
     if not await lte_init('soracom.io', 'sora', 'sora'):
         print("Could not initialize LTE network parameters")
@@ -383,7 +394,6 @@ async def loop():
         print("Could not close the socket")
         return False
 
-    # TODO: this is missing in C version?
     await lte_disconnect()
 
     return True

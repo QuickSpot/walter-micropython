@@ -213,12 +213,6 @@ def static_rsp(result):
 
 class Modem:
     def __init__(self):
-        """The flag indicating if the modem is initialized."""
-        self._initialized = False
-
-        """The hardware serial peripheral used to talk to the modem."""
-        self._uart = None
-
         """The current operational state of the modem."""
         self._op_state = _walter.ModemOpState.MINIMUM
 
@@ -257,18 +251,6 @@ class Modem:
 
         """Current http profile in use in the modem"""
         self._http_current_profile = 0xff
-
-        """The GNSS fix which is currently being processed."""
-        self._GNSSfix = _walter.ModemGNSSFix()
-
-        """Task queue: commands and responses"""
-        self._task_queue = None
-        
-        """Command queue: saved commands"""
-        self._command_queue = None
-
-        """Parser state"""
-        self._parser_data = _walter.ModemATParserData()
 
         """GNSS fix waiters"""
         self._gnss_fix_lock = uasyncio.Lock()
@@ -526,6 +508,13 @@ class Modem:
             cmd.rsp.type = _walter.ModemRspType.OP_STATE
             cmd.rsp.op_state = self._op_state
 
+        elif at_rsp.startswith("+SQNMODEACTIVE: "):
+            if cmd is None:
+                return
+
+            cmd.rsp.type = _walter.ModemRspType.RAT
+            cmd.rsp.rat = int(at_rsp.decode().split(':')[1]) - 1
+
         elif at_rsp.startswith("+SQNBANDSEL: "):
             data = at_rsp[len('+SQNBANDSEL: '):]
 
@@ -614,6 +603,27 @@ class Modem:
                 cmd.rsp.pdp_address_list.append(parts[1][1:-1])
             if len(parts) > 2 and parts[2]:
                 cmd.rsp.pdp_address_list.append(parts[2][1:-1])
+
+        elif at_rsp.startswith("+CSQ: "):
+            if not cmd:
+                return
+
+            parts = at_rsp.decode().split(',')
+            raw_rssi = int(parts[0][len('+CSQ: '):])
+
+            cmd.rsp.type = _walter.ModemRspType.RSSI
+            cmd.rsp.rssi = -113 + (raw_rssi * 2)
+
+        elif at_rsp.startswith("+CESQ: "):
+            if not cmd:
+                return
+
+            cmd.rsp.type = _walter.ModemRspType.SIGNAL_QUALITY
+
+            parts = at_rsp.decode().split(',')
+            cmd.rsp.signal_quality = _walter.ModemSignalQuality()
+            cmd.rsp.signal_quality.rsrq = -195 + (int(parts[4]) * 5)
+            cmd.rsp.signal_quality.rsrp = -140 + int(parts[5])
 
         elif at_rsp.startswith("+CCLK: "):
             if not cmd:
@@ -727,22 +737,30 @@ class Modem:
                     if part_no == 0:
                         gnss_fix.fix_id = int(part)
                     elif part_no == 1:
+                        part = part[1:-1]
                         gnss_fix.timestamp = parse_gnss_time(part)
                     elif part_no == 2:
                         gnss_fix.time_to_fix = int(part)
                     elif part_no == 3:
+                        part = part[1:-1]
                         gnss_fix.estimated_confidence = float(part)
                     elif part_no == 4:
+                        part = part[1:-1]
                         gnss_fix.latitude = float(part)
                     elif part_no == 5:
+                        part = part[1:-1]
                         gnss_fix.longitude = float(part)
                     elif part_no == 6:
+                        part = part[1:-1]
                         gnss_fix.height = float(part)
                     elif part_no == 7:
+                        part = part[1:-1]
                         gnss_fix.north_speed = float(part)
                     elif part_no == 8:
+                        part = part[1:-1]
                         gnss_fix.east_speed = float(part)
                     elif part_no == 9:
+                        part = part[1:-1]
                         gnss_fix.down_speed = float(part)
                     elif part_no == 10:
                          # Raw satellite signal sample is ignored
@@ -757,9 +775,9 @@ class Modem:
 
                             gnss_fix.sats.append(_walter.ModemGNSSSat(int(sat_no_str), int(sat_sig_str)))
 
-                    # +2 for the comma and trailing space
+                    # +1 for the comma
                     part_no += 1;
-                    start_pos = character_pos + 2
+                    start_pos = character_pos + 1
                     part = ''
 
             # notify every coroutine that is waiting for a fix
@@ -800,10 +818,12 @@ class Modem:
                         if part[0] == ord('0'):
                             gnss_details = cmd.rsp.gnss_assistance.almanac
                         elif part[0] == ord('1'):
-                            gnss_details = cmd.rsp.gnss_assistance.ephemeris
+                            gnss_details = cmd.rsp.gnss_assistance.realtime_ephemeris
+                        elif part[0] == ord('2'):
+                            gnss_details = cmd.rsp.gnss_assistance.predicted_ephemeris
                     elif part_no == 1:
                         if gnss_details:
-                            gnss_details.available = part[0] == ord('1')
+                            gnss_details.available = int(part) == 1
                     elif part_no == 2:
                         if gnss_details:
                             gnss_details.last_update = int(part)
@@ -814,9 +834,9 @@ class Modem:
                         if gnss_details:
                             gnss_details.time_to_expire = int(part)
 
-                    # +2 for the comma and trailing space
+                    # +1 for the comma
                     part_no += 1;
-                    start_pos = character_pos + 2
+                    start_pos = character_pos + 1
                     part = ''
                 
 
@@ -917,6 +937,7 @@ class Modem:
 
         self._task_queue = Queue()
         self._command_queue = Queue()
+        self._parser_data = _walter.ModemATParserData()
 
         uasyncio.run(self.reset())
         uasyncio.run(self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC))
@@ -938,6 +959,9 @@ class Modem:
         reset_pin.off()
         time.sleep(.01)
         reset_pin.on()
+
+        # also reset internal "modem mirror" state
+        self.__init__()
 
         return await self._run_cmd('', b'+SYSSTART', None,
                 None, None,
@@ -962,6 +986,18 @@ class Modem:
                 _walter.ModemCmdType.TX_WAIT,
                 WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
+    async def get_rssi(self):
+        return await self._run_cmd('AT+CSQ', b'OK', None,
+                                   None, None,
+                                   _walter.ModemCmdType.TX_WAIT,
+                                   WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+
+    async def get_signal_quality(self):
+        return await self._run_cmd('AT+CESQ', b'OK', None,
+                                   None, None,
+                                   _walter.ModemCmdType.TX_WAIT,
+                                   WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+
     def get_network_reg_state(self):
         rsp = _walter.ModemRsp()
 
@@ -983,6 +1019,18 @@ class Modem:
                 _walter.ModemCmdType.TX_WAIT,
                 WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
         
+    async def get_rat(self):
+        return await self._run_cmd('AT+SQNMODEACTIVE?', b'OK', None,
+                                   None, None,
+                                   _walter.ModemCmdType.TX_WAIT,
+                                   WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+
+    async def set_rat(self, rat):
+        return await self._run_cmd('AT+SQNMODEACTIVE=%d' % (rat + 1), b'OK', None,
+                                   None, None,
+                                   _walter.ModemCmdType.TX_WAIT,
+                                   WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+
     async def get_radio_bands(self):
         return await self._run_cmd("AT+SQNBANDSEL?", b"OK", None,
             None, None,
@@ -1325,15 +1373,8 @@ class Modem:
                                    WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
     async def update_gnss_assistance(self, ass_type = _walter.ModemGNSSAssistanceType.REALTIME_EPHEMERIS ):
-        if ass_type == _walter.ModemGNSSAssistanceType.ALMANAC:
-            expect_string = b"+LPGNSSASSISTANCE:0"
-        elif ass_type == _walter.ModemGNSSAssistanceType.REALTIME_EPHEMERIS:
-            expect_string = b"+LPGNSSASSISTANCE:1"
-        else:
-            expect_string = b"OK"
-
         return await self._run_cmd("AT+LPGNSSASSISTANCE=%d" % ass_type,
-                                   expect_string, None,
+                                   b"+LPGNSSASSISTANCE:", None,
                                    None, None,
                                    _walter.ModemCmdType.TX_WAIT,
                                    WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
@@ -1452,7 +1493,7 @@ class Modem:
             b"OK", None, complete_handler, self._http_context_set[profile_id],
             _walter.ModemCmdType.TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
-    async def http_send(self, profile_id, uri, data, send_cmd = _walter.ModemHttpSendCmd.POST, post_param = _walter.ModemHttpPostParam.OCTET_STREAM):
+    async def http_send(self, profile_id, uri, data, send_cmd = _walter.ModemHttpSendCmd.POST, post_param = _walter.ModemHttpPostParam.UNSPECIFIED):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
             return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
@@ -1465,6 +1506,11 @@ class Modem:
             if result == _walter.ModemState.OK:
                 ctx.state = _walter.ModemHttpContextState.EXPECT_RING
 
-        return await self._run_cmd("AT+SQNHTTPSND={},{},{},{},{}".format(profile_id, send_cmd, modem_string(uri), len(data), post_param),
-            b"OK", data, complete_handler, self._http_context_set[profile_id],
-            _walter.ModemCmdType.TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+        if post_param == _walter.ModemHttpPostParam.UNSPECIFIED:
+            return await self._run_cmd("AT+SQNHTTPSND={},{},{},{}".format(profile_id, send_cmd, modem_string(uri), len(data)),
+                b"OK", data, complete_handler, self._http_context_set[profile_id],
+                _walter.ModemCmdType.DATA_TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+        else:
+            return await self._run_cmd("AT+SQNHTTPSND={},{},{},{},\"{}\"".format(profile_id, send_cmd, modem_string(uri), len(data), post_param),
+                b"OK", data, complete_handler, self._http_context_set[profile_id],
+                _walter.ModemCmdType.DATA_TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
