@@ -773,7 +773,7 @@ class Modem:
                             sat_no_str = satellite_data[i]
                             sat_sig_str = satellite_data[i + 1]
 
-                            gnss_fix.sats.append(_walter.ModemGNSSSat(int(sat_no_str), int(sat_sig_str)))
+                            gnss_fix.sats.append(_walter.ModemGNSSSat(int(sat_no_str[1:]), int(sat_sig_str[:-1])))
 
                     # +1 for the comma
                     part_no += 1;
