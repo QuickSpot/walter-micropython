@@ -453,7 +453,7 @@ class Modem:
             else:
                 tick_diff = time.time() - cmd.attempt_start
                 if tick_diff >= WALTER_MODEM_CMD_TIMEOUT:
-                    await _finish_queue_cmd(cmd, _walter.ModemState.TIMEOUT)
+                    await self._finish_queue_cmd(cmd, _walter.ModemState.TIMEOUT)
                 else:
                     return
 
