@@ -34,6 +34,7 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
+import deflate
 import esp32
 import time
 
@@ -53,14 +54,21 @@ while True:
         mcu_temp = esp32.mcu_temperature()
 
         # Create a JSON string with the temperature data
-        json_data = '{"mcu_temp": %.2f}' % mcu_temp
+        json_data = '{"mcu_temperature": %.2f}' % mcu_temp
 
-        # Send the temperature data
-        comm.http.post_sync("URL",
-                            HttpContentType.JSON,
-                            data)
+        # Compress the JSON string using deflate
+        with open("data.zlib", "wb") as f:
+            with deflate.DeflateIO(f, deflate.ZLIB) as d:
+                d.write(json_data.encode("utf-8"))
 
-    except Exception as e:
-        print("Error during upload:", e)
+        # Read and send the compressed temperature data
+        with open("data.zlib", "rb") as f:
+            data = f.read()
+            comm.http.post_sync("URL",
+                                HttpContentType.OCTET_STREAM,
+                                data)
 
-    time.sleep(10)
+        except Exception as e:
+            print("Error during upload:", e)
+
+        time.sleep(10)

@@ -928,7 +928,7 @@ class Modem:
         await cmd.event.wait()
         return cmd.rsp
 
-    def begin(self, main_function=None):
+    def begin(self):
         self._uart = UART(2, baudrate=WALTER_MODEM_BAUD, bits=8, parity=None, stop=1, \
                 flow=UART.RTS|UART.CTS, tx=WALTER_MODEM_PIN_TX, \
                 rx=WALTER_MODEM_PIN_RX, cts=WALTER_MODEM_PIN_CTS, \
@@ -943,16 +943,8 @@ class Modem:
         uasyncio.run(self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC))
         uasyncio.run(self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED))
 
-        uasyncio.run(self.runner(main_function))
-
-    async def runner(self, main_function):
         reader_task = uasyncio.create_task(self._uart_reader())
         worker_task = uasyncio.create_task(self._queue_worker())
-        user_task = uasyncio.create_task(main_function())
-
-        await reader_task
-        await worker_task
-        await user_task
 
     async def reset(self):
         reset_pin = Pin(WALTER_MODEM_PIN_RESET, Pin.OUT)
