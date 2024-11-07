@@ -41,6 +41,16 @@ import network
 import walter
 import _walter
 
+# settings for Soracom SIM card
+# APN = "soracom.io"
+# USERNAME = 'sora'
+# PASSWORD = 'sora'
+
+# settings for 1nce SIM card
+APN = "iot.1nce.net"
+USERNAME = ''
+PASSWORD = ''
+
 SERV_ADDR = "64.225.64.140"
 SERV_PORT = 1999
 HTTP_PROFILE = 1
@@ -98,8 +108,8 @@ async def setup():
     print("Successfully unlocked SIM card")
 
     # Create PDP context
-    rsp = await modem.create_PDP_context('soracom.io',
-        _walter.ModemPDPAuthProtocol.PAP, 'sora', 'sora',
+    rsp = await modem.create_PDP_context(APN,
+        _walter.ModemPDPAuthProtocol.PAP, USERNAME, PASSWORD,
         _walter.ModemPDPType.IP, None,
         _walter.ModemPDPHeaderCompression.OFF,
         _walter.ModemPDPDataCompression.OFF,
@@ -117,12 +127,14 @@ async def setup():
     # Authenticate the PDP context
     global ctx_id
     ctx_id = rsp.pdp_ctx_id
-    rsp = await modem.authenticate_PDP_context(ctx_id)
-    if rsp.result != _walter.ModemState.OK:
-        print("Could not authenticate the PDP context")
-        return False
-
-    print("Authenticated the PDP context")
+    if USERNAME:
+        rsp = await modem.authenticate_PDP_context(ctx_id)
+        if rsp.result != _walter.ModemState.OK:
+            print("Could not authenticate the PDP context")
+            return False
+        print("Authenticated the PDP context")
+    else:
+        print("No authentication required.")
 
     # set operational state to FULL
     rsp = await modem.set_op_state(_walter.ModemOpState.FULL)
