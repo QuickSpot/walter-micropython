@@ -793,7 +793,7 @@ class Modem:
                             gnss_fix.sats.append(_walter.ModemGNSSSat(int(sat_no_str[1:]), int(sat_sig_str[:-1])))
 
                     # +1 for the comma
-                    part_no += 1;
+                    part_no += 1
                     start_pos = character_pos + 1
                     part = ''
 
@@ -888,10 +888,10 @@ class Modem:
                 cmd.rsp.type = _walter.ModemRspType.MQTT
                 cmd.rsp.mqtt_data = at_rsp.decode()
 
-        if cmd:
-            print('process rsp to cmd:' + str(cmd) + ' ' + str(cmd.at_cmd) + ' ' + str(at_rsp) + ' expecting ' + str(cmd.at_rsp))
-        else:
-            print('process rsp without preceding cmd: ' + str(at_rsp))
+        # if cmd:
+        #     print('process rsp to cmd:' + str(cmd) + ' ' + str(cmd.at_cmd) + ' ' + str(at_rsp) + ' expecting ' + str(cmd.at_rsp))
+        # else:
+        #     print('process rsp without preceding cmd: ' + str(at_rsp))
 
         if not cmd or not cmd.at_rsp or cmd.type == _walter.ModemCmdType.TX or cmd.at_rsp != at_rsp[:len(cmd.at_rsp)]:
             return
