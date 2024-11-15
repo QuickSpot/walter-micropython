@@ -319,6 +319,10 @@ class ModemHttpContextState:
     EXPECT_RING = 1
     GOT_RING = 2
 
+"""The state of the MQTT client"""
+class ModemMqttState:
+    DISCONNECTED = 0
+    CONNECTED = 1
 
 """The protocol that us used by the socket."""
 class ModemSocketProto:
@@ -598,13 +602,29 @@ class ModemRsp:
         """Unix timestamp of the current time and date in the modem."""
         self.clock = None
 
-        """ TODO  mqtt_data"""
+        """mqtt_data"""
+        self.mqtt_data = None
 
         """HTTP response"""
         self.http_response = None
 
         """ TODO  coap_response"""
 
+class ModemMqttMessage:
+    """This class represents an MQTT message (received or to be sent)"""
+    def __init__(self, topic, length, qos, message_id = None, payload = None):
+        """The topic to which the message is published"""
+        self.topic = topic
+        """The length of the payload"""
+        self.length = length
+        """The quality of service"""
+        self.qos = qos
+        """The message ID"""
+        self.message_id = message_id
+        """The payload of the message"""
+        self.payload = payload
+        """Has the message been received from the buffer of the modem?"""
+        self.received = False
 
 class ModemCmd:
     """This structure represents an AT command to be added to the command queue.
@@ -801,3 +821,18 @@ class ModemHttpContext:
         self.http_status = 0
         self.content_length = 0
         self.content_type = ''
+
+class ModemTlsVersion:
+    V10 = 0
+    V11 = 1
+    V12 = 2
+    V13 = 3
+    RESET = 255
+
+class ModemTlsValidation:
+    NONE = 0
+    CA = 1
+    URL = 4
+    URL_AND_CA = 5
+
+
