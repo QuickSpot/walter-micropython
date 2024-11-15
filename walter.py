@@ -1724,3 +1724,11 @@ class Modem:
             if msg.received:
                 self._mqtt_messages.remove(msg)
                 return msg
+    """
+    Coroutine to turn off the modem
+    """
+    async def shutdown(self):
+        return await self._run_cmd("AT+SQNSSHDN",
+            b"+SHUTDOWN", None, None, None, _walter.ModemCmdType.TX_WAIT,
+            WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+    
