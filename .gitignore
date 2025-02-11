@@ -5,6 +5,7 @@
 *.vsix
 .history
 .ionide
+pymakr.conf
 
 ## Intellij, PyCharm
 .idea/**/workspace.xml
