@@ -7,6 +7,7 @@ from walter import (
 from _walter import (
     ModemRspType,
     ModemRat,
+    ModemRai,
     ModemNetworkRegState,
     ModemState,
     ModemOpState,
@@ -163,3 +164,43 @@ async def lte_disconnect() -> bool:
     
     print('Failed to disconnect, modem network registration state still not "NOT SEARCHING" after 5 seconds')
     return False
+
+async def lte_transmit(address: str, port: int, buffer: bytearray) -> bool:
+    """
+    Transmit to an UDP socket
+
+    This function will configure the modem to set up, connect, transmit and close to an UDP socket.
+
+    :param address: The address of the server to connect to.
+    :param port: The socket port to connect to.
+    :param buffer: The buffer containing the packet data.
+    :param length: The length in bytes that need to be transmitted.
+
+    :return bool: True on success, False on failure
+    """
+    if not await lte_connect():
+        return False
+
+    if (await modem.create_socket()).result != ModemState.OK:
+        print('Failed to create a new UDP socket')
+        return False
+    
+    if (await modem.config_socket()).result != ModemState.OK:
+        print('Failed to configure UDP socket')
+        return False
+    
+    if (await modem.connect_socket(address, port, port)).result != ModemState.OK:
+        print('Failed to connect to UDP socket')
+        return False
+    
+    print(f'Connected to UDP server: {address}:{port}')
+
+    if (await modem.socket_send(buffer, ModemRai.NO_INFO, 1)).result != ModemState.OK:
+        print('Failed to transmit to UDP socket')
+        return False
+    
+    if (await modem.close_socket()).result != ModemState.OK:
+        print('Failed to close UDP socket')
+        return False
+    
+    return True
