@@ -121,7 +121,7 @@ async def lte_connect(_retry: bool = False) -> bool:
             print('Failed to connect using LTE-M and NB-IoT, no connection possible')
             
             if rat != ModemRat.LTEM:
-                if (await modem.set_rat(ModemRat.LTEM).result != ModemState.OK):
+                if (await modem.set_rat(ModemRat.LTEM)).result != ModemState.OK:
                     print('Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
             
