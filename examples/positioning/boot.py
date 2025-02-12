@@ -204,3 +204,53 @@ async def lte_transmit(address: str, port: int, buffer: bytearray) -> bool:
         return False
     
     return True
+
+def check_assistance_data(modem_rsp):
+    update_almanac = False
+    update_ephemeris = False
+
+    if modem_rsp.gnss_assistance.almanac.available:
+        print(f'Almanac data is available and should be updated within {modem_rsp.gnss_assistance.almanac.time_to_update}')
+        if modem_rsp.gnss_assistance.almanac.time_to_update <= 0:
+            update_almanac = True
+    else:
+        print("Almanac data is not available.")
+        update_almanac = True
+
+    if modem_rsp.gnss_assistance.realtime_ephemeris.available:
+        print("Real-time ephemeris data is available and should be updated within %ds" % modem_rsp.gnss_assistance.realtime_ephemeris.time_to_update)
+        if modem_rsp.gnss_assistance.realtime_ephemeris.time_to_update <= 0:
+            update_ephemeris = True
+    else:
+        print("Real-time ephemeris data is not available.")
+        update_ephemeris = True
+
+    return update_almanac, update_ephemeris
+
+def check_assistance_data(modem_rsp):
+    """
+    Check the assistance data in the modem response.
+
+    This function check the availability of assistance data in the modem's response.
+
+    :param modem_rsp: The modem resonse to check
+    
+    :return tuple: bools representing wether or not almanac or ephemeris should be updated
+    """
+    almanac = modem_rsp.gnss_assistance.almanac
+    ephemeris = modem_rsp.gnss_assistance.realtime_ephemeris
+
+    update_almanac = (not almanac.available) or (almanac.time_to_update <= 0)
+    update_ephemeris = (not ephemeris.available) or (ephemeris.time_to_update <= 0)
+
+    if almanac.available:
+        print("Almanac data is available and should be updated within %s" % almanac.time_to_update)
+    else:
+        print("Almanac data is not available.")
+
+    if ephemeris.available:
+        print("Real-time ephemeris data is available and should be updated within %s" % ephemeris.time_to_update)
+    else:
+        print("Real-time ephemeris data is not available.")
+
+    return update_almanac, update_ephemeris
