@@ -112,8 +112,7 @@ async def lte_connect(_retry: bool = False) -> bool:
             return False
 
         if not await_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
-            print('Unexpted: failed to stop modem from searching (network registration state: NOT_SEARCHING)')
-            print(f'Stopping connection attempt with modem in network registration state: {await modem.get_network_reg_state()}')
+            print('Unexpted: failed to put modem on standby (opState: MISSING), network registration still not "NOT_SEARCHING" after 5sec')
             return False
         
         rat = modem_rsp.data.rat
