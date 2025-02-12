@@ -202,28 +202,6 @@ async def lte_transmit(address: str, port: int, buffer: bytearray) -> bool:
     return True
 
 def check_assistance_data(modem_rsp):
-    update_almanac = False
-    update_ephemeris = False
-
-    if modem_rsp.gnss_assistance.almanac.available:
-        print(f'Almanac data is available and should be updated within {modem_rsp.gnss_assistance.almanac.time_to_update}')
-        if modem_rsp.gnss_assistance.almanac.time_to_update <= 0:
-            update_almanac = True
-    else:
-        print("Almanac data is not available.")
-        update_almanac = True
-
-    if modem_rsp.gnss_assistance.realtime_ephemeris.available:
-        print("Real-time ephemeris data is available and should be updated within %ds" % modem_rsp.gnss_assistance.realtime_ephemeris.time_to_update)
-        if modem_rsp.gnss_assistance.realtime_ephemeris.time_to_update <= 0:
-            update_ephemeris = True
-    else:
-        print("Real-time ephemeris data is not available.")
-        update_ephemeris = True
-
-    return update_almanac, update_ephemeris
-
-def check_assistance_data(modem_rsp):
     """
     Check the assistance data in the modem response.
 
