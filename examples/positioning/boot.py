@@ -1,4 +1,6 @@
 import asyncio
+import ubinascii
+import network
 
 from walter import (
     Modem
@@ -13,7 +15,8 @@ from _walter import (
     ModemState,
     ModemOpState,
     ModemNetworkSelMode,
-    ModemGNSSAssistanceType
+    ModemGNSSAssistanceType,
+    ModemGNSSAction
 )
 
 CELL_APN = ''
@@ -323,3 +326,19 @@ async def update_gnss_assistance():
             return False
         
     return True
+
+async def setup():
+    print('Walter Positioning Demo Sketch')
+    print(f'Walter MAC address is: {ubinascii.hexlify(network.WLAN().config('mac'),':').decode()}')
+
+    try:
+        modem.begin()
+    except:
+        print(f'Unexpected error when starting modem')
+
+    if (await modem.create_PDP_context(CELL_APN)).result != ModemState.OK:
+        print('Failed to create PDP context')
+
+    if (await modem.config_gnss()).result != ModemState.OK:
+        print('Failed to configure GNSS subsystem')
+        
