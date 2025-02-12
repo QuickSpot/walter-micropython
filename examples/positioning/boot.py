@@ -141,3 +141,25 @@ async def lte_connect(_retry: bool = False) -> bool:
         
         await modem.reset()
         return lte_connect(_retry=True)
+    
+async def lte_disconnect() -> bool:
+    """
+    Disconnect from the LTE network
+
+    This function will disconnect the modem from the LTE network.
+    This function blocks until the modem is successfully disconnected.
+
+    :return bool: True on success, False on failure
+    """
+    if modem.get_network_reg_state() == ModemNetworkRegState.NOT_SEARCHING:
+        return True
+    
+    if (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK:
+        print('Failed to set operational state to minimum')
+        return False
+
+    if (await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING)):
+        return True
+    
+    print('Failed to disconnect, modem network registration state still not "NOT SEARCHING" after 5 seconds')
+    return False
