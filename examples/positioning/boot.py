@@ -56,7 +56,7 @@ fix_rcvd = False
 Flag used to signal when a fix is received
 """
 
-async def await_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
+async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
     """
     Wait for the modem network registration state to reach the desired state(s).
     
@@ -100,19 +100,22 @@ async def lte_connect(_retry: bool = False) -> bool:
         print('Failed to set network selection mode to automatic')
         return False
     
-    if not await await_network_reg_state(
+    if not await wait_for_network_reg_state(
         300,
         ModemNetworkRegState.REGISTERED_HOME,
         ModemNetworkRegState.REGISTERED_ROAMING
     ):
         modem_rsp = await modem.get_rat()
 
-        if modem_rsp.result != ModemState.OK or (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK:
+        if (
+            modem_rsp.result != ModemState.OK or
+            (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK
+        ):
             print('Failed to connect using current RAT')
             return False
 
-        if not await_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
-            print('Unexpted: failed to put modem on standby (opState: MISSING), network registration still not "NOT_SEARCHING" after 5sec')
+        if not wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
+            print('Unexpected: modem not on standby after 5 seconds')
             return False
         
         rat = modem_rsp.data.rat
