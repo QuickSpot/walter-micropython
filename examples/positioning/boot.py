@@ -5,13 +5,15 @@ from walter import (
 )
 
 from _walter import (
-    ModemRspType,
     ModemRat,
     ModemRai,
+    ModemRsp,
+    ModemRspType,
     ModemNetworkRegState,
     ModemState,
     ModemOpState,
-    ModemNetworkSelMode
+    ModemNetworkSelMode,
+    ModemGNSSAssistanceType
 )
 
 CELL_APN = ''
@@ -106,7 +108,7 @@ async def lte_connect(_retry: bool = False) -> bool:
         ModemNetworkRegState.REGISTERED_HOME,
         ModemNetworkRegState.REGISTERED_ROAMING
     ):
-        modem_rsp = await modem.get_rat()
+        modem_rsp: ModemRsp = await modem.get_rat()
 
         if (
             modem_rsp.result != ModemState.OK or
@@ -244,13 +246,80 @@ def check_assistance_data(modem_rsp):
     update_ephemeris = (not ephemeris.available) or (ephemeris.time_to_update <= 0)
 
     if almanac.available:
-        print("Almanac data is available and should be updated within %s" % almanac.time_to_update)
+        print(f'Almanac data is available and should be updated within {almanac.time_to_update}')
     else:
-        print("Almanac data is not available.")
+        print('Almanac data is not available.')
 
     if ephemeris.available:
-        print("Real-time ephemeris data is available and should be updated within %s" % ephemeris.time_to_update)
+        print(f'Real-time ephemeris data is available and should be updated within {ephemeris.time_to_update}')
     else:
-        print("Real-time ephemeris data is not available.")
+        print('Real-time ephemeris data is not available.')
 
     return update_almanac, update_ephemeris
+
+async def update_gnss_assistance():
+    """
+    This function will update GNNS assistance data when needed.
+
+    Check if the current real-time ephemeris data is good enough to get a fast GNSS fix.
+    If not, the function will connect to the LTE network to download newer assistance data.
+
+    :return bool: True on success, False on failure
+    """
+    modem_rsp: ModemRsp = await modem.get_clock()
+    if modem_rsp.result != ModemState.OK:
+        print('Failed to retrieve modem time')
+        return False
+    
+    if not modem_rsp.clock:
+        print('Modem time is invalid, connecting to LTE network')
+        if not await lte_connect():
+            print('Failed to connect to LTE network')
+            return False
+        
+    for i in range(5):
+        modem_rsp = await modem.get_clock()
+        if modem_rsp.result != ModemState.OK:
+            print('Failed to retrieve modem time')
+            return False
+        
+        if modem_rsp.clock:
+            print(f'Synchronised clock with network: {modem_rsp.clock}')
+            return True
+        elif i == 4:
+            print('Could not sync time with network')
+
+        await asyncio.sleep(.5)
+
+    modem_rsp = await modem.get_gnss_assistance_status()
+    if (
+        modem_rsp.result != ModemState.OK or 
+        modem_rsp.type != ModemRspType.GNSS_ASSISTANCE_DATA
+    ):
+        print('Could not request GNSS assistance status')
+        return False
+    
+    update_almanac, update_ephemeris = check_assistance_data(modem_rsp)
+    
+    if update_almanac:
+        if not lte_connect():
+            print('Failed to connect to LTE network')
+            return False
+        
+        if ((await modem.update_gnss_assistance(ModemGNSSAssistanceType.ALMANAC)).result
+            != ModemState.OK):
+            print('Failed to update almanac data')
+            return False
+        
+    if update_ephemeris:
+        if not lte_connect():
+            print('Failed to connect to LTE network')
+            return False
+        
+        if (
+            (await modem.update_gnss_assistance(ModemGNSSAssistanceType.REALTIME_EPHEMERIS)).result
+            != ModemState.OK):
+            print('Failed to update ephemeris data')
+            return False
+        
+    return True
