@@ -1,6 +1,8 @@
 import asyncio
-import ubinascii
+import esp32
 import network
+import struct
+import ubinascii
 
 from walter import (
     Modem
@@ -49,17 +51,6 @@ All GNSS fixes with a confidence value below this number are considered valid.
 modem = Modem()
 """
 The modem instance
-"""
-
-data_buffer = bytearray(PACKET_SIZE)
-"""
-The buffer to transmit to the UDP server.
-The first 6 bytes will be the MAC address of the Walter this code is running on.
-"""
-
-fix_rcvd = False
-"""
-Flag used to signal when a fix is received
 """
 
 async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
@@ -331,14 +322,70 @@ async def setup():
     print('Walter Positioning Demo Sketch')
     print(f'Walter MAC address is: {ubinascii.hexlify(network.WLAN().config('mac'),':').decode()}')
 
-    try:
-        modem.begin()
-    except:
-        print(f'Unexpected error when starting modem')
+    modem.begin()
 
     if (await modem.create_PDP_context(CELL_APN)).result != ModemState.OK:
         print('Failed to create PDP context')
 
     if (await modem.config_gnss()).result != ModemState.OK:
         print('Failed to configure GNSS subsystem')
+
+async def loop():
+    print('Checking GNSS assistance data')
+    if not update_gnss_assistance():
+        print('Failed to update GNSS assistance data')
+
+    for _ in range(5):
+        if (await modem.perform_gnss_action(ModemGNSSAction.GET_SINGLE_FIX)).result != ModemState.OK:
+            print('Failed to request GNSS fix')
+            continue
         
+        print('Requested GNSS fix')
+
+        gnss_fix = await modem.wait_for_gnss_fix()
+
+        if gnss_fix.estimated_confidence <= MAX_GNSS_CONFIDENCE:
+            break
+
+    above_threshold = 0
+    for sat in gnss_fix.sats:
+        if sat.signal_strength >= 30:
+            above_threshold += 1
+    
+    print('GNSS fix attempt finnished')
+    print(f'  Confidence: {gnss_fix.estimated_confidence:.2f}')
+    print(f'  Latitude: {gnss_fix.latitude:.06f}')
+    print(f'  Longitude: {gnss_fix.longitude:.06f}')
+    print(f'  Satcount: {len(gnss_fix.sats)}')
+    print(f'  Good sats: {above_threshold}')
+
+    lat: float = gnss_fix.latitude
+    lon: float = gnss_fix.longitude
+    mcu_temperature: float = esp32.mcu_temperature()
+
+    if gnss_fix.estimated_confidence > MAX_GNSS_CONFIDENCE:
+        gnss_fix.sats = []
+        lat = 0.0
+        lon = 0.0
+        print('Failed to get a valid fix')
+
+    data_buffer: bytearray = bytearray(network.WLAN().config('mac'))
+    data_buffer.append(0x2)
+    data_buffer.extend(struct.pack('>h', (mcu_temperature + 50) * 100))
+    data_buffer.append(len(gnss_fix.sats))
+    data_buffer.extend(struct.pack('>f', lat))
+    data_buffer.extend(struct.pack('>f', lon))
+    data_buffer.extend([0] * 11)
+    
+    await asyncio.sleep(5)
+
+async def main():
+    try:
+        await setup()
+
+        while True:
+            await loop()
+    except Exception as error:
+        print('Unexpected error', error)
+
+main()
