@@ -158,7 +158,7 @@ async def lte_disconnect() -> bool:
         print('Failed to set operational state to minimum')
         return False
 
-    if (await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING)):
+    if await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
         return True
     
     print('Failed to disconnect, modem network registration state still not "NOT SEARCHING" after 5 seconds')
