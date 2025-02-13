@@ -111,7 +111,7 @@ async def lte_connect(_retry: bool = False) -> bool:
             print('Failed to connect using current RAT')
             return False
 
-        if not wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
+        if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
             print('Unexpected: modem not on standby after 5 seconds')
             return False
         
@@ -137,7 +137,7 @@ async def lte_connect(_retry: bool = False) -> bool:
             return False
         
         await modem.reset()
-        return lte_connect(_retry=True)
+        return await lte_connect(_retry=True)
     
 async def lte_disconnect() -> bool:
     """
@@ -274,7 +274,7 @@ async def update_gnss_assistance():
     update_almanac, update_ephemeris = check_assistance_data(modem_rsp)
     
     if update_almanac:
-        if not lte_connect():
+        if not await lte_connect():
             print('Failed to connect to LTE network')
             return False
         
@@ -284,7 +284,7 @@ async def update_gnss_assistance():
             return False
         
     if update_ephemeris:
-        if not lte_connect():
+        if not await lte_connect():
             print('Failed to connect to LTE network')
             return False
         
@@ -310,7 +310,7 @@ async def setup():
 
 async def loop():
     print('Checking GNSS assistance data')
-    if not update_gnss_assistance():
+    if not await update_gnss_assistance():
         print('Failed to update GNSS assistance data')
 
     for _ in range(5):
@@ -354,7 +354,8 @@ async def loop():
     data_buffer.extend(struct.pack('>f', lat))
     data_buffer.extend(struct.pack('>f', lon))
     data_buffer.extend([0] * 11)
-    
+
+    await lte_transmit(SERVER_ADDRESS, SERVER_PORT, data_buffer)
     await asyncio.sleep(5)
 
 async def main():
