@@ -36,7 +36,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from machine import Pin, UART
 import time
-import uasyncio
+import asyncio
 import uselect
 import sys
 import random
@@ -253,7 +253,7 @@ class Modem:
         self._http_current_profile = 0xff
 
         """GNSS fix waiters"""
-        self._gnss_fix_lock = uasyncio.Lock()
+        self._gnss_fix_lock = asyncio.Lock()
         self._gnss_fix_waiters = []
 
     async def _queue_rx_buffer(self):
@@ -291,7 +291,7 @@ class Modem:
         self._parser_data.line += chr(data)
 
     async def _uart_reader(self):
-        rx_stream = uasyncio.StreamReader(self._uart, {})
+        rx_stream = asyncio.StreamReader(self._uart, {})
 
         while True:
             incoming_uart_data = bytearray(256)
@@ -851,7 +851,7 @@ class Modem:
         await self._finish_queue_cmd(cmd, result)
 
     async def _queue_worker(self):
-        tx_stream = uasyncio.StreamWriter(self._uart, {})
+        tx_stream = asyncio.StreamWriter(self._uart, {})
         cur_cmd = None
 
         while True:
@@ -939,12 +939,12 @@ class Modem:
         self._command_queue = Queue()
         self._parser_data = _walter.ModemATParserData()
 
-        uasyncio.run(self.reset())
-        uasyncio.run(self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC))
-        uasyncio.run(self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED))
+        asyncio.wait_for(self.reset(), None)
+        asyncio.wait_for(self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC), None)
+        asyncio.wait_for(self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED), None)
 
-        reader_task = uasyncio.create_task(self._uart_reader())
-        worker_task = uasyncio.create_task(self._queue_worker())
+        reader_task = asyncio.create_task(self._uart_reader())
+        worker_task = asyncio.create_task(self._queue_worker())
 
     async def reset(self):
         reset_pin = Pin(WALTER_MODEM_PIN_RESET, Pin.OUT)
@@ -1063,18 +1063,27 @@ class Modem:
                 _walter.ModemCmdType.TX_WAIT,
                 WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
-    async def create_PDP_context(self, apn = None, auth_proto = _walter.ModemPDPAuthProtocol.NONE,
-                auth_user = None, auth_pass = None, auth_type = _walter.ModemPDPType.IP,
-                pdp_address = None, header_comp = _walter.ModemPDPHeaderCompression.OFF,
-                data_comp = _walter.ModemPDPDataCompression.OFF,
-                ipv4_alloc_method = _walter.ModemPDPIPv4AddrAllocMethod.DHCP,
-                request_type = _walter.ModemPDPRequestType.NEW_OR_HANDOVER,
-                pcscf_method = _walter.ModemPDPPCSCFDiscoveryMethod.AUTO,
-                for_IMCN = False, use_NSLPI = True, use_secure_PCO = False,
-                use_NAS_ipv4_MTU_discovery = False,
-                use_local_addr_ind = False, use_NAS_on_IPMTU_discovery = False):
+    async def create_PDP_context(
+        self, apn = '',
+        auth_proto = _walter.ModemPDPAuthProtocol.NONE,
+        auth_user = None,
+        auth_pass = None,
+        auth_type = _walter.ModemPDPType.IP,
+        pdp_address = None,
+        header_comp = _walter.ModemPDPHeaderCompression.OFF,
+        data_comp = _walter.ModemPDPDataCompression.OFF,
+        ipv4_alloc_method = _walter.ModemPDPIPv4AddrAllocMethod.DHCP,
+        request_type = _walter.ModemPDPRequestType.NEW_OR_HANDOVER,
+        pcscf_method = _walter.ModemPDPPCSCFDiscoveryMethod.AUTO,
+        for_IMCN = False,
+        use_NSLPI = True,
+        use_secure_PCO = False,
+        use_NAS_ipv4_MTU_discovery = False,
+        use_local_addr_ind = False,
+        use_NAS_on_IPMTU_discovery = False
+    ):
         _ctx = None
-        for idx, ctx in enumerate(self._pdp_ctx_set):
+        for ctx in self._pdp_ctx_set:
             if ctx.state == _walter.ModemPDPContextState.FREE:
                 ctx.state = _walter.ModemPDPContextState.RESERVED
                 _ctx = ctx
