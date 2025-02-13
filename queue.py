@@ -6,7 +6,7 @@
 # Code is based on Paul Sokolovsky's work.
 # This is a temporary solution until uasyncio V3 gets an efficient official version
 
-import uasyncio as asyncio
+import asyncio
 
 
 # Exception raised by get_nowait().
