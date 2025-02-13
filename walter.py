@@ -856,7 +856,7 @@ class Modem:
                 qitem.cmd = await self._command_queue.get()
             else:
                 qitem = await self._task_queue.get()
-                if not isinstance(_walter.ModemTaskQueueItem, type(qitem)):
+                if not isinstance(qitem, _walter.ModemTaskQueueItem):
                     print('Invalid task queue item: %s %s' % (type(qitem), str(qitem)))
                     continue
 
@@ -935,9 +935,9 @@ class Modem:
         self._command_queue = Queue()
         self._parser_data = _walter.ModemATParserData()
 
-        await self.reset()
-        await self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC)
-        await self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED)
+        asyncio.wait_for(self.reset(), None)
+        asyncio.wait_for(self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC), None)
+        asyncio.wait_for(self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED), None)
 
         asyncio.create_task(self._uart_reader())
         asyncio.create_task(self._queue_worker())
