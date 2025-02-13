@@ -127,8 +127,8 @@ async def lte_connect(_retry: bool = False) -> bool:
             
             return False
         
-        print(f'Failed to connect to LTE network using: {'LTE-M' if rat == ModemRat.LTEM else 'NB-IoT'}')
-        print(f'Switching modem to {'NB-IoT' if rat == ModemRat.LTEM else 'LTE-M'} and retrying...')
+        print(f'Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
+        print(f'Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
 
         next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
 
@@ -298,7 +298,7 @@ async def update_gnss_assistance():
 
 async def setup():
     print('Walter Positioning Demo Sketch')
-    print(f'Walter MAC address is: {ubinascii.hexlify(network.WLAN().config('mac'),':').decode()}')
+    print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode())
 
     modem.begin()
 
@@ -366,4 +366,4 @@ async def main():
     except Exception as error:
         print('Unexpected error', error)
 
-main()
+asyncio.run(main())
