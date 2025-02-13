@@ -37,9 +37,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 from machine import Pin, UART
 import time
 import asyncio
-import uselect
-import sys
-import random
 from queue import Queue
 
 CR = 13
@@ -220,7 +217,7 @@ class Modem:
         self._reg_state = _walter.ModemNetworkRegState.NOT_SEARCHING
 
         """The PIN code when required for the installed SIM."""
-        self._simPIN = None
+        self._sim_PIN = None
 
         """The chosen network selection mode."""
         self._network_sel_mode = _walter.ModemNetworkSelMode.AUTOMATIC
@@ -420,7 +417,7 @@ class Modem:
                 cmd.attempt = 1
                 cmd.attempt_start = time.time()
                 cmd.state = _walter.ModemCmdState.PENDING
-                return
+
             else:
                 tick_diff = time.time() - cmd.attempt_start
                 timed_out = tick_diff >= WALTER_MODEM_CMD_TIMEOUT
@@ -441,7 +438,7 @@ class Modem:
                         cmd.attempt += 1
                         cmd.attempt_start = time.time()
                         cmd.state = _walter.ModemCmdState.PENDING
-                        return
+
                 else:
                     return
 
@@ -449,7 +446,7 @@ class Modem:
             if cmd.state == _walter.ModemCmdState.NEW:
                 cmd.attempt_start = time.time()
                 cmd.state = _walter.ModemCmdState.PENDING
-                return
+
             else:
                 tick_diff = time.time() - cmd.attempt_start
                 if tick_diff >= WALTER_MODEM_CMD_TIMEOUT:
@@ -598,7 +595,6 @@ class Modem:
 
             parts = at_rsp.decode().split(',')
             
-            context_id = int(parts[0][len('+CGPADDR: '):])
             if len(parts) > 1 and parts[1]:
                 cmd.rsp.pdp_address_list.append(parts[1][1:-1])
             if len(parts) > 2 and parts[2]:
@@ -703,7 +699,8 @@ class Modem:
             socket_id = int(at_rsp[len('+SQNSH: '):].decode())
             try:
                 _socket = self._socket_set[socket_id - 1]
-            except:
+            except Exception as err:
+                print('(Modem, _process_queue_rsp; +SQNSH) unexpected error: ', err)
                 return
 
             self._socket = _socket
@@ -830,12 +827,11 @@ class Modem:
                     elif part_no == 3:
                         if gnss_details:
                             gnss_details.time_to_update = int(part)
-                    elif part_no == 4:
-                        if gnss_details:
+                    elif part_no == 4 and gnss_details:
                             gnss_details.time_to_expire = int(part)
 
                     # +1 for the comma
-                    part_no += 1;
+                    part_no += 1
                     start_pos = character_pos + 1
                     part = ''
                 
@@ -860,7 +856,7 @@ class Modem:
                 qitem.cmd = await self._command_queue.get()
             else:
                 qitem = await self._task_queue.get()
-                if type(qitem) != _walter.ModemTaskQueueItem:
+                if not isinstance(_walter.ModemTaskQueueItem, type(qitem)):
                     print('Invalid task queue item: %s %s' % (type(qitem), str(qitem)))
                     continue
 
@@ -928,7 +924,7 @@ class Modem:
         await cmd.event.wait()
         return cmd.rsp
 
-    def begin(self):
+    async def begin(self):
         self._uart = UART(2, baudrate=WALTER_MODEM_BAUD, bits=8, parity=None, stop=1, \
                 flow=UART.RTS|UART.CTS, tx=WALTER_MODEM_PIN_TX, \
                 rx=WALTER_MODEM_PIN_RX, cts=WALTER_MODEM_PIN_CTS, \
@@ -939,12 +935,12 @@ class Modem:
         self._command_queue = Queue()
         self._parser_data = _walter.ModemATParserData()
 
-        asyncio.wait_for(self.reset(), None)
-        asyncio.wait_for(self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC), None)
-        asyncio.wait_for(self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED), None)
+        await self.reset()
+        await self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC)
+        await self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED)
 
-        reader_task = asyncio.create_task(self._uart_reader())
-        worker_task = asyncio.create_task(self._queue_worker())
+        asyncio.create_task(self._uart_reader())
+        asyncio.create_task(self._queue_worker())
 
     async def reset(self):
         reset_pin = Pin(WALTER_MODEM_PIN_RESET, Pin.OUT)
@@ -1036,8 +1032,8 @@ class Modem:
             WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
     async def unlock_sim(self, pin = None):
-        self._simPIN = pin;
-        if self._simPIN == None:
+        self._sim_PIN = pin;
+        if self._sim_PIN == None:
             return await self.get_sim_state()
         
         return await self._run_cmd("AT+CPIN=%s" % pin, b"OK", None,
@@ -1159,7 +1155,8 @@ class Modem:
                 _ctx = self._pdp_ctx
             else:
                 _ctx = self._pdp_ctx_set[context_id - 1]
-        except:
+        except Exception as err:
+            print('(Modem, set_PDP_context_active) unexpected error: ', err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
@@ -1179,9 +1176,8 @@ class Modem:
 
     async def attach_PDP_context(self, attached = True):
         async def complete_handler(result, rsp, complete_handler_arg):
-            if result == _walter.ModemState.OK:
-                if self._pdp_ctx:
-                    self._pdp_ctx.state = _walter.ModemPDPContextState.ATTACHED
+            if result == _walter.ModemState.OK and self._pdp_ctx:
+                self._pdp_ctx.state = _walter.ModemPDPContextState.ATTACHED
 
         return await self._run_cmd("AT+CGATT={}".format(
             modem_bool(attached)),
@@ -1196,7 +1192,8 @@ class Modem:
                 _ctx = self._pdp_ctx
             else:
                 _ctx = self._pdp_ctx_set[context_id - 1]
-        except:
+        except Exception as err:
+            print('(Modem, get_PDP_address) unexpected error: ', err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
@@ -1214,7 +1211,8 @@ class Modem:
                 _ctx = self._pdp_ctx
             else:
                 _ctx = self._pdp_ctx_set[pdp_context_id - 1]
-        except:
+        except Exception as err:
+            print('(Modem, create_socket) unexpected error: ', err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
@@ -1259,7 +1257,8 @@ class Modem:
                 _socket = self._socket
             else:
                 _socket = self._socket_set[socket_id - 1]
-        except:
+        except Exception as err:
+            print('(Modem, config_socket) unexpected error: ', err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
@@ -1285,7 +1284,8 @@ class Modem:
                 _socket = self._socket
             else:
                 _socket = self._socket_set[socket_id - 1]
-        except:
+        except Exception as err:
+            print('(Modem, create_socket) unexpected error: ', err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
@@ -1317,7 +1317,8 @@ class Modem:
                 _socket = self._socket
             else:
                 _socket = self._socket_set[socket_id - 1]
-        except:
+        except Exception as err:
+            print('(Modem, close_socket) unexpected error: ', err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
@@ -1340,7 +1341,8 @@ class Modem:
                 _socket = self._socket
             else:
                 _socket = self._socket_set[socket_id - 1]
-        except:
+        except Exception as err:
+            print('(Modem, socket_send) unexpected error: ', err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
