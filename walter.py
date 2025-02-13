@@ -34,10 +34,11 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-from machine import Pin, UART
-import time
 import asyncio
+import sys
+import time
 from queue import Queue
+from machine import Pin, UART
 
 CR = 13
 LF = 10
@@ -46,65 +47,65 @@ GREATER_THAN = ord('>')
 SMALLER_THAN = ord('<')
 SPACE = ord(' ')
 
+WALTER_MODEM_DEFAULT_CMD_ATTEMPTS = 3
 """
 The default number of attempts to execute a command.
 """
-WALTER_MODEM_DEFAULT_CMD_ATTEMPTS = 3
 
+WALTER_MODEM_PIN_RX = 14
 """
 The RX pin on which modem data is received.
 """
-WALTER_MODEM_PIN_RX = 14
 
+WALTER_MODEM_PIN_TX = 48
 """
 The TX to which modem data must be transmitted.
 """
-WALTER_MODEM_PIN_TX = 48
 
+WALTER_MODEM_PIN_RTS = 21
 """
 The RTS pin on the ESP32 side.
 """
-WALTER_MODEM_PIN_RTS = 21
 
+WALTER_MODEM_PIN_CTS = 47
 """
 The CTS pin on the ESP32 size.
 """
-WALTER_MODEM_PIN_CTS = 47
 
+WALTER_MODEM_PIN_RESET = 45
 """
 The active low modem reset pin.
 """
-WALTER_MODEM_PIN_RESET = 45
 
+WALTER_MODEM_BAUD = 115200
 """
 The baud rate used to talk to the modem.
 """
-WALTER_MODEM_BAUD = 115200
 
+WALTER_MODEM_CMD_TIMEOUT = 5
 """
 The maximum number of seconds to wait.
 """
-WALTER_MODEM_CMD_TIMEOUT = 5
 
+WALTER_MODEM_MIN_VALID_TIMESTAMP = 1672531200
 """
 Any modem time below 1 Jan 2023 00:00:00 UTC is considered an invalid time.
 """
-WALTER_MODEM_MIN_VALID_TIMESTAMP = 1672531200
 
+WALTER_MODEM_MAX_PDP_CTXTS = 8
 """
 The maximum number of PDP contexts that the library can support.
 """
-WALTER_MODEM_MAX_PDP_CTXTS = 8
 
+WALTER_MODEM_MAX_SOCKETS = 6
 """
 The maximum number of sockets that the library can support.
 """
-WALTER_MODEM_MAX_SOCKETS = 6
 
+WALTER_MODEM_MAX_HTTP_PROFILES = 3
 """
 The max nr of http profiles
 """
-WALTER_MODEM_MAX_HTTP_PROFILES = 3
 
 
 import _walter
@@ -210,51 +211,51 @@ def static_rsp(result):
 
 class Modem:
     def __init__(self):
-        """The current operational state of the modem."""
         self._op_state = _walter.ModemOpState.MINIMUM
+        """The current operational state of the modem."""
 
-        """The current network registration state of the modem."""
         self._reg_state = _walter.ModemNetworkRegState.NOT_SEARCHING
+        """The current network registration state of the modem."""
 
-        """The PIN code when required for the installed SIM."""
         self._sim_PIN = None
+        """The PIN code when required for the installed SIM."""
 
-        """The chosen network selection mode."""
         self._network_sel_mode = _walter.ModemNetworkSelMode.AUTOMATIC
+        """The chosen network selection mode."""
 
-        """An operator to use, this is ignored when automatic operator selection
-        is used."""
         self._operator = _walter.ModemOperator()
+        """An operator to use, this is ignored when automatic operator selectionis used."""
 
-        """The PDP context which is currently in use by the library or None when
+        self._pdp_ctx = None
+        """
+        The PDP context which is currently in use by the library or None when
         no PDP context is in use. In use doesn't mean that the 
         context is activated yet it is just a pointer to the PDP context
-        which was last used by any of the functions that work with a PDP
-        context."""
-        self._pdp_ctx = None
+        which was last used by any of the functions that work with a PDPcontext.
+        """
         
-        """The list of PDP context."""
         self._pdp_ctx_set = [_walter.ModemPDPContext(idx + 1) for idx in range(WALTER_MODEM_MAX_PDP_CTXTS)]
+        """The list of PDP context."""
 
-        """The list of sockets"""
         self._socket_set = [ _walter.ModemSocket(idx + 1) for idx in range(WALTER_MODEM_MAX_SOCKETS) ]
+        """The list of sockets"""
 
-        """The socket which is currently in use by the library or None when no 
-        socket is in use."""
         self._socket = None
+        """The socket which is currently in use by the library or None when no socket is in use."""
 
-        """The list of http contexts in the modem"""
         self._http_context_set = [ _walter.ModemHttpContext() for _ in range(WALTER_MODEM_MAX_HTTP_PROFILES) ]
+        """The list of http contexts in the modem"""
 
-        """Current http profile in use in the modem"""
         self._http_current_profile = 0xff
+        """Current http profile in use in the modem"""
 
-        """GNSS fix waiters"""
         self._gnss_fix_lock = asyncio.Lock()
         self._gnss_fix_waiters = []
+        """GNSS fix waiters"""
 
     async def _queue_rx_buffer(self):
-        """Copy the currently received data buffer into the task queue.
+        """
+        Copy the currently received data buffer into the task queue.
         
         This function will copy the current modem receive buffer into the
         task queue. When the buffer could not be placed in the queue it will
@@ -270,7 +271,8 @@ class Modem:
         self._parser_data.line = b''
 
     def _add_at_byte_to_buffer(self, data, raw_mode_active):
-        """Handle an AT data byte.
+        """
+        Handle an AT data byte.
         
         This function is used by the AT data parser to add a databyte to 
         the buffer currently in use or to reserve a new buffer to add a byte
@@ -293,7 +295,7 @@ class Modem:
         while True:
             incoming_uart_data = bytearray(256)
             size = await rx_stream.readinto(incoming_uart_data)
-            print('RX:[%s]' % incoming_uart_data[:size])
+            if self.debug_log: print('DEBUG: RX:[%s]' % incoming_uart_data[:size])
             for b in incoming_uart_data[:size]:
                 if self._parser_data.state == _walter.ModemRspParserState.START_CR:
                     if b == CR:
@@ -398,7 +400,7 @@ class Modem:
 
     async def _process_queue_cmd(self, tx_stream, cmd):
         if cmd.type == _walter.ModemCmdType.TX:
-            print('TX:[%s]' % cmd.at_cmd)
+            if self.debug_log: print('DEBUG: TX:[%s]' % cmd.at_cmd)
             tx_stream.write(cmd.at_cmd)
             tx_stream.write(b'\r\n')
             await tx_stream.drain()
@@ -407,7 +409,7 @@ class Modem:
         elif cmd.type == _walter.ModemCmdType.TX_WAIT \
         or cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
             if cmd.state == _walter.ModemCmdState.NEW:
-                print('TX:[%s]' % cmd.at_cmd)
+                if self.debug_log: print('DEBUG: TX:[%s]' % cmd.at_cmd)
                 tx_stream.write(cmd.at_cmd)
                 if cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
                     tx_stream.write(b'\n')
@@ -428,7 +430,7 @@ class Modem:
                         else:
                             await self._finish_queue_cmd(cmd, _walter.ModemState.ERROR)
                     else:
-                        print('TX:[%s]' % cmd.at_cmd)
+                        if self.debug_log: print('DEBUG: TX:[%s]' % cmd.at_cmd)
                         tx_stream.write(cmd.at_cmd)
                         if cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
                             tx_stream.write(b'\n')
@@ -477,7 +479,7 @@ class Modem:
 
         elif at_rsp.startswith("> ") or at_rsp.startswith(">>>"):
             if cmd and cmd.data and cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
-                print('TX:[%s]' % cmd.data)
+                if self.debug_log: print('DEBUG: TX:[%s]' % cmd.data)
                 tx_stream.write(cmd.data)
                 await tx_stream.drain()
 
@@ -526,7 +528,7 @@ class Modem:
             if data[0] == ord('0'):
                 bsel.rat = _walter.ModemRat.LTEM
             else:
-                bsel.rat = _walter.ModemRat.NBIOT;
+                bsel.rat = _walter.ModemRat.NBIOT
 
             # Parse operator name
             bsel.net_operator.format = _walter.ModemOperatorFormat.LONG_ALPHANUMERIC
@@ -700,7 +702,8 @@ class Modem:
             try:
                 _socket = self._socket_set[socket_id - 1]
             except Exception as err:
-                print('(Modem, _process_queue_rsp; +SQNSH) unexpected error: ', err)
+                print('ERROR: (Modem, _process_queue_rsp; +SQNSH): ', err)
+                sys.print_exception(err)
                 return
 
             self._socket = _socket
@@ -710,7 +713,7 @@ class Modem:
             data = at_rsp[len("+LPGNSSFIXREADY: "):]
 
             parenthesis_open = False
-            part_no = 0;
+            part_no = 0
             start_pos = 0
             part = ''
             gnss_fix = _walter.ModemGNSSFix()
@@ -721,7 +724,7 @@ class Modem:
 
                 if character == ord(',') and not parenthesis_open:
                     part = data[start_pos:character_pos]
-                    part_complete = True;
+                    part_complete = True
                 elif character == ord('('):
                     parenthesis_open = True
                 elif character == ord(')'):
@@ -773,7 +776,7 @@ class Modem:
                             gnss_fix.sats.append(_walter.ModemGNSSSat(int(sat_no_str[1:]), int(sat_sig_str[:-1])))
 
                     # +1 for the comma
-                    part_no += 1;
+                    part_no += 1
                     start_pos = character_pos + 1
                     part = ''
 
@@ -794,7 +797,7 @@ class Modem:
                 cmd.rsp.gnss_assistance = _walter.ModemGNSSAssistance()
 
             data = at_rsp[len("+LPGNSSASSISTANCE: "):]
-            part_no = 0;
+            part_no = 0
             start_pos = 0
             part = ''
             gnss_details = None
@@ -805,7 +808,7 @@ class Modem:
 
                 if character == ord(','):
                     part = data[start_pos:character_pos]
-                    part_complete = True;
+                    part_complete = True
                 elif character_pos + 1 == len(data):
                     part = data[start_pos:character_pos + 1]
                     part_complete = True
@@ -857,7 +860,7 @@ class Modem:
             else:
                 qitem = await self._task_queue.get()
                 if not isinstance(qitem, _walter.ModemTaskQueueItem):
-                    print('Invalid task queue item: %s %s' % (type(qitem), str(qitem)))
+                    print('ERROR: (Modem, _queue_worker) Invalid task queue item: %s %s' % (type(qitem), str(qitem)))
                     continue
 
             # process or enqueue new command or response
@@ -867,7 +870,7 @@ class Modem:
                 else:
                     await self._command_queue.put(qitem.cmd)
             elif qitem.rsp:
-                await self._process_queue_rsp(tx_stream, cur_cmd, qitem.rsp);
+                await self._process_queue_rsp(tx_stream, cur_cmd, qitem.rsp)
 
             # initial transmit of cmd + retransmits after timeout
             if cur_cmd:
@@ -882,7 +885,8 @@ class Modem:
     async def _run_cmd(self, at_cmd, at_rsp, data,
             complete_handler, complete_handler_arg,
             cmd_type, max_attempts):
-        """Add a command to the command queue and await execution.
+        """
+        Add a command to the command queue and await execution.
         
         This function add a command to the task queue. This function will 
         only fail when the command queue is full. The command which is put
@@ -924,7 +928,8 @@ class Modem:
         await cmd.event.wait()
         return cmd.rsp
 
-    async def begin(self):
+    async def begin(self, debug_log: bool = False):
+        self.debug_log = debug_log
         self._uart = UART(2, baudrate=WALTER_MODEM_BAUD, bits=8, parity=None, stop=1, \
                 flow=UART.RTS|UART.CTS, tx=WALTER_MODEM_PIN_TX, \
                 rx=WALTER_MODEM_PIN_RX, cts=WALTER_MODEM_PIN_CTS, \
@@ -1032,7 +1037,7 @@ class Modem:
             WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
     async def unlock_sim(self, pin = None):
-        self._sim_PIN = pin;
+        self._sim_PIN = pin
         if self._sim_PIN == None:
             return await self.get_sim_state()
         
@@ -1042,8 +1047,8 @@ class Modem:
             WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
     async def set_network_selection_mode(self, mode = _walter.ModemNetworkSelMode.AUTOMATIC, operator_name = '', format = _walter.ModemOperatorFormat.LONG_ALPHANUMERIC):
-        self._network_sel_mode = mode;
-        self._operator.format = format;
+        self._network_sel_mode = mode
+        self._operator.format = format
         self._operator.name = operator_name
 
         if mode == _walter.ModemNetworkSelMode.AUTOMATIC:
@@ -1156,7 +1161,8 @@ class Modem:
             else:
                 _ctx = self._pdp_ctx_set[context_id - 1]
         except Exception as err:
-            print('(Modem, set_PDP_context_active) unexpected error: ', err)
+            print('ERROR: (Modem, set_PDP_context_active): ', err)
+            sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
@@ -1193,7 +1199,8 @@ class Modem:
             else:
                 _ctx = self._pdp_ctx_set[context_id - 1]
         except Exception as err:
-            print('(Modem, get_PDP_address) unexpected error: ', err)
+            print('ERROR: (Modem, get_PDP_address): ', err)
+            sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
@@ -1212,7 +1219,8 @@ class Modem:
             else:
                 _ctx = self._pdp_ctx_set[pdp_context_id - 1]
         except Exception as err:
-            print('(Modem, create_socket) unexpected error: ', err)
+            print('ERROR: (Modem, create_socket): ', err)
+            sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
@@ -1258,7 +1266,8 @@ class Modem:
             else:
                 _socket = self._socket_set[socket_id - 1]
         except Exception as err:
-            print('(Modem, config_socket) unexpected error: ', err)
+            print('ERROR: (Modem, config_socket): ', err)
+            sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
@@ -1285,7 +1294,8 @@ class Modem:
             else:
                 _socket = self._socket_set[socket_id - 1]
         except Exception as err:
-            print('(Modem, create_socket) unexpected error: ', err)
+            print('ERROR: (Modem, create_socket): ', err)
+            sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
@@ -1318,7 +1328,8 @@ class Modem:
             else:
                 _socket = self._socket_set[socket_id - 1]
         except Exception as err:
-            print('(Modem, close_socket) unexpected error: ', err)
+            print('ERROR: (Modem, close_socket): ', err)
+            sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
@@ -1342,7 +1353,8 @@ class Modem:
             else:
                 _socket = self._socket_set[socket_id - 1]
         except Exception as err:
-            print('(Modem, socket_send) unexpected error: ', err)
+            print('ERROR: (Modem, socket_send): ', err)
+            sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
         self._socket = _socket
@@ -1428,7 +1440,7 @@ class Modem:
             self._http_context_set[profile_id].state = _walter.ModemHttpContextState.IDLE
             return static_rsp(_walter.ModemState.ERROR)
 
-        self._http_current_profile = profile_id;
+        self._http_current_profile = profile_id
 
         async def complete_handler(result, rsp, complete_handler_arg):
             modem = complete_handler_arg
@@ -1477,7 +1489,7 @@ class Modem:
         # (too bad: according to the docs SQNHTTPCONNECT is mandatory for
         # TLS connections)
 
-        return self._http_context_set[profile_id].connected;
+        return self._http_context_set[profile_id].connected
 
     async def http_query(self, profile_id, uri, query_cmd = _walter.ModemHttpQueryCmd.GET):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:

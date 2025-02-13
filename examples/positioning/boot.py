@@ -1,4 +1,5 @@
 import asyncio
+import sys
 import esp32
 import network
 import struct
@@ -300,7 +301,7 @@ async def setup():
     print('Walter Positioning Demo Sketch')
     print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode())
 
-    modem.begin()
+    await modem.begin()
 
     if (await modem.create_PDP_context(CELL_APN)).result != ModemState.OK:
         print('Failed to create PDP context')
@@ -361,10 +362,9 @@ async def loop():
 async def main():
     try:
         await setup()
-
-        while True:
-            await loop()
-    except Exception as error:
-        print('Unexpected error', error)
+        await loop()
+    except Exception as err:
+        print('ERROR: (boot.py, main): ')
+        sys.print_exception(err)
 
 asyncio.run(main())
