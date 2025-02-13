@@ -209,6 +209,12 @@ def static_rsp(result):
     rsp.result = result
     return rsp
 
+def bytes_to_str(byte_data):
+    """Convert byte data to a string."""
+    if isinstance(byte_data, bytearray):
+        return byte_data.decode('utf-8', 'ignore')
+    return byte_data
+
 class Modem:
     def __init__(self):
         self._op_state = _walter.ModemOpState.MINIMUM
@@ -295,7 +301,9 @@ class Modem:
         while True:
             incoming_uart_data = bytearray(256)
             size = await rx_stream.readinto(incoming_uart_data)
-            if self.debug_log: print('DEBUG: RX:[%s]' % incoming_uart_data[:size])
+            if self.debug_log:
+                for line in incoming_uart_data[:size].splitlines():
+                    print(f'walter.py - DEBUG: RX: "{bytes_to_str(line)}"')
             for b in incoming_uart_data[:size]:
                 if self._parser_data.state == _walter.ModemRspParserState.START_CR:
                     if b == CR:
@@ -400,7 +408,8 @@ class Modem:
 
     async def _process_queue_cmd(self, tx_stream, cmd):
         if cmd.type == _walter.ModemCmdType.TX:
-            if self.debug_log: print('DEBUG: TX:[%s]' % cmd.at_cmd)
+            if self.debug_log:
+                print(f'walter.py - DEBUG: TX: "{bytes_to_str(cmd.at_cmd)}"')
             tx_stream.write(cmd.at_cmd)
             tx_stream.write(b'\r\n')
             await tx_stream.drain()
@@ -409,7 +418,8 @@ class Modem:
         elif cmd.type == _walter.ModemCmdType.TX_WAIT \
         or cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
             if cmd.state == _walter.ModemCmdState.NEW:
-                if self.debug_log: print('DEBUG: TX:[%s]' % cmd.at_cmd)
+                if self.debug_log:
+                    print(f'walter.py - DEBUG: TX: "{bytes_to_str(cmd.at_cmd)}"')
                 tx_stream.write(cmd.at_cmd)
                 if cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
                     tx_stream.write(b'\n')
@@ -430,7 +440,8 @@ class Modem:
                         else:
                             await self._finish_queue_cmd(cmd, _walter.ModemState.ERROR)
                     else:
-                        if self.debug_log: print('DEBUG: TX:[%s]' % cmd.at_cmd)
+                        if self.debug_log:
+                            print(f'walter.py - DEBUG: TX: "{bytes_to_str(cmd.at_cmd)}"')
                         tx_stream.write(cmd.at_cmd)
                         if cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
                             tx_stream.write(b'\n')
@@ -479,7 +490,8 @@ class Modem:
 
         elif at_rsp.startswith("> ") or at_rsp.startswith(">>>"):
             if cmd and cmd.data and cmd.type == _walter.ModemCmdType.DATA_TX_WAIT:
-                if self.debug_log: print('DEBUG: TX:[%s]' % cmd.data)
+                if self.debug_log:
+                    print(f'walter.py - DEBUG: TX: "{bytes_to_str(cmd.data)}"')
                 tx_stream.write(cmd.data)
                 await tx_stream.drain()
 
@@ -702,7 +714,7 @@ class Modem:
             try:
                 _socket = self._socket_set[socket_id - 1]
             except Exception as err:
-                print('ERROR: (Modem, _process_queue_rsp; +SQNSH): ', err)
+                print('walter.py - ERROR: (Modem, _process_queue_rsp; +SQNSH): ', err)
                 sys.print_exception(err)
                 return
 
@@ -860,7 +872,7 @@ class Modem:
             else:
                 qitem = await self._task_queue.get()
                 if not isinstance(qitem, _walter.ModemTaskQueueItem):
-                    print('ERROR: (Modem, _queue_worker) Invalid task queue item: %s %s' % (type(qitem), str(qitem)))
+                    print('walter.py - ERROR: (Modem, _queue_worker) Invalid task queue item: %s %s' % (type(qitem), str(qitem)))
                     continue
 
             # process or enqueue new command or response
@@ -1161,7 +1173,7 @@ class Modem:
             else:
                 _ctx = self._pdp_ctx_set[context_id - 1]
         except Exception as err:
-            print('ERROR: (Modem, set_PDP_context_active): ', err)
+            print('walter.py - ERROR: (Modem, set_PDP_context_active): ', err)
             sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
@@ -1199,7 +1211,7 @@ class Modem:
             else:
                 _ctx = self._pdp_ctx_set[context_id - 1]
         except Exception as err:
-            print('ERROR: (Modem, get_PDP_address): ', err)
+            print('walter.py - ERROR: (Modem, get_PDP_address): ', err)
             sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
@@ -1219,7 +1231,7 @@ class Modem:
             else:
                 _ctx = self._pdp_ctx_set[pdp_context_id - 1]
         except Exception as err:
-            print('ERROR: (Modem, create_socket): ', err)
+            print('walter.py - ERROR: (Modem, create_socket): ', err)
             sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
@@ -1266,7 +1278,7 @@ class Modem:
             else:
                 _socket = self._socket_set[socket_id - 1]
         except Exception as err:
-            print('ERROR: (Modem, config_socket): ', err)
+            print('walter.py - ERROR: (Modem, config_socket): ', err)
             sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
@@ -1294,7 +1306,7 @@ class Modem:
             else:
                 _socket = self._socket_set[socket_id - 1]
         except Exception as err:
-            print('ERROR: (Modem, create_socket): ', err)
+            print('walter.py - ERROR: (Modem, create_socket): ', err)
             sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
@@ -1328,7 +1340,7 @@ class Modem:
             else:
                 _socket = self._socket_set[socket_id - 1]
         except Exception as err:
-            print('ERROR: (Modem, close_socket): ', err)
+            print('walter.py - ERROR: (Modem, close_socket): ', err)
             sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
@@ -1353,7 +1365,7 @@ class Modem:
             else:
                 _socket = self._socket_set[socket_id - 1]
         except Exception as err:
-            print('ERROR: (Modem, socket_send): ', err)
+            print('walter.py - ERROR: (Modem, socket_send): ', err)
             sys.print_exception(err)
             return static_rsp(_walter.ModemState.NO_SUCH_SOCKET)
         
