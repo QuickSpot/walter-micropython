@@ -453,9 +453,14 @@ async def loop():
 async def main():
     try:
         await setup()
-        await loop()
+        while True:
+            await loop()
     except Exception as err:
         print('ERROR: (boot.py, main): ')
         sys.print_exception(err)
+        print('Waiting 5 minutes before exiting')
+        # Sleep a while to prevent getting stuck in an infite crash loop
+        # And give time for the serial over usb to function
+        asyncio.sleep(300)
 
 asyncio.run(main())
