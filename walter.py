@@ -99,7 +99,7 @@ def modem_bool(a_bool):
     else:
         return 0
 
-def pdp_type_as_string(pdp_type: _walter.ModemPDPType) -> str:
+def pdp_type_as_string(pdp_type: int) -> str:
     if pdp_type == _walter.ModemPDPType.X25:
         return '"X.25"'
     if pdp_type == _walter.ModemPDPType.IP:
