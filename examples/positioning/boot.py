@@ -308,7 +308,7 @@ async def setup():
     print('Find your walter at: https://walterdemo.quickspot.io/')
     print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode(), end='\n\n')
 
-    await modem.begin(debug_log=True)
+    await modem.begin(debug_log=False)
 
     if (await modem.create_PDP_context(CELL_APN)).result != ModemState.OK:
         print('Failed to create PDP context')
@@ -323,7 +323,7 @@ async def loop():
 
     print('Attempting to request a GNSS fix')
     gnss_fix = None
-    for i in range(1):
+    for i in range(5):
         if i > 0:
             print('trying again...')
         await lte_disconnect()
@@ -365,6 +365,27 @@ async def loop():
     else:
         lat: float = 0
         lon: float = 0
+
+    print('Connecting to LTE')
+    if not await lte_connect():
+        print('Failed to connect to LTE')
+
+    modem_rsp = await modem.get_cell_information()
+    if modem_rsp.result != ModemState.OK:
+        print('Failed to request cell information', ModemCMEError.get_value_name(modem_rsp.cme_error))
+    else:
+        print('Connected on band {} using operator {} ({}{})'.format(
+            modem_rsp.cell_information.band,
+            modem_rsp.cell_information.net_name,
+            modem_rsp.cell_information.cc,
+            modem_rsp.cell_information.nc
+        ))
+        print(f'cell ID {modem_rsp.cell_information.cid}')
+        print('Signal strength: RSRP: {:.2f}, RSRQ: {:.2f}.'.format(
+            modem_rsp.cell_information.rsrp,
+            modem_rsp.cell_information.rsrq
+        ))
+
     mcu_temperature: float = esp32.mcu_temperature()
 
     data_buffer: bytearray = bytearray(network.WLAN().config('mac'))
@@ -373,7 +394,21 @@ async def loop():
     data_buffer.append(len(gnss_fix.sats) if gnss_fix else 255)
     data_buffer.extend(struct.pack('>f', lat))
     data_buffer.extend(struct.pack('>f', lon))
-    data_buffer.extend(b'\x00' * 11)
+
+    if hasattr(modem_rsp, 'cell_information'):
+        data_buffer.append(modem_rsp.cell_information.cc >> 8)
+        data_buffer.append(modem_rsp.cell_information.cc & 0xFF)
+        data_buffer.append(modem_rsp.cell_information.nc >> 8)
+        data_buffer.append(modem_rsp.cell_information.nc & 0xFF)
+        data_buffer.append(modem_rsp.cell_information.tac >> 8)
+        data_buffer.append(modem_rsp.cell_information.tac & 0xFF)
+        data_buffer.append((modem_rsp.cell_information.cid >> 24) & 0xFF)
+        data_buffer.append((modem_rsp.cell_information.cid >> 16) & 0xFF)
+        data_buffer.append((modem_rsp.cell_information.cid >> 8) & 0xFF)
+        data_buffer.append(modem_rsp.cell_information.cid & 0xFF)
+        data_buffer.append(int(modem_rsp.cell_information.rsrp * -1))
+    else:
+        data_buffer.extend(b'\x00' * 11)
 
     print('Transmitting data to server')
     await lte_transmit(SERVER_ADDRESS, SERVER_PORT, data_buffer)

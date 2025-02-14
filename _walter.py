@@ -180,7 +180,15 @@ class ModemCMEError(Enum):
     HW_CONFIG_FAILED_INVALID_FUNCTION = 541
     HW_CONFIG_FAILED_INVALID_FUNCTION_PARAM = 542
     HW_CONFIG_FAILED_PINS_ALREADY_ASSIGNED = 54
+    WRONG_STATE = 551
 
+class ModemSQNMONIReportsType(Enum):
+    """SQNMONI cell information reporting scopes"""
+    SERVING_CELL = 0
+    INTRA_FREQUENCY_CELLS = 1
+    INTER_FREQUENCY_CELLS = 2
+    ALL_CELLS = 7
+    SERVING_CELL_WITH_CINR = 9
 
 class ModemRspParserState(Enum):
     """RAW RX response parser states."""
@@ -288,6 +296,7 @@ class ModemRspType(Enum):
     MQTT = 13
     HTTP_RESPONSE = 14
     COAP = 15
+    CELL_INFO = 16
     REG_STATE = 50
 
 class ModemNetworkSelMode(Enum):
@@ -808,3 +817,51 @@ class ModemHttpContext:
         self.http_status = 0
         self.content_length = 0
         self.content_type = ''
+
+class ModemCellInformation:
+    """Grouping of all possible cell monitoring response values"""
+    def __init__(self):
+        self.net_name: str = ''
+        """Name of the network operator"""
+
+        self.cc: int = 0
+        """Mobile country code"""
+
+        self.nc: int = 0
+        """Network operator code"""
+
+        self.rsrp: float = 0.0
+        """Reference signal Received Power"""
+
+        self.cinr: float = 0.0
+        """Carrier to Interference-plus-Noise Ratio"""
+
+        self.rsrq: float = 0.0
+        """Reference Signal Received Quality"""
+
+        self.tac: int = 0
+        """Tracking Area Code"""
+
+        self.pci: int = 0
+        """Physical Cell ID"""
+
+        self.earfcn: int = 0
+        """E-UTRA Assigned Radio Channel"""
+
+        self.rssi: float = 0.0
+        """Received signal strength in dBm"""
+
+        self.paging: int = 0
+        """DRX cycle in number of radio frames (1 frame = 10 ms)"""
+
+        self.cid: int = 0
+        """25-bit E-UTRAN Cell Identity"""
+
+        self.band: int = 0
+        """Band Number"""
+
+        self.bw: int = 0
+        """Downlink bandwidth in kHz"""
+
+        self.ce_level: int = 0
+        """Coverage Enhancement Level"""

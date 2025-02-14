@@ -83,6 +83,9 @@ WALTER_MODEM_MAX_SOCKETS = 6
 WALTER_MODEM_MAX_HTTP_PROFILES = 3
 """The max nr of http profiles"""
 
+WALTER_MODEM_OPERATOR_MAX_SIZE = 16
+"""The maximum number of characters of an operator name"""
+
 
 import _walter
 
@@ -828,7 +831,62 @@ class Modem:
                     part_no += 1
                     start_pos = character_pos + 1
                     part = ''
+
+        elif at_rsp.startswith(b"+SQNMONI"):
+            if cmd is None:
+                return
+
+            cmd.rsp.type = _walter.ModemRspType.CELL_INFO
+
+            data_str = at_rsp[len(b"+SQNMONI: "):].decode()
+
+            cmd.rsp.cell_information = _walter.ModemCellInformation()
+            first_key_parsed = False
+
+            for part in data_str.split(' '):
+                if ':' not in part:
+                    continue
                 
+                key, value = part.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+
+                if not first_key_parsed and len(key) > 2:
+                    operator_name = key[:-2]
+                    cmd.rsp.cell_information.net_name = operator_name[:WALTER_MODEM_OPERATOR_MAX_SIZE]
+                    key = key[-2:]
+                    first_key_parsed = True
+
+                if key == "Cc":
+                    cmd.rsp.cell_information.cc = int(value, 10)
+                elif key == "Nc":
+                    cmd.rsp.cell_information.nc = int(value, 10)
+                elif key == "RSRP":
+                    cmd.rsp.cell_information.rsrp = float(value)
+                elif key == "CINR":
+                    cmd.rsp.cell_information.cinr = float(value)
+                elif key == "RSRQ":
+                    cmd.rsp.cell_information.rsrq = float(value)
+                elif key == "TAC":
+                    cmd.rsp.cell_information.tac = int(value, 10)
+                elif key == "Id":
+                    cmd.rsp.cell_information.pci = int(value, 10)
+                elif key == "EARFCN":
+                    cmd.rsp.cell_information.earfcn = int(value, 10)
+                elif key == "PWR":
+                    cmd.rsp.cell_information.rssi = float(value)
+                elif key == "PAGING":
+                    cmd.rsp.cell_information.paging = int(value, 10)
+                elif key == "CID":
+                    cmd.rsp.cell_information.cid = int(value, 16)
+                elif key == "BAND":
+                    cmd.rsp.cell_information.band = int(value, 10)
+                elif key == "BW":
+                    cmd.rsp.cell_information.bw = int(value, 10)
+                elif key == "CE":
+                    cmd.rsp.cell_information.ce_level = int(value, 10)
+
+
 
 #        if cmd:
 #            print('process rsp to cmd:' + str(cmd) + ' ' + str(cmd.at_cmd) + ' ' + str(at_rsp) + ' expecting ' + str(cmd.at_rsp))
@@ -981,6 +1039,12 @@ class Modem:
                                    None, None,
                                    _walter.ModemCmdType.TX_WAIT,
                                    WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+    
+    async def get_cell_information(self, reports_type = _walter.ModemSQNMONIReportsType.SERVING_CELL):
+        return await self._run_cmd(f'AT+SQNMONI={reports_type}', b'OK', None,
+                None, None,
+                _walter.ModemCmdType.TX_WAIT,
+                WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
     def get_network_reg_state(self):
         rsp = _walter.ModemRsp()
@@ -1129,7 +1193,7 @@ class Modem:
     async def authenticate_PDP_context(self, context_id = None):
         try:
             _ctx = self._pdp_ctx_set[context_id - 1]
-        except:
+        except Exception:
             return static_rsp(_walter.ModemState.NO_SUCH_PDP_CONTEXT)
         
         self._pdp_ctx = _ctx
