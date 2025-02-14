@@ -48,70 +48,46 @@ SMALLER_THAN = ord('<')
 SPACE = ord(' ')
 
 WALTER_MODEM_DEFAULT_CMD_ATTEMPTS = 3
-"""
-The default number of attempts to execute a command.
-"""
+"""The default number of attempts to execute a command."""
 
 WALTER_MODEM_PIN_RX = 14
-"""
-The RX pin on which modem data is received.
-"""
+"""The RX pin on which modem data is received."""
 
 WALTER_MODEM_PIN_TX = 48
-"""
-The TX to which modem data must be transmitted.
-"""
+"""The TX to which modem data must be transmitted."""
 
 WALTER_MODEM_PIN_RTS = 21
-"""
-The RTS pin on the ESP32 side.
-"""
+"""The RTS pin on the ESP32 side."""
 
 WALTER_MODEM_PIN_CTS = 47
-"""
-The CTS pin on the ESP32 size.
-"""
+"""The CTS pin on the ESP32 size."""
 
 WALTER_MODEM_PIN_RESET = 45
-"""
-The active low modem reset pin.
-"""
+"""The active low modem reset pin."""
 
 WALTER_MODEM_BAUD = 115200
-"""
-The baud rate used to talk to the modem.
-"""
+"""The baud rate used to talk to the modem."""
 
 WALTER_MODEM_CMD_TIMEOUT = 5
-"""
-The maximum number of seconds to wait.
-"""
+"""The maximum number of seconds to wait."""
 
 WALTER_MODEM_MIN_VALID_TIMESTAMP = 1672531200
-"""
-Any modem time below 1 Jan 2023 00:00:00 UTC is considered an invalid time.
-"""
+"""Any modem time below 1 Jan 2023 00:00:00 UTC is considered an invalid time."""
 
 WALTER_MODEM_MAX_PDP_CTXTS = 8
-"""
-The maximum number of PDP contexts that the library can support.
-"""
+"""The maximum number of PDP contexts that the library can support."""
 
 WALTER_MODEM_MAX_SOCKETS = 6
-"""
-The maximum number of sockets that the library can support.
-"""
+"""The maximum number of sockets that the library can support."""
 
 WALTER_MODEM_MAX_HTTP_PROFILES = 3
-"""
-The max nr of http profiles
-"""
+"""The max nr of http profiles"""
 
 
 import _walter
 
 
-def modem_string(a_string):
+def modem_string(a_string: str) -> str:
     if a_string:
         return '"' + a_string + '"'
     else:
@@ -123,7 +99,7 @@ def modem_bool(a_bool):
     else:
         return 0
 
-def pdp_type_as_string(pdp_type):
+def pdp_type_as_string(pdp_type: _walter.ModemPDPType) -> str:
     if pdp_type == _walter.ModemPDPType.X25:
         return '"X.25"'
     if pdp_type == _walter.ModemPDPType.IP:
@@ -140,9 +116,10 @@ def pdp_type_as_string(pdp_type):
         return '"Non-IP"'
     return ''
 
-def parse_cclk_time(time_str):
-    # format: yy/mm/dd,hh:nn:ss+qq
-    # where qq = tz offset in quarters of an hour
+def parse_cclk_time(time_str: str) -> float | None:
+    """
+    :param time_str: format: yy/mm/dd,hh:nn:ss+qq where qq = tz offset in quarters of an hour
+    """
     yy = int(time_str[:2])
     mm = int(time_str[3:5])
     dd = int(time_str[6:8])
@@ -174,8 +151,10 @@ def parse_cclk_time(time_str):
 
     return time_val
 
-def parse_gnss_time(time_str):
-    # format: yyyy-mm-ddThh:nn
+def parse_gnss_time(time_str: str) -> float | None:
+    """
+    :param time_str: format: yyyy-mm-ddThh:nn
+    """
     yyyy = int(time_str[:4])
     mm = int(time_str[5:7])
     dd = int(time_str[8:10])
@@ -952,12 +931,12 @@ class Modem:
         self._command_queue = Queue()
         self._parser_data = _walter.ModemATParserData()
 
-        asyncio.wait_for(self.reset(), None)
-        asyncio.wait_for(self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC), None)
-        asyncio.wait_for(self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED), None)
-
         asyncio.create_task(self._uart_reader())
         asyncio.create_task(self._queue_worker())
+
+        await self.reset()
+        await self.config_cme_error_reports(_walter.ModemCMEErrorReportsType.NUMERIC)
+        await self.config_cereg_reports(_walter.ModemCEREGReportsType.ENABLED)
 
     async def reset(self):
         reset_pin = Pin(WALTER_MODEM_PIN_RESET, Pin.OUT)

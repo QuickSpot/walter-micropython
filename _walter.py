@@ -34,11 +34,23 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
-from uasyncio import Event
+from asyncio import Event
 
-# @brief This enum groups status codes of functions and operational components
-# of the modem.
-class ModemState:
+class Enum:
+    reverse_mapping = {}
+    @classmethod
+    def get_value_name(cls, value: int):
+        """Get the property name for any property value of the class."""
+        if not hasattr(cls, '_reverse_mapping'):
+            cls._reverse_mapping = {
+                val: name for name, val in cls.__dict__.items()
+                if isinstance(val, int)
+            }
+
+        return cls._reverse_mapping.get(value, f"Unknown code: {value}")
+
+class ModemState(Enum):
+    """Grouped status codes of functions and operational components of the modem."""
     OK = 0
     ERROR = 1
     TIMEOUT = 2
@@ -53,8 +65,8 @@ class ModemState:
     BUSY = 11
     NO_DATA = 12
 
-# @brief The possible states that the SIM card can be in.
-class ModemSimState:
+class ModemSimState(Enum):
+    """SIM card states."""
     READY = 0
     PIN_REQUIRED = 1
     PUK_REQUIRED = 2
@@ -72,21 +84,21 @@ class ModemSimState:
     CORPORATE_SIM_REQUIRED = 14
     CORPORATE_PUK_REQUIRED = 15
 
-# @brief The different types of 3GPP access technologies supported by Walter.
-class ModemRat:
+class ModemRat(Enum):
+    """Types of 3GPP access technologies supported by Walter."""
     LTEM = 0
     NBIOT = 1
     AUTO = 2
 
-# @brief The different operational modes of the modem.
-class ModemOpState:
+class ModemOpState(Enum):
+    """Modem operational modes."""
     MINIMUM = 0
     FULL = 1
     NO_RF = 4
     MANUFACTURING = 5
 
-# @brief The different network registration states that the modem can be in.
-class ModemNetworkRegState:
+class ModemNetworkRegState(Enum):
+    """Modem network registration states."""
     NOT_SEARCHING = 0
     REGISTERED_HOME = 1
     SEARCHING = 2
@@ -100,14 +112,14 @@ class ModemNetworkRegState:
     REGISTERED_CSFB_NOT_PREFERRED_ROAMING = 10
     REGISTERED_TEMP_CONN_LOSS = 80
 
-# @brief The CME error reporting methods.
-class ModemCMEErrorReportsType:
+class ModemCMEErrorReportsType(Enum):
+    """Modem CME error reporting methods."""
     OFF = 0
     NUMERIC = 1
     VERBOSE = 2
     
-# @brief This CEREG unsolicited reporting methods.
-class ModemCEREGReportsType:
+class ModemCEREGReportsType(Enum):
+    """CEREG unsolicited reporting methods."""
     OFF = 0
     ENABLED = 1
     ENABLED_WITH_LOCATION = 2
@@ -115,8 +127,8 @@ class ModemCEREGReportsType:
     ENABLED_UE_PSM_WITH_LOCATION= 4
     ENABLED_UE_PSM_WITH_LOCATION_EMM_CAUSE = 5
 
-# @brief All supported CME error codes.
-class ModemCmeError:
+class ModemCMEError(Enum):
+    """CME error codes."""
     EQUIPMENT_FAILURE = 0
     NO_CONNECTION = 1
     PHONE_ADAPTER_LINK_RESERVED = 2
@@ -167,11 +179,11 @@ class ModemCmeError:
     HW_CONFIG_FAILED_GENERAL_ERROR = 540
     HW_CONFIG_FAILED_INVALID_FUNCTION = 541
     HW_CONFIG_FAILED_INVALID_FUNCTION_PARAM = 542
-    HW_CONFIG_FAILED_PINS_ALREADY_ASSIGNED = 543
+    HW_CONFIG_FAILED_PINS_ALREADY_ASSIGNED = 54
 
 
-"""The different states the raw RX response parser can be in."""
-class ModemRspParserState:
+class ModemRspParserState(Enum):
+    """RAW RX response parser states."""
     START_CR = 0
     START_LF = 1
     DATA = 2
@@ -183,33 +195,32 @@ class ModemRspParserState:
     RAW = 8
 
 
-"""The types of command supported by the queue task."""
-class ModemCmdType:
+class ModemCmdType(Enum):
+    """Queue task supported commands."""
     TX = 0
     TX_WAIT = 1
     WAIT = 2
     DATA_TX_WAIT = 3
 
 
-"""The different states the AT command FSM can be in."""
-class ModemCmdState:
+class ModemCmdState(Enum):
+    """AT command FSM supported states."""
     NEW = 2
     PENDING = 3
     RETRY_AFTER_ERROR = 4
     COMPLETE = 6
 
 
-"""This enumeration represents the different states a PDP context can be in."""
-class ModemPDPContextState:
+class ModemPDPContextState(Enum):
+    """PDP context states."""
     FREE = 0
     RESERVED = 1
     INACTIVE = 2
     ACTIVE = 3
     ATTACHED = 4
 
-
-"""The supported packet data protocol types."""
-class ModemPDPType:
+class ModemPDPType(Enum):
+    """Supported packet data protocol types."""
     X25 = 0
     IP = 1
     IPV6 = 2
@@ -218,9 +229,8 @@ class ModemPDPType:
     PPP = 5
     NON_IP = 6
 
-
-"""The supported packet data protocol header compression mechanisms."""
-class ModemPDPHeaderCompression:
+class ModemPDPHeaderCompression(Enum):
+    """Supported packet data protocol header compression mechanisms."""
     OFF = 0
     ON = 1
     RFC1144 = 2
@@ -228,46 +238,40 @@ class ModemPDPHeaderCompression:
     RFC3095 = 4
     UNSPEC = 99
 
-
-"""The supported packet data protocol data compression mechanisms"""
-class ModemPDPDataCompression:
+class ModemPDPDataCompression(Enum):
+    """Supported packet data protocol data compression mechanisms."""
     OFF = 0
     ON = 1
     V42BIS = 2
     V44 = 3
     UNSPEC = 99
 
-
-"""The supported packet data protocol IPv4 address allocation methods."""
-class ModemPDPIPv4AddrAllocMethod:
+class ModemPDPIPv4AddrAllocMethod(Enum):
+    """Supported packet data protocol IPv4 address allocation methods."""
     NAS = 0
     DHCP = 1
 
-
-"""The supported packet data protocol request types."""
-class ModemPDPRequestType:
+class ModemPDPRequestType(Enum):
+    """Supported packet data protocol request types."""
     NEW_OR_HANDOVER = 0
     EMERGENCY = 1
     NEW = 2
     HANDOVER = 3
     EMERGENCY_HANDOVER = 4
 
-
-"""The supported types of P-CSCF discovery in a packet data context."""
-class ModemPDPPCSCFDiscoveryMethod:
+class ModemPDPPCSCFDiscoveryMethod(Enum):
+    """Supported types of P-CSCF discovery in a packet data context."""
     AUTO = 0
     NAS = 1
 
-
-"""The authentication protocol used within the PDP context."""
-class ModemPDPAuthProtocol:
+class ModemPDPAuthProtocol(Enum):
+    """PDP context authentication protocols."""
     NONE = 0
     PAP = 1
     CHAP = 2
 
-
-"""This enum represents the different implemented response types."""
-class ModemRspType:
+class ModemRspType(Enum):
+    """Implemented response types."""
     NO_DATA = 0
     OP_STATE = 1
     RAT = 2
@@ -286,24 +290,21 @@ class ModemRspType:
     COAP = 15
     REG_STATE = 50
 
-
-"""The supported network selection modes."""
-class ModemNetworkSelMode:
+class ModemNetworkSelMode(Enum):
+    """Support network selection modes."""
     AUTOMATIC = 0
     MANUAL = 1
     UNREGISTER = 2
     MANUAL_AUTO_FALLBACK = 4
 
-
-"""The supported netowrk operator formats. """
-class ModemOperatorFormat:
+class ModemOperatorFormat(Enum):
+    """Supported netowrk operator formats."""
     LONG_ALPHANUMERIC = 0
     SHORT_ALPHANUMERIC = 1
     NUMERIC = 2
-    
 
-"""The state of a socket."""
-class ModemSocketState:
+class ModemSocketState(Enum):
+    """State of a socket."""
     FREE = 0
     RESERVED = 1
     CREATED = 2
@@ -312,103 +313,100 @@ class ModemSocketState:
     LISTENING = 5
     CLOSED = 6
 
-
-"""The state of a http context."""
-class ModemHttpContextState:
+class ModemHttpContextState(Enum):
+    """State of an http context."""
     IDLE = 0
     EXPECT_RING = 1
     GOT_RING = 2
 
-
-"""The protocol that us used by the socket."""
-class ModemSocketProto:
+class ModemSocketProto(Enum):
+    """Protocol used by the socket."""
     TCP = 0
     UDP = 1
 
-
-"""Possible methodologies on how a socket handles data from other 
- hosts besides the IP-address and remote port it is configured for.
-"""
-class ModemSocketAcceptAnyRemote:
+class ModemSocketAcceptAnyRemote(Enum):
+    """
+    Possible methodologies on how a socket handles data from other hosts
+    besides the IP-address and remote port it is configured for.
+    """
     DISABLED = 0
     REMOTE_RX_ONLY = 1
     REMOTE_RX_AND_TX = 2
 
-
-"""In case of an NB-IoT connection the RAI (Release Assistance Information).
-The RAI is used to indicate to the network (MME) if there 
-are going to be other transmissions or not.
-"""
-class ModemRai:
+class ModemRai(Enum):
+    """
+    In case of an NB-IoT connection the RAI (Release Assistance Information).
+    The RAI is used to indicate to the entwork (MME) if there are going to be
+    other transmissions or not
+    """
     NO_INFO = 0
     NO_FURTHER_RXTX_EXPECTED = 1
     ONLY_SINGLE_RXTX_EXPECTED = 2
 
-
-"""The GNSS location modus. When set to 'on-device location' the GNSS 
-subsystem will compute position and speed and estimate the error on these
-parameters.
-"""
-class ModemGNSSLocMode:
+class ModemGNSSLocMode(Enum):
+    """
+    The GNSS location modus. When set to 'on-device location', the GNSS sybsystem
+    will compute position and speed and estimate the error on these parameters.
+    """
     ON_DEVICE_LOCATION = 0
 
-
-"""The possible sensitivity settings use by Walter's GNSS receiver. This
-sets the amount of time that the receiver is actually on. More sensitivity
-requires more power.
-"""
-class ModemGNSSSensMode:
+class ModemGNSSSensMode(Enum):
+    """
+    The possible sensitivity settings use by Walter's GNSS receiver.
+    his sets the amount of time that the receiver is actually on.
+    More sensitivity requires more power.
+    """
     LOW = 1
     MEDIUM = 2
     HIGH = 3
 
-
-"""The possible GNSS acquisition modes. In a cold or warm start situation 
- Walter has no clue where he is on earth. In hot start mode Walter must know
- where he is within 100km. When no ephemerides are available and/or the time
- is not known cold start will be used automatically.
-"""
-class ModemGNSSAcqMode:
+class ModemGNSSAcqMode(Enum):
+    """
+    The possible GNSS acquisition modes.
+    In a cold or warm start situation Walter has no clue where he is on earth.
+    In hot start mode Walter must know where he is within 100km.
+    When no ephemerides are available and/or the time is not known cold start will be used automatically.
+    """
     COLD_WARM_START = 0
     HOT_START = 1
 
 
-"""The supported actions that Walter's GNSS can execute."""
-class ModemGNSSAction:
+class ModemGNSSAction(Enum):
+    """Supported actions that Walter's GNSS can execute."""
     GET_SINGLE_FIX = 0
     CANCEL = 1
 
 
-"""The possible GNSS fix statuses"""
-class ModemGNSSFixStatus:
+class ModemGNSSFixStatus(Enum):
+    """GNSS fix statuses."""
     READY = 0
     STOPPED_BY_USER = 1
     NO_RTC = 2
     LTE_CONCURRENCY = 3
 
 
-"""The possible GNSS assistance types."""
-class ModemGNSSAssistanceType:
+class ModemGNSSAssistanceType(Enum):
+    """GNSS assistance types."""
     ALMANAC = 0
     REALTIME_EPHEMERIS = 1
     PREDICTED_EPHEMERIS = 2
 
 
-"""The possible commands for a HTTP query operation."""
-class ModemHttpQueryCmd:
+class ModemHttpQueryCmd(Enum):
+    """Possible commands for an HTTP query operation."""
     GET = 0
     HEAD = 1
     DELETE = 2
 
 
-"""The possible commands for a HTTP send operation."""
-class ModemHttpSendCmd:
+class ModemHttpSendCmd(Enum):
+    """Possible commands for an HTTP send operation."""
     POST = 0
     PUT = 1
 
 
-"""The possible post params for a HTTP send operation."""
-class ModemHttpPostParam:
+class ModemHttpPostParam(Enum):
+    """Possible post params for a HTTP send operation."""
     URL_ENCODED = 0
     TEXT_PLAIN = 1
     OCTET_STREAM = 2
@@ -418,120 +416,128 @@ class ModemHttpPostParam:
 
 
 class ModemGNSSSat:
-    """This class contains the number of satellites and the signal strength.
+    """
+    Contains the number of satellites and the signal strength.
     """
     def __init__(self, sat_no, signal_strength):
-        """The number of the satellite."""
+        """
+        The number of the satellite.
+
+        :param sat_no:
+        :param signal_strength: The CN0 signal strength of the sattellite in dB/Hz, minimum is 30dB/Hz
+        """
         self.sat_no = sat_no
-        """The CN0 signal strength of the satellite in dB/Hz. The minimum
-        required signal strength is 30dB/Hz."""
         self.signal_strength = signal_strength
 
 
 class ModemGNSSFix:
-    """This structure represents a GNSS fix.
+    """
+    Structure represents a GNSS fix.
     """
     def __init__(self):
-        """The status of the fix."""
         self.status = ModemGNSSFixStatus.READY
+        """The status of the fix."""
         
-        """The id of the fix, always in [0-9]."""
         self.fix_id = 0
+        """The id of the fix, always in [0-9]."""
         
-        """The time of the fix as a unix timestamp."""
         self.timestamp = 0
+        """The time of the fix as a unix timestamp."""
         
-        """The number of milliseconds used to get the fix."""
         self.time_to_fix = 0
+        """The number of milliseconds used to get the fix."""
         
-        """The estimated horizontal confidence of the fix in meters."""
         self.estimated_confidence = 20000000.0
+        """The estimated horizontal confidence of the fix in meters."""
         
-        """The latitude of the fix."""
         self.latitude = 0.0
+        """The latitude of the fix."""
         
-        """The longitude of the fix"""
         self.longitude = 0.0
+        """The longitude of the fix"""
         
-        """The height above sea level."""
         self.height = 0.0
+        """The height above sea level."""
         
-        """The speed in northern direction in meters per second"""
         self.north_speed = 0.0
+        """The speed in northern direction in meters per second"""
         
-        """The speed in eastern direction in meters per second."""
         self.east_speed = 0.0
+        """The speed in eastern direction in meters per second."""
         
-        """The downwards speed in meters per second"""
         self.down_speed = 0.0
+        """The downwards speed in meters per second"""
         
-        """Satellite numbers and reception strength."""
         self.sats = []
+        """Satellite numbers and reception strength."""
 
 
 class ModemGNSSAssistanceTypeDetails:
-    """This class represents the details of a certain GNSS assistance"""
+    """Represents the details of a certain GNSS assistance."""
     def __init__(self):
-        """True when assistance data is available."""
         self.available = False
+        """True when assistance data is available."""
         
-        """The number of seconds since the last update of this type of 
-        assistance data
-        """
         self.last_update = 0
+        """The number of seconds since the last update of this type of assistance data"""
         
-        """The number of seconds before this type of assistance data is available"""
         self.time_to_update = 0
+        """The number of seconds before this type of assistance data is available"""
         
-        """The number of seconds after which this type of assistance data
-        expires and cannot be used by the GNSS system."""
         self.time_to_expire = 0
+        """
+        The number of seconds after which this type of assistance data
+        expires and cannot be used by the GNSS system.
+        """
 
 
 class ModemGNSSAssistance:
     def __init__(self):
-        """Almanac data details, this is not needed when real-time ephemeris
-        data is available"""
         self.almanac = ModemGNSSAssistanceTypeDetails()
+        """
+        Almanac data details, this is not needed when real-time ephemeris
+        data is available
+        """
         
-        """Real-time ephemeris data details. Use this kind of assistance 
-        data for the fastest and most power efficient GNSS fix."""
         self.realtime_ephemeris = ModemGNSSAssistanceTypeDetails() 
+        """
+        Real-time ephemeris data details. Use this kind of assistance 
+        data for the fastest and most power efficient GNSS fix.
+        """
 
-        """Predicted ephemeris data details."""
         self.predicted_ephemeris = ModemGNSSAssistanceTypeDetails() 
+        """Predicted ephemeris data details."""
  
 
 class ModemOperator:
-    """This class represents an operator
-    """
+    """Represents an operator"""
     def __init__(self):
-        """The format in which the operator is stored."""
         self.format = ModemOperatorFormat.LONG_ALPHANUMERIC
+        """The format in which the operator is stored."""
         
-        """The name of the operator"""
         self.name = ""
+        """The name of the operator"""
 
 
 class ModemBandSelection:
-    """This class represents a band selection for a given radio access
-    technology and operator."""
+    """Represents a band selection for a given radio access technology and operator."""
     def __init__(self):
-        """The radio access technology for which the bands are configured"""
         self.rat = ModemRat.AUTO
+        """The radio access technology for which the bands are configured"""
         
         self.net_operator = ModemOperator()
         
-        """When the bit is set the respective band is configured to be used.
+        self.bands = []
+        """
+        When the bit is set the respective band is configured to be used.
         The bands are B1, B2, B3, B4, B5, B8, B12, B13, B14, B17, B18, B19, B20, 
         B25, B26, B28, B66, B71, B85. For example to check if B1 is configured
         one must do 'bands & 0x01'
         """
-        self.bands = []
         
 
 class ModemHttpResponse:
-    """This class represents a http response."""
+    """Represents an http response."""
     def __init__(self):
         self.http_status = 0
         self.content_length = 0
@@ -540,261 +546,262 @@ class ModemHttpResponse:
 
 
 class ModemSignalQuality:
-    """This class groups the RSRQ and RSPR signal quality parameters."""
+    """Grouping the RSRQ and RSPR signal quality parameters."""
     def __init__(self):
-        """The RSRQ in 10ths of dB"""
         self.rsrq = None
+        """The RSRQ in 10ths of dB"""
 
-        """The RSPR in dBm"""
         self.rsrp = None
+        """The RSPR in dBm"""
 
 
 class ModemRsp:
-    """This class represents a response 
-    """
+    """Represents a response """
     def __init__(self):
-        """The result of the executed command."""
         self.result = ModemState.OK
+        """The result of the executed command."""
 
-        """The data type of the response"""
         self.type = ModemRspType.NO_DATA
+        """The data type of the response"""
         
-        """The network registration state of the modem."""
         self.reg_state = None
+        """The network registration state of the modem."""
         
-        """The operational state of the modem."""
         self.op_state = None
+        """The operational state of the modem."""
         
-        """The state of the SIM card"""
         self.sim_state = None
+        """The state of the SIM card"""
         
-        """The CME error received from the modem."""
         self.cme_error = None
+        """The CME error received from the modem."""
         
-        """The ID of a PDP context."""
         self.pdp_ctx_id = None
+        """The ID of a PDP context."""
         
-        """The radio access technology"""
         self.rat = None
+        """The radio access technology"""
 
-        """The RSSI of the signal in dBm"""
         self.rssi = None
+        """The RSSI of the signal in dBm"""
 
-        """Signal quality"""
         self.signal_quality = None
+        """Signal quality"""
 
-        """The band selection configuration set."""
         self.band_sel_cfg_set = None
-        
-        """The list of addresses of a cert"""
-        self.pdp_address_list = None
-        
-        """The ID of the socket."""
-        self.socket_id = None
-        
         """The band selection configuration set."""
-        self.gnss_assistance = None
         
-        """Unix timestamp of the current time and date in the modem."""
+        self.pdp_address_list = None
+        """The list of addresses of a cert"""
+        
+        self.socket_id = None
+        """The ID of the socket."""
+        
+        self.gnss_assistance = None
+        """The band selection configuration set."""
+        
         self.clock = None
+        """Unix timestamp of the current time and date in the modem."""
 
         """ TODO  mqtt_data"""
 
-        """HTTP response"""
         self.http_response = None
+        """HTTP response"""
 
         """ TODO  coap_response"""
 
 
 class ModemCmd:
-    """This structure represents an AT command to be added to the command queue.
-    """
+    """Structure epresenting an AT command to be added to the command queue."""
     def __init__(self):
-        """The current state of the command."""
         self.state = ModemCmdState.NEW
+        """The current state of the command."""
         
-        """The type of AT command."""
         self.type = ModemCmdType.TX_WAIT
+        """The type of AT command."""
         
-        """The AT command without the trailing \r\n."""
         self.at_cmd = b''
+        """The AT command without the trailing \r\n."""
         
-        """Pointer to the data buffer to transmit in case of a
-        WALTER_MODEM_CMD_TYPE_DATA_TX_WAIT command."""
         self.data = None
+        """
+        Pointer to the data buffer to transmit in case of a
+        WALTER_MODEM_CMD_TYPE_DATA_TX_WAIT command.
+        """
         
-        """The expected command response starting string."""
         self.at_rsp = None
+        """The expected command response starting string."""
         
-        """The maximum number of attempts to execute the command."""
         self.max_attempts = 0
+        """The maximum number of attempts to execute the command."""
         
-        """The current attempt number."""
         self.attempt = 0
+        """The current attempt number."""
         
-        """The time on which the current attempt was started."""
         self.attempt_start = 0
+        """The time on which the current attempt was started."""
         
-        """Pointer to the response object to store the command results in."""
         self.rsp = None
+        """Pointer to the response object to store the command results in."""
         
-        """Pointer to a function which is called before the command user
-        callback is called. This pointer is used to manage internal library 
-        state."""
         self.complete_handler = None
+        """
+        Pointer to a function which is called before the command user callback is called.
+        This pointer is used to manage internal library 
+        state.
+        """
         
-        """Pointer to an argument used by the complete_handler."""
         self.complete_handler_arg = None
+        """Pointer to an argument used by the complete_handler."""
 
-        """Event for letting main user program wait on a blocking call"""
         self.event = Event()
+        """Event for letting main user program wait on a blocking call"""
 
 
 class ModemATParserData:
     def __init__(self):
-        """The FSM state the parser currently is in."""
         self.state = ModemRspParserState.START_CR
+        """The FSM state the parser currently is in."""
         
-        """The buffer currently used by the parser."""
         self.line = b''
+        """The buffer currently used by the parser."""
 
-        """In raw data chunk parser state, we remember nr expected bytes"""
         self.raw_chunk_size = 0
+        """In raw data chunk parser state, we remember nr expected bytes"""
 
 
 class ModemTaskQueueItem:
-    """This class represents an item in the task queue.
-    """
+    """Represents an item in the task queue."""
     def __init__(self):
-        """Pointer to an AT response or None when this is an AT command"""
         self.rsp = None 
+        """Pointer to an AT response or None when this is an AT command"""
         
-        """The AT command pointer in case rsp is None"""
         self.cmd = None
+        """The AT command pointer in case rsp is None"""
 
 
 class ModemPDPContext:
-    """This class represents a PDP context."""
+    """Represents a PDP context."""
     def __init__(self, id):
-        """The state of the PDP context."""
         self.state = ModemPDPContextState.FREE
+        """The state of the PDP context."""
         
-        """The ID of this PDP data context."""
         self.id = id
+        """The ID of this PDP data context."""
         
-        """The type of packet data protocol."""
         self.type = ModemPDPType.IP
+        """The type of packet data protocol."""
         
-        """"The APN to use"""
         self.apn = ""
+        """"The APN to use"""
         
-        """The FDP address od this context."""
         self.pdp_address = ""
+        """The FDP address od this context."""
         
-        """A secondary IPv6 PDPaddress when dual stack is enabled."""
         self.pdp_address2 = ""
+        """A secondary IPv6 PDPaddress when dual stack is enabled."""
         
-        """The header compression used in the PDP context"""
         self.header_comp = ModemPDPHeaderCompression.UNSPEC
+        """The header compression used in the PDP context"""
         
-        """The data compression method used in the PDP context"""
         self.data_comp = ModemPDPDataCompression.UNSPEC
+        """The data compression method used in the PDP context"""
         
-        """The IPv4 address allocation method used in the PDP context"""
         self.ipv4_alloc_method = ModemPDPIPv4AddrAllocMethod.NAS
+        """The IPv4 address allocation method used in the PDP context"""
         
-        """The packet data protocol request type"""
         self.request_type = ModemPDPRequestType.NEW_OR_HANDOVER
+        """The packet data protocol request type"""
         
-        """The method to use for p-CSCF discovery"""
         self.pcscf_method = ModemPDPPCSCFDiscoveryMethod.AUTO
+        """The method to use for p-CSCF discovery"""
         
+        self.for_IMCN = False
         """Flag indicating if the PDP context is used for IM CN 
         subsystem-related signalling"""
-        self.for_IMCN = False
         
+        self.use_NSLPI = False
         """Flag indicating if the PDP context should use Non-Access Stratum 
         (NAS) Signalling Low Priority Indication (NSLPI)"""
-        self.use_NSLPI = False
         
-        """Flag indicating if the Protocol Configuration Options (PCO) should be protected"""
         self.use_secure_PCO = False
+        """Flag indicating if the Protocol Configuration Options (PCO) should be protected"""
         
+        self.use_NAS_ipv4_MTU_discovery = False
         """Flag indicating if NAS signalling should be used to discover the 
         IPv4 MTU"""
-        self.use_NAS_ipv4_MTU_discovery = False
         
+        self.use_local_addr_ind = False
         """Flag indicating if the system supports local IP addresses in the 
         Traffic Flow Template (TFT)"""
-        self.use_local_addr_ind = False
         
+        self.use_NAS_non_IPMTU_discovery = False
         """Flag indicating if NAS should be used to discover the MTU of non-IP
         PDP contexts"""
-        self.use_NAS_non_IPMTU_discovery = False
         
-        """"The authentication protocol used to activate the PDP"""
         self.auth_proto = ModemPDPAuthProtocol.NONE
+        """"The authentication protocol used to activate the PDP"""
         
-        """The user to authenticate."""
         self.auth_user = ""
+        """The user to authenticate."""
         
-        """The password to authenticate"""
         self.auth_pass = ""
+        """The password to authenticate"""
 
 
 class ModemSocket:
-    """This class represents a socket."""
+    """Represents a socket."""
     def __init__(self, id):
-        """The state of the socket."""
         self.state = ModemSocketState.FREE
+        """The state of the socket."""
 
-        """The socket identifier."""
         self.id = id
+        """The socket identifier."""
 
-        """The PDP context ID in which the socket is created."""
         self.pdp_context_id = 1
+        """The PDP context ID in which the socket is created."""
 
-        """Maximum transmission unit used by the TCP/UDP/IP stack."""
         self.mtu = 300
+        """Maximum transmission unit used by the TCP/UDP/IP stack."""
 
-        """The socket exchange timeout in seconds."""
         self.exchange_timeout = 90
+        """The socket exchange timeout in seconds."""
 
-        """The connection timeout in seconds."""
         self.conn_timeout = 60
+        """The connection timeout in seconds."""
 
+        self.send_delay_ms = 5000
         """The number of milliseconds after which the transmit buffer is 
         effectively transmitted."""
-        self.send_delay_ms = 5000
 
-        """The protocol to use."""
         self.protocol = ModemSocketProto.UDP
+        """The protocol to use."""
 
+        self.accept_any_remote = ModemSocketAcceptAnyRemote.DISABLED
         """How to handle data from other hosts than the remote host and port 
         that the socket is configured for."""
-        self.accept_any_remote = ModemSocketAcceptAnyRemote.DISABLED
 
+        self.remote_host = ""
         """The IPv4 or IPv6 address of the remote host or a hostname in which 
         case a DNS query will be executed in the background."""
-        self.remote_host = ""
 
-        """The remote port to connect to."""
         self.remote_port = 0
+        """The remote port to connect to."""
 
+        self.local_port = 0
         """In case of UDP, this is the local port number to which the remote 
         host can send an answer."""
-        self.local_port = 0
 
 
 class ModemGnssFixWaiter:
-    """This class represents a wait_for_gnss_fix call that is waiting for data"""
+    """Represents a wait_for_gnss_fix call that is waiting for data"""
     def __init__(self):
         self.event = Event()
         self.gnss_fix = None
 
 
 class ModemHttpContext:
-    """This class represents a socket."""
+    """Represents a socket."""
     def __init__(self):
         self.connected = False
         self.state = ModemHttpContextState.IDLE
