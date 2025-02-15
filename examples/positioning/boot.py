@@ -428,8 +428,8 @@ async def loop():
     data_buffer.append(0x2)
     data_buffer.extend(struct.pack('>h', (mcu_temperature + 50) * 100))
     data_buffer.append(len(gnss_fix.sats) if gnss_fix else 255)
-    data_buffer.extend(struct.pack('>f', lat))
-    data_buffer.extend(struct.pack('>f', lon))
+    data_buffer.extend(struct.pack('<f', lat))
+    data_buffer.extend(struct.pack('<f', lon))
 
     if hasattr(modem_rsp, 'cell_information'):
         data_buffer.append(modem_rsp.cell_information.cc >> 8)
