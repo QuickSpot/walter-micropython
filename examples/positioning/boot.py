@@ -128,14 +128,14 @@ async def lte_connect(_retry: bool = False) -> bool:
         return True
     
     if (await modem.set_op_state(ModemOpState.FULL)).result != ModemState.OK:
-        print('│  ├─ Failed to set operational state to full')
+        print('    ↳ Failed to set operational state to full')
         return False
     
     if (await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC)).result != ModemState.OK:
-        print('│  ├─ Failed to set network selection mode to automatic')
+        print('    ↳ Failed to set network selection mode to automatic')
         return False
     
-    print('│  ├─ Waiting for network registration')
+    print('    ↳ Waiting for network registration')
     if not await wait_for_network_reg_state(
         300,
         ModemNetworkRegState.REGISTERED_HOME,
@@ -147,32 +147,32 @@ async def lte_connect(_retry: bool = False) -> bool:
             modem_rsp.result != ModemState.OK or
             (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK
         ):
-            print('│  ├─ Failed to connect using current RAT')
+            print('    ↳ Failed to connect using current RAT')
             return False
 
         if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
-            print('│  ├─ Unexpected: modem not on standby after 5 seconds')
+            print('    ↳ Unexpected: modem not on standby after 5 seconds')
             return False
         
         rat = modem_rsp.data.rat
 
         if _retry:
-            print('│  ├─ Failed to connect using LTE-M and NB-IoT, no connection possible')
+            print('    ↳ Failed to connect using LTE-M and NB-IoT, no connection possible')
             
             if rat != ModemRat.LTEM:
                 if (await modem.set_rat(ModemRat.LTEM)).result != ModemState.OK:
-                    print('│  ├─ Failed to set RAT back to *preferred* LTEM')
+                    print('    ↳ Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
             
             return False
         
-        print(f'│  ├─ Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
-        print(f'│  ├─ Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
+        print(f'    ↳ Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
+        print(f'    ↳ Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
 
         next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
 
         if (await modem.set_rat(next_rat)).result != ModemState.OK:
-            print('│  ├─ Failed to switch RAT')
+            print('    ↳ Failed to switch RAT')
             return False
         
         await modem.reset()
@@ -193,13 +193,13 @@ async def lte_disconnect() -> bool:
         return True
     
     if (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK:
-        print('│  ├─ Failed to set operational state to minimum')
+        print('    ↳ Failed to set operational state to minimum')
         return False
 
     if await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
         return True
     
-    print('│  ├─ Failed to disconnect, modem network registration state still not "NOT SEARCHING" after 5 seconds')
+    print('    ↳ Failed to disconnect, modem network registration state still not "NOT SEARCHING" after 5 seconds')
     return False
 
 async def lte_transmit(address: str, port: int, buffer: bytearray) -> bool:
@@ -215,30 +215,30 @@ async def lte_transmit(address: str, port: int, buffer: bytearray) -> bool:
 
     :return bool: True on success, False on failure
     """
-    print('├─ Connecting to LTE')
+    print('  ↳ Connecting to LTE')
     if not await lte_connect():
         return False
 
     if (await modem.create_socket()).result != ModemState.OK:
-        print('├─ Failed to create a new UDP socket')
+        print('  ↳ Failed to create a new UDP socket')
         return False
     
     if (await modem.config_socket()).result != ModemState.OK:
-        print('├─ Failed to configure UDP socket')
+        print('  ↳ Failed to configure UDP socket')
         return False
     
     if (await modem.connect_socket(address, port, port)).result != ModemState.OK:
-        print('├─ Failed to connect to UDP socket')
+        print('  ↳ Failed to connect to UDP socket')
         return False
     
-    print(f'├─ Connected to UDP server: {address}:{port}')
+    print(f'  ↳ Connected to UDP server: {address}:{port}')
 
     if (await modem.socket_send(buffer, ModemRai.NO_INFO, 1)).result != ModemState.OK:
-        print('├─ Failed to transmit to UDP socket')
+        print('  ↳ Failed to transmit to UDP socket')
         return False
     
     if (await modem.close_socket()).result != ModemState.OK:
-        print('├─ Failed to close UDP socket')
+        print('  ↳ Failed to close UDP socket')
         return False
     
     return True
@@ -260,14 +260,14 @@ def check_assistance_data(modem_rsp):
     update_ephemeris = (not ephemeris.available) or (ephemeris.time_to_update <= 0)
 
     if almanac.available:
-        print(f'│  ├─ Almanac data is available and should be updated within {almanac.time_to_update}')
+        print(f'    ↳ Almanac data is available and should be updated within {almanac.time_to_update}')
     else:
-        print('│  ├─ Almanac data is not available.')
+        print('    ↳ Almanac data is not available.')
 
     if ephemeris.available:
-        print(f'│  ├─ Real-time ephemeris data is available and should be updated within {ephemeris.time_to_update}')
+        print(f'    ↳ Real-time ephemeris data is available and should be updated within {ephemeris.time_to_update}')
     else:
-        print('│  ├─ Real-time ephemeris data is not available.')
+        print('    ↳ Real-time ephemeris data is not available.')
 
     return update_almanac, update_ephemeris
 
@@ -282,26 +282,26 @@ async def update_gnss_assistance():
     """
     modem_rsp: ModemRsp = await modem.get_clock()
     if modem_rsp.result != ModemState.OK:
-        print('├─ Failed to retrieve modem time')
+        print('  ↳ Failed to retrieve modem time')
         return False
     
     if not modem_rsp.clock:
-        print('├─ Modem time is invalid, connecting to LTE')
+        print('  ↳ Modem time is invalid, connecting to LTE')
         if not await lte_connect():
-            print('├─ Failed to connect to LTE')
+            print('  ↳ Failed to connect to LTE')
             return False
         
     for i in range(5):
         modem_rsp = await modem.get_clock()
         if modem_rsp.result != ModemState.OK:
-            print('├─ Failed to retrieve modem time')
+            print('  ↳ Failed to retrieve modem time')
             return False
         
         if modem_rsp.clock:
             print(f'  ↳ Synchronised clock with network: {modem_rsp.clock}')
             break
         elif i == 4:
-            print('├─ Could not sync time with network')
+            print('  ↳ Could not sync time with network')
 
         await asyncio.sleep(.5)
 
@@ -310,30 +310,32 @@ async def update_gnss_assistance():
         modem_rsp.result != ModemState.OK or 
         modem_rsp.type != ModemRspType.GNSS_ASSISTANCE_DATA
     ):
-        print('├─ Failed to request GNSS assistance status')
+        print('  ↳ Failed to request GNSS assistance status')
         return False
     
     update_almanac, update_ephemeris = check_assistance_data(modem_rsp)
     
     if update_almanac:
+        print('  ↳ Updating Almanac data')
         if not await lte_connect():
-            print('├─ Failed to connect to LTE network')
+            print('  ↳ Failed to connect to LTE network')
             return False
         
         if ((await modem.update_gnss_assistance(ModemGNSSAssistanceType.ALMANAC)).result
             != ModemState.OK):
-            print('├─ Failed to update almanac data')
+            print('  ↳ Failed to update almanac data')
             return False
         
     if update_ephemeris:
+        print('  ↳ Updating Ephemeris data')
         if not await lte_connect():
-            print('├─ Failed to connect to LTE network')
+            print('  ↳ Failed to connect to LTE network')
             return False
         
         if (
             (await modem.update_gnss_assistance(ModemGNSSAssistanceType.REALTIME_EPHEMERIS)).result
             != ModemState.OK):
-            print('├─ Failed to update ephemeris data')
+            print('  ↳ Failed to update ephemeris data')
             return False
         
     return True
