@@ -361,21 +361,25 @@ async def loop():
     gnss_fix = None
     for i in range(5):
         if i > 0:
-            print('trying again...')
+            print(f'  ↳ trying again, run: {i+1}/5')
         await lte_disconnect()
         modem_rsp: ModemRsp = await modem.perform_gnss_action(ModemGNSSAction.GET_SINGLE_FIX)
         if modem_rsp.result != ModemState.OK:
-            print('Failed to request GNSS fix', ModemCMEError.get_value_name(modem_rsp.cme_error))
+            print('  ↳ Failed to request GNSS fix', ModemCMEError.get_value_name(modem_rsp.cme_error))
             continue
         
-        print('Requested GNSS fix')
-        print('Waiting for GNSS fix')
+        print('  ↳ Requested GNSS fix')
+        print('  ↳ Waiting for GNSS fix')
         gnss_fix = await modem.wait_for_gnss_fix()
 
-        if gnss_fix.estimated_confidence > MAX_GNSS_CONFIDENCE:
-            print(f'GNSS fix confidence exceeds max confidence of {MAX_GNSS_CONFIDENCE}')
-            gnss_fix = None
+        if gnss_fix.estimated_confidence <= MAX_GNSS_CONFIDENCE:
+            print(f'  ↳ Fix success, estimated confidence: {gnss_fix.estimated_confidence}')
             break
+
+    if gnss_fix.estimated_confidence > MAX_GNSS_CONFIDENCE:
+        print(f'  ↳ GNSS fix confidence ({gnss_fix.estimated_confidence:.2f}) exceeds max confidence of {MAX_GNSS_CONFIDENCE}')
+        print('  ↳ Not accurate enough, values will not be used')
+        
 
     if gnss_fix != None:
         above_threshold = 0
