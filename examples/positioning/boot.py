@@ -298,8 +298,8 @@ async def update_gnss_assistance():
             return False
         
         if modem_rsp.clock:
-            print(f'├─ Synchronised clock with network: {modem_rsp.clock}')
-            return True
+            print(f'  ↳ Synchronised clock with network: {modem_rsp.clock}')
+            break
         elif i == 4:
             print('├─ Could not sync time with network')
 
