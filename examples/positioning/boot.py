@@ -344,7 +344,7 @@ async def update_gnss_assistance():
     return True
 
 async def setup():
-    print('Walter Positioning Demo Sketch')
+    print('Walter Positioning Demo')
     print('---------------')
     print('Find your walter at: https://walterdemo.quickspot.io/')
     print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode(), end='\n\n')
