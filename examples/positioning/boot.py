@@ -35,9 +35,9 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import asyncio
-import sys
 import esp32
 import network
+import sys
 import struct
 import ubinascii
 
@@ -46,17 +46,17 @@ from walter import (
 )
 
 from _walter import (
-    ModemRat,
+    ModemCMEError,
+    ModemGNSSAction,
+    ModemGNSSAssistanceType,
+    ModemNetworkRegState,
+    ModemNetworkSelMode,
+    ModemOpState,
     ModemRai,
+    ModemRat,
     ModemRsp,
     ModemRspType,
-    ModemNetworkRegState,
-    ModemState,
-    ModemOpState,
-    ModemNetworkSelMode,
-    ModemGNSSAssistanceType,
-    ModemGNSSAction,
-    ModemCMEError
+    ModemState
 )
 
 CELL_APN = ''
