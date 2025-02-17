@@ -515,7 +515,7 @@ class Modem:
             # first band selection
             if cmd.rsp.type != _walter.ModemRspType.BANDSET_CFG_SET:
                 cmd.rsp.type = _walter.ModemRspType.BANDSET_CFG_SET
-                cmd.rsp.band_sel_cfg_set = []
+                cmd.rsp.band_sel_cfg_list = []
 
             bsel = _walter.ModemBandSelection()
 
@@ -540,7 +540,7 @@ class Modem:
             else:
                 bsel.bands = []
 
-            cmd.rsp.band_sel_cfg_set.append(bsel)
+            cmd.rsp.band_sel_cfg_list.append(bsel)
 
         elif at_rsp.startswith("+CPIN: "):
             if cmd is None:

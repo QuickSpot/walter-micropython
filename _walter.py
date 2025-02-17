@@ -536,7 +536,7 @@ class ModemBandSelection:
         
         self.net_operator = ModemOperator()
         
-        self.bands = []
+        self.bands: list[int] = []
         """
         When the bit is set the respective band is configured to be used.
         The bands are B1, B2, B3, B4, B5, B8, B12, B13, B14, B17, B18, B19, B20, 
@@ -567,57 +567,59 @@ class ModemSignalQuality:
 class ModemRsp:
     """Represents a response """
     def __init__(self):
-        self.result = ModemState.OK
+        self.result: ModemState | None = ModemState.OK
         """The result of the executed command."""
 
-        self.type = ModemRspType.NO_DATA
+        self.type: ModemRspType | None = ModemRspType.NO_DATA
         """The data type of the response"""
         
-        self.reg_state = None
+        self.reg_state: ModemNetworkRegState | None = None
         """The network registration state of the modem."""
         
-        self.op_state = None
+        self.op_state: ModemOpState | None = None
         """The operational state of the modem."""
         
-        self.sim_state = None
+        self.sim_state: ModemSimState | None = None
         """The state of the SIM card"""
         
-        self.cme_error = None
+        self.cme_error: ModemCMEError | None = None
         """The CME error received from the modem."""
         
-        self.pdp_ctx_id = None
+        self.pdp_ctx_id: int | None = None
         """The ID of a PDP context."""
         
-        self.rat = None
+        self.rat: int | None = None
         """The radio access technology"""
 
-        self.rssi = None
+        self.rssi: int | None = None
         """The RSSI of the signal in dBm"""
 
-        self.signal_quality = None
+        self.signal_quality: ModemSignalQuality | None = None
         """Signal quality"""
 
-        self.band_sel_cfg_set = None
+        self.band_sel_cfg_list: list[ModemBandSelection] | None = None
         """The band selection configuration set."""
         
-        self.pdp_address_list = None
+        self.pdp_address_list: list | None = None
         """The list of addresses of a cert"""
         
-        self.socket_id = None
+        self.socket_id: int | None = None
         """The ID of the socket."""
         
-        self.gnss_assistance = None
+        self.gnss_assistance: ModemGNSSAssistance | None = None
         """The band selection configuration set."""
         
-        self.clock = None
+        self.clock: float | None = None
         """Unix timestamp of the current time and date in the modem."""
 
         """ TODO  mqtt_data"""
 
-        self.http_response = None
+        self.http_response: ModemHttpResponse | None = None
         """HTTP response"""
 
         """ TODO  coap_response"""
+
+        self.cell_information: ModemCellInformation | None = None
 
 
 class ModemCmd:

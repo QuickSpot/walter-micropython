@@ -154,10 +154,7 @@ async def lte_connect(_retry: bool = False) -> bool:
             print('    ↳ Unexpected: modem not on standby after 5 seconds')
             return False
         
-        if not hasattr(modem_rsp, 'data'):
-            print('    ↳ Unexpected: no property data on modem_rsp')
-        
-        rat = modem_rsp.data.rat
+        rat = modem_rsp.rat
 
         if _retry:
             print('    ↳ Failed to connect using LTE-M and NB-IoT, no connection possible')
@@ -246,7 +243,7 @@ async def lte_transmit(address: str, port: int, buffer: bytearray) -> bool:
     
     return True
 
-def check_assistance_data(modem_rsp):
+def check_assistance_data(modem_rsp) -> tuple[bool, bool]:
     """
     Check the assistance data in the modem response.
 
@@ -274,7 +271,7 @@ def check_assistance_data(modem_rsp):
 
     return update_almanac, update_ephemeris
 
-async def update_gnss_assistance():
+async def update_gnss_assistance() -> bool:
     """
     This function will update GNNS assistance data when needed.
 
@@ -344,7 +341,7 @@ async def update_gnss_assistance():
     return True
 
 async def setup():
-    print('Walter Positioning Demo')
+    print('Walter Positioning Example')
     print('---------------')
     print('Find your walter at: https://walterdemo.quickspot.io/')
     print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode(), end='\n\n')
@@ -415,7 +412,7 @@ async def loop():
     if not await lte_connect():
         print('Failed to connect to LTE')
 
-    modem_rsp = await modem.get_cell_information()
+    modem_rsp: ModemRsp = await modem.get_cell_information()
     if modem_rsp.result != ModemState.OK:
         print('Failed to request cell information', ModemCMEError.get_value_name(modem_rsp.cme_error))
     else:
@@ -440,7 +437,7 @@ async def loop():
     data_buffer.extend(struct.pack('<f', lat))
     data_buffer.extend(struct.pack('<f', lon))
 
-    if hasattr(modem_rsp, 'cell_information'):
+    if hasattr(modem_rsp, 'cell_information') and modem_rsp.ce:
         data_buffer.append(modem_rsp.cell_information.cc >> 8)
         data_buffer.append(modem_rsp.cell_information.cc & 0xFF)
         data_buffer.append(modem_rsp.cell_information.nc >> 8)
