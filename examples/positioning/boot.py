@@ -154,6 +154,9 @@ async def lte_connect(_retry: bool = False) -> bool:
             print('    ↳ Unexpected: modem not on standby after 5 seconds')
             return False
         
+        if not hasattr(modem_rsp, 'data'):
+            print('    ↳ Unexpected: no property data on modem_rsp')
+        
         rat = modem_rsp.data.rat
 
         if _retry:
