@@ -35,7 +35,6 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 """
 
 import asyncio
-import esp32
 import network
 import sys
 import ubinascii
@@ -45,16 +44,11 @@ from walter import (
 )
 
 from _walter import (
-    ModemCMEError,
-    ModemGNSSAction,
-    ModemGNSSAssistanceType,
     ModemNetworkRegState,
     ModemNetworkSelMode,
     ModemOpState,
-    ModemRai,
     ModemRat,
     ModemRsp,
-    ModemRspType,
     ModemState
 )
 
