@@ -61,8 +61,23 @@ from _walter import (
 
 CELL_APN = ''
 """
-The cullular Access Point Name.
-Leave blank for automatic APN detection.
+The cellular Access Point Name (APN).
+Leave blank to enable automatic APN detection, which is sufficient for most networks.
+Manually set this only if your network provider specifies a particular APN.
+"""
+
+APN_USERNAME = ''
+"""
+The username for APN authentication.
+Typically, this is not required and should be left blank.
+Only provide a username if your network provider explicitly mandates it.
+"""
+
+APN_PASSWORD = ''
+"""
+The password for APN authentication.
+This is generally unnecessary and should remain blank.
+Set a password only if it is specifically required by your network provider.
 """
 
 SERVER_ADDRESS = 'walterdemo.quickspot.io'
@@ -73,6 +88,12 @@ The address of the Walter Demo server.
 SERVER_PORT = 1999
 """
 The UDP port of the Walter Demo server.
+"""
+
+SIM_PIN = None
+"""
+Optional: Set this only if your SIM card requires a PIN for activation. 
+Most IoT SIMs do not need this.
 """
 
 PACKET_SIZE = 29
@@ -340,6 +361,21 @@ async def update_gnss_assistance() -> bool:
         
     return True
 
+async def unlock_sim() -> bool:
+    if (await modem.set_op_state(ModemOpState.NO_RF)).result != ModemState.OK:
+        print('  ↳ Failed to set operational state to: NO RF')
+        return False
+
+    # Give the modem time to detect the SIM
+    asyncio.sleep(2)
+    if (await modem.unlock_sim(pin=SIM_PIN)).result != ModemState.OK:
+        print('  ↳ Failed to unlock SIM card')
+        return False
+    else:
+        print('  ↳ SIM unlocked')
+   
+    return True
+
 async def setup():
     print('Walter Positioning Example')
     print('---------------')
@@ -348,8 +384,17 @@ async def setup():
 
     await modem.begin(debug_log=False)
 
-    if (await modem.create_PDP_context(CELL_APN)).result != ModemState.OK:
+    if SIM_PIN != None and not await unlock_sim():
+        return False
+   
+    modem_rsp = await modem.create_PDP_context(
+        apn=CELL_APN,
+        auth_user=APN_USERNAME,
+        auth_pass=APN_PASSWORD
+    )
+    if modem_rsp.result != ModemState.OK:
         print('Failed to create PDP context')
+        return False
 
     if (await modem.config_gnss()).result != ModemState.OK:
         print('Failed to configure GNSS subsystem')
@@ -437,7 +482,7 @@ async def loop():
     data_buffer.extend(struct.pack('<f', lat))
     data_buffer.extend(struct.pack('<f', lon))
 
-    if hasattr(modem_rsp, 'cell_information') and modem_rsp.ce:
+    if hasattr(modem_rsp, 'cell_information') and modem_rsp.cell_information:
         data_buffer.append(modem_rsp.cell_information.cc >> 8)
         data_buffer.append(modem_rsp.cell_information.cc & 0xFF)
         data_buffer.append(modem_rsp.cell_information.nc >> 8)
