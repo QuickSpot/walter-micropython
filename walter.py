@@ -225,7 +225,7 @@ class Modem:
         self._pdp_ctx_set = [_walter.ModemPDPContext(idx + 1) for idx in range(WALTER_MODEM_MAX_PDP_CTXTS)]
         """The list of PDP context."""
 
-        self._socket_set = [ _walter.ModemSocket(idx + 1) for idx in range(WALTER_MODEM_MAX_SOCKETS) ]
+        self._socket_list = [ _walter.ModemSocket(idx + 1) for idx in range(WALTER_MODEM_MAX_SOCKETS) ]
         """The list of sockets"""
 
         self._socket = None
@@ -694,7 +694,7 @@ class Modem:
         elif at_rsp.startswith("+SQNSH: "):
             socket_id = int(at_rsp[len('+SQNSH: '):].decode())
             try:
-                _socket = self._socket_set[socket_id - 1]
+                _socket = self._socket_list[socket_id - 1]
             except Exception as err:
                 print('walter.py - ERROR: (Modem, _process_queue_rsp; +SQNSH): ', err)
                 sys.print_exception(err)
@@ -1281,7 +1281,7 @@ class Modem:
         self._pdp_ctx = _ctx
 
         _socket = None
-        for socket in self._socket_set:
+        for socket in self._socket_list:
             if socket.state == _walter.ModemSocketState.FREE:
                 socket.state = _walter.ModemSocketState.RESERVED
                 _socket = socket
@@ -1319,7 +1319,7 @@ class Modem:
             if socket_id == -1:
                 _socket = self._socket
             else:
-                _socket = self._socket_set[socket_id - 1]
+                _socket = self._socket_list[socket_id - 1]
         except Exception as err:
             print('walter.py - ERROR: (Modem, config_socket): ', err)
             sys.print_exception(err)
@@ -1381,7 +1381,7 @@ class Modem:
             if socket_id == -1:
                 _socket = self._socket
             else:
-                _socket = self._socket_set[socket_id - 1]
+                _socket = self._socket_list[socket_id - 1]
         except Exception as err:
             print('walter.py - ERROR: (Modem, close_socket): ', err)
             sys.print_exception(err)
@@ -1406,7 +1406,7 @@ class Modem:
             if socket_id == -1:
                 _socket = self._socket
             else:
-                _socket = self._socket_set[socket_id - 1]
+                _socket = self._socket_list[socket_id - 1]
         except Exception as err:
             print('walter.py - ERROR: (Modem, socket_send): ', err)
             sys.print_exception(err)
