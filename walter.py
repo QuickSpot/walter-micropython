@@ -83,6 +83,9 @@ WALTER_MODEM_MAX_SOCKETS = 6
 WALTER_MODEM_MAX_HTTP_PROFILES = 3
 """The max nr of http profiles"""
 
+WALTER_MODEM_MAX_TLS_PROFILES = 6
+"""The maximum number of TLS profiles that the library can support"""
+
 WALTER_MODEM_OPERATOR_MAX_SIZE = 16
 """The maximum number of characters of an operator name"""
 
@@ -1506,13 +1509,77 @@ class Modem:
             b"<<<", None, complete_handler, self, _walter.ModemCmdType.TX_WAIT,
             WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
-    async def http_config_profile(self, profile_id, server_name, port = 80, use_basic_auth = False, auth_user = '', auth_pass = ''):
-        if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
+    async def http_config_profile(self,
+        profile_id: int,
+        server_address: str,
+        port: int = 80,
+        use_basic_auth: bool = False,
+        auth_user: str = '',
+        auth_pass: str = '',
+        tls_profile_id: int = None
+    ):
+        if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES or profile_id < 0:
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+        
+        if tls_profile_id and tls_profile_id > WALTER_MODEM_MAX_TLS_PROFILES:
             return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
-        return await self._run_cmd("AT+SQNHTTPCFG={},{},{},{},\"{}\",\"{}\"".format(profile_id, modem_string(server_name), port, modem_bool(use_basic_auth), auth_user, auth_pass),
-            b"OK", None, None, None, _walter.ModemCmdType.TX_WAIT,
-            WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
+        cmd = 'AT+SQNHTTPCFG={},"{}",{},{},"{}","{}"'.format(
+            profile_id, server_address, port, modem_bool(use_basic_auth),
+            auth_user, auth_pass
+        )
+
+        if tls_profile_id:
+            cmd += ',1,,,{}'.format(tls_profile_id)
+
+        return await self._run_cmd(
+            at_cmd=cmd,
+            at_rsp=b'OK',
+            data=None,
+            complete_handler=None,
+            complete_handler_arg=None,
+            cmd_type=_walter.ModemCmdType.TX_WAIT,
+            max_attempts=WALTER_MODEM_DEFAULT_CMD_ATTEMPTS
+        )
+
+    async def tls_config_profile(self,
+        profile_id: int,
+        tls_version: int,
+        tls_validation: int,
+        ca_certificate_id: int = None,
+        client_certificate_id: int = None,
+        client_private_key: int = None
+    ):
+        if profile_id > WALTER_MODEM_MAX_TLS_PROFILES or profile_id <= 0:
+            return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
+        
+        cmd = 'AT+SQNSPCFG={},{},"",{}'.format(
+                profile_id, tls_version, tls_validation, 
+        )
+
+        cmd += ','
+        if ca_certificate_id is not None:
+            cmd += f'{ca_certificate_id}'
+
+        cmd += ','
+        if client_certificate_id is not None:
+            cmd += f',{client_certificate_id}'
+        
+        cmd += ','
+        if client_private_key is not None:
+            cmd += f',{client_private_key}'
+
+        cmd += ',"","",0'
+        
+        return await self._run_cmd(
+            at_cmd=cmd,
+            at_rsp=b'OK',
+            data=None,
+            complete_handler=None,
+            complete_handler_arg=None,
+            cmd_type=_walter.ModemCmdType.TX_WAIT,
+            max_attempts=WALTER_MODEM_DEFAULT_CMD_ATTEMPTS
+        )
 
     async def http_connect(self, profile_id):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:

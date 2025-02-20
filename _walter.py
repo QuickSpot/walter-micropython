@@ -423,6 +423,20 @@ class ModemHttpPostParam(Enum):
     JSON = 4
     UNSPECIFIED = 99
 
+class ModemTlsValidation(Enum):
+    """The TLS validation policy."""
+    NONE = 0
+    CA = 1
+    URL = 4
+    URL_AND_CA = 5
+
+class ModemTlsVersion(Enum):
+    """The TLS version to use."""
+    TLS_VERSION_10 = 0
+    TLS_VERSION_11 = 1
+    TLS_VERSION_12 = 2
+    TLS_VERSION_13 = 3
+    TLS_VERSION_RESET = 255
 
 class ModemGNSSSat:
     """
