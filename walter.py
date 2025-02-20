@@ -1635,7 +1635,7 @@ class Modem:
             if result == _walter.ModemState.OK:
                 ctx.state = _walter.ModemHttpContextState.EXPECT_RING
 
-        return await self._run_cmd("AT+SQNHTTPQRY={},{},{},{}".format(profile_id, query_cmd, modem_string(uri), modem_string(extra_header_line)),
+        return await self._run_cmd("AT+SQNHTTPQRY={},{},{}{}".format(profile_id, query_cmd, modem_string(uri), f',"{extra_header_line}"' if extra_header_line else ''),
             b"OK", None, complete_handler, self._http_context_set[profile_id],
             _walter.ModemCmdType.TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
