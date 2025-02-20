@@ -641,8 +641,9 @@ class Modem:
                 cmd.rsp.type = _walter.ModemRspType.HTTP_RESPONSE
                 cmd.rsp.http_response = _walter.ModemHttpResponse()
                 cmd.rsp.http_response.http_status = self._http_context_set[self._http_current_profile].http_status
-                cmd.rsp.http_response.data = at_rsp[3:self._http_context_set[self._http_current_profile].content_length + 3]         # skip <<<
+                cmd.rsp.http_response.data = at_rsp[3:-len(b'\r\nOK\r\n')] # 3 skips: <<<
                 cmd.rsp.http_response.content_type = self._http_context_set[self._http_current_profile].content_type
+                cmd.rsp.http_response.content_length = self._http_context_set[self._http_current_profile].content_length
 
                 # the complete handler will reset the state,
                 # even if we never received <<< but got an error instead
