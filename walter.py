@@ -197,7 +197,10 @@ def static_rsp(result):
 def bytes_to_str(byte_data):
     """Convert byte data to a string."""
     if isinstance(byte_data, bytearray):
-        return byte_data.decode('utf-8', 'ignore')
+        try:
+            return byte_data.decode('utf-8', 'replace')
+        except Exception:
+            return byte_data
     return byte_data
 
 class Modem:
