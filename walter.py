@@ -259,7 +259,7 @@ class Modem:
 
         await self._task_queue.put(qitem)
 
-        self._parser_data.line = b''
+        self._parser_data.line = bytearray()
 
     def _add_at_byte_to_buffer(self, data, raw_mode_active):
         """
@@ -278,7 +278,7 @@ class Modem:
             self._parser_data.state = _walter.ModemRspParserState.END_LF
             return
 
-        self._parser_data.line += chr(data)
+        self._parser_data.line += bytes([data])
 
     async def _uart_reader(self):
         rx_stream = asyncio.StreamReader(self._uart, {})
