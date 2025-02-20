@@ -1613,7 +1613,12 @@ class Modem:
 
         return self._http_context_set[profile_id].connected
 
-    async def http_query(self, profile_id, uri, query_cmd = _walter.ModemHttpQueryCmd.GET):
+    async def http_query(self,
+        profile_id: int,
+        uri: str,
+        query_cmd: int = _walter.ModemHttpQueryCmd.GET,
+        extra_header_line: str = None
+    ):
         if profile_id >= WALTER_MODEM_MAX_HTTP_PROFILES:
             return static_rsp(_walter.ModemState.NO_SUCH_PROFILE)
 
@@ -1626,7 +1631,7 @@ class Modem:
             if result == _walter.ModemState.OK:
                 ctx.state = _walter.ModemHttpContextState.EXPECT_RING
 
-        return await self._run_cmd("AT+SQNHTTPQRY={},{},{}".format(profile_id, query_cmd, modem_string(uri)),
+        return await self._run_cmd("AT+SQNHTTPQRY={},{},{},{}".format(profile_id, query_cmd, modem_string(uri), modem_string(extra_header_line)),
             b"OK", None, complete_handler, self._http_context_set[profile_id],
             _walter.ModemCmdType.TX_WAIT, WALTER_MODEM_DEFAULT_CMD_ATTEMPTS)
 
