@@ -826,6 +826,7 @@ class ModemGnssFixWaiter:
 
 
 class ModemHttpContext:
+    # TODO: Does it?
     """Represents a socket."""
     def __init__(self):
         self.connected = False
