@@ -3,9 +3,9 @@ import time
 import sys
 
 from machine import UART
-from ..queue import Queue
+from .queue import Queue
 
-from ..enums import (
+from .enums import (
     ModemNetworkRegState,
     ModemNetworkSelMode,
     ModemOpState,
@@ -23,7 +23,7 @@ from ..enums import (
     ModemCEREGReportsType
 )
 
-from ..structs import (
+from .structs import (
     ModemOperator,
     ModemPDPContext,
     ModemSocket,
@@ -41,7 +41,7 @@ from ..structs import (
     ModemATParserData
 )
 
-from ..utils import (
+from .utils import (
     bytes_to_str,
     parse_cclk_time,
     parse_gnss_time
