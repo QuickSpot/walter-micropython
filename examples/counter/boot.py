@@ -73,6 +73,12 @@ This is generally unnecessary and should remain blank.
 Set a password only if it is specifically required by your network provider.
 """
 
+SIM_PIN = None
+"""
+Optional: Set this only if your SIM card requires a PIN for activation. 
+Most IoT SIMs do not need this.
+"""
+
 SERVER_ADDRESS = 'walterdemo.quickspot.io'
 """
 The address of the Walter Demo server.
@@ -81,12 +87,6 @@ The address of the Walter Demo server.
 SERVER_PORT = 1999
 """
 The UDP port of the Walter Demo server.
-"""
-
-SIM_PIN = None
-"""
-Optional: Set this only if your SIM card requires a PIN for activation. 
-Most IoT SIMs do not need this.
 """
 
 modem = Modem()
@@ -140,14 +140,14 @@ async def lte_connect(_retry: bool = False) -> bool:
         return True
     
     if (await modem.set_op_state(ModemOpState.FULL)).result != ModemState.OK:
-        print('  ↳ Failed to set operational state to full')
+        print('  - Failed to set operational state to full')
         return False
     
     if (await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC)).result != ModemState.OK:
-        print('  ↳ Failed to set network selection mode to automatic')
+        print('  - Failed to set network selection mode to automatic')
         return False
     
-    print('  ↳ Waiting for network registration')
+    print('  - Waiting for network registration')
     if not await wait_for_network_reg_state(
         300,
         ModemNetworkRegState.REGISTERED_HOME,
@@ -159,32 +159,32 @@ async def lte_connect(_retry: bool = False) -> bool:
             modem_rsp.result != ModemState.OK or
             (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK
         ):
-            print('  ↳ Failed to connect using current RAT')
+            print('  - Failed to connect using current RAT')
             return False
 
         if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
-            print('  ↳ Unexpected: modem not on standby after 5 seconds')
+            print('  - Unexpected: modem not on standby after 5 seconds')
             return False
         
         rat = modem_rsp.rat
 
         if _retry:
-            print('  ↳ Failed to connect using LTE-M and NB-IoT, no connection possible')
+            print('  - Failed to connect using LTE-M and NB-IoT, no connection possible')
             
             if rat != ModemRat.LTEM:
                 if (await modem.set_rat(ModemRat.LTEM)).result != ModemState.OK:
-                    print('  ↳ Failed to set RAT back to *preferred* LTEM')
+                    print('  - Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
             
             return False
         
-        print(f'  ↳ Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
-        print(f'  ↳ Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
+        print(f'  - Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
+        print(f'  - Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
 
         next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
 
         if (await modem.set_rat(next_rat)).result != ModemState.OK:
-            print('  ↳ Failed to switch RAT')
+            print('  - Failed to switch RAT')
             return False
         
         await modem.reset()
@@ -194,16 +194,16 @@ async def lte_connect(_retry: bool = False) -> bool:
 
 async def unlock_sim() -> bool:
     if (await modem.set_op_state(ModemOpState.NO_RF)).result != ModemState.OK:
-        print('  ↳ Failed to set operational state to: NO RF')
+        print('  - Failed to set operational state to: NO RF')
         return False
 
     # Give the modem time to detect the SIM
     asyncio.sleep(2)
     if (await modem.unlock_sim(pin=SIM_PIN)).result != ModemState.OK:
-        print('  ↳ Failed to unlock SIM card')
+        print('  - Failed to unlock SIM card')
         return False
     else:
-        print('  ↳ SIM unlocked')
+        print('  - SIM unlocked')
    
     return True
 
@@ -218,26 +218,14 @@ async def setup():
 
     if (await modem.check_comm()).result != ModemState.OK:
         print('Modem communication error')
-        return
+        return False
    
     modem_rsp: ModemRsp = await modem.get_op_state()
     if modem_rsp.result == ModemState.OK and modem_rsp.op_state is not None:
         print(f'Modem operatonal state: {ModemOpState.get_value_name(modem_rsp.op_state)}')
     else:
         print('Failed to retrieve modem operational state')
-        return
-   
-    modem_rsp: ModemRsp = await modem.get_radio_bands()
-    if modem_rsp.result == ModemState.OK and modem_rsp.band_sel_cfg_list is not None:
-        print('Modem is configured for the following bands:')
-        for band_sel in modem_rsp.band_sel_cfg_list:
-            print(
-                f'- rat: {'LTE-M' if band_sel.rat == ModemRat.LTEM else 'NB-IoT'},'
-                f'net operator: {band_sel.net_operator.name}'
-            )
-            print(f'  - bands: {', '.join(str(band) for band in band_sel.bands)}')
-    else:
-        print('Failed to retrieve the configured radio bands')
+        return False
 
     if SIM_PIN != None and not await unlock_sim():
         return False
@@ -280,6 +268,8 @@ async def setup():
         )).result != ModemState.OK:
         print('Failed to connect socket')
         return False
+    
+    return True
 
 async def loop():
     global counter
@@ -300,7 +290,9 @@ async def loop():
 
 async def main():
     try:
-        await setup()
+        if not await setup():
+            print('Failed to complete setup, raising runtime error to stop')
+            raise RuntimeError()
         while True:
             await loop()
     except Exception as err:
