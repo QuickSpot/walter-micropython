@@ -5,7 +5,8 @@ from ..enums import (
     ModemSocketState,
     ModemSocketProto,
     ModemSocketAcceptAnyRemote,
-    ModemRai
+    ModemRai,
+    ModemCmdType
 )
 from ..structs import (
     ModemRsp,
@@ -237,5 +238,6 @@ class ModemSocket(ModemCore):
             rsp=rsp,
             at_cmd=f'AT+SQNSSENDEXT={_socket.id},{len(data)},{rai}',
             at_rsp=b'OK',
-            at_data=data
+            cmd_type=ModemCmdType.DATA_TX_WAIT,
+            data=data
         )
