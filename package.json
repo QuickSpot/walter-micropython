@@ -1,16 +1,16 @@
 {
     "urls": [
-        ["walter_modem/__init__.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/__init__.py"],
-        ["walter_modem/core.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/core.py"],
-        ["walter_modem/modem.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/modem.py"],
-        ["walter_modem/enums.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/enums.py"],
-        ["walter_modem/structs.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/structs.py"],
-        ["walter_modem/queue.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/queue.py"],
-        ["walter_modem/mixins/__init__.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/mixins/__init__.py"],
-        ["walter_modem/mixins/gnss.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/mixins/gnss.py"],
-        ["walter_modem/mixins/http.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/mixins/http.py"],
-        ["walter_modem/mixins/pdp.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/mixins/pdp.py"],
-        ["walter_modem/mixins/socket.py", "github:FoxyHunter7/walter-micropython@upgrades-and-refactorings-prep-for-mip/walter_modem/mixins/socket.py"]
+        ["walter_modem/__init__.py", "walter_modem/__init__.py"],
+        ["walter_modem/core.py", "walter_modem/core.py"],
+        ["walter_modem/modem.py", "walter_modem/modem.py"],
+        ["walter_modem/enums.py", "walter_modem/enums.py"],
+        ["walter_modem/structs.py", "walter_modem/structs.py"],
+        ["walter_modem/queue.py", "walter_modem/queue.py"],
+        ["walter_modem/mixins/__init__.py", "walter_modem/mixins/__init__.py"],
+        ["walter_modem/mixins/gnss.py", "walter_modem/mixins/gnss.py"],
+        ["walter_modem/mixins/http.py", "walter_modem/mixins/http.py"],
+        ["walter_modem/mixins/pdp.py", "walter_modem/mixins/pdp.py"],
+        ["walter_modem/mixins/socket.py", "walter_modem/mixins/socket.py"]
     ],
     "version": "1.0"
 }
