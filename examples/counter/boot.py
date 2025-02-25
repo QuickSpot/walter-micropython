@@ -39,17 +39,17 @@ import network
 import sys
 import ubinascii
 
-from walter import (
-    Modem
+from walter_modem import Modem
+
+from walter_modem.enums import (
+    ModemNetworkRegState,
+    ModemOpState,
+    ModemNetworkSelMode,
 )
 
-from _walter import (
-    ModemNetworkRegState,
-    ModemNetworkSelMode,
-    ModemOpState,
-    ModemRat,
+from walter_modem.structs import (
     ModemRsp,
-    ModemState
+    ModemRat
 )
 
 CELL_APN = ''
@@ -104,6 +104,8 @@ socket_id = None
 The id of the socket
 """
 
+modem_rsp = ModemRsp()
+
 async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
     """
     Wait for the modem network registration state to reach the desired state(s).
@@ -114,7 +116,7 @@ async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState
     :return: True if the current state matches any of the provided states, False if timed out.
     """
     for _ in range(timeout):
-        if modem.get_network_reg_state().reg_state in states:
+        if modem.get_network_reg_state() in states:
             return True
         
         await asyncio.sleep(1)
@@ -133,17 +135,19 @@ async def lte_connect(_retry: bool = False) -> bool:
 
     :return bool: True on success, False on failure.
     """
+    global modem_rsp
+
     if modem.get_network_reg_state() in (
         ModemNetworkRegState.REGISTERED_HOME,
         ModemNetworkRegState.REGISTERED_ROAMING
     ):
         return True
     
-    if (await modem.set_op_state(ModemOpState.FULL)).result != ModemState.OK:
+    if not await modem.set_op_state(ModemOpState.FULL):
         print('  - Failed to set operational state to full')
         return False
     
-    if (await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC)).result != ModemState.OK:
+    if not await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC):
         print('  - Failed to set network selection mode to automatic')
         return False
     
@@ -153,14 +157,10 @@ async def lte_connect(_retry: bool = False) -> bool:
         ModemNetworkRegState.REGISTERED_HOME,
         ModemNetworkRegState.REGISTERED_ROAMING
     ):
-        modem_rsp: ModemRsp = await modem.get_rat()
-
-        if (
-            modem_rsp.result != ModemState.OK or
-            (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK
-        ):
-            print('  - Failed to connect using current RAT')
-            return False
+        if await modem.get_rat(rsp=modem_rsp):
+            if not await modem.set_op_state(ModemOpState.MINIMUM):
+                print('  - Failed to connected using current RAT')
+                return False
 
         if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
             print('  - Unexpected: modem not on standby after 5 seconds')
@@ -172,7 +172,7 @@ async def lte_connect(_retry: bool = False) -> bool:
             print('  - Failed to connect using LTE-M and NB-IoT, no connection possible')
             
             if rat != ModemRat.LTEM:
-                if (await modem.set_rat(ModemRat.LTEM)).result != ModemState.OK:
+                if not await modem.set_rat(ModemRat.LTEM):
                     print('  - Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
             
@@ -183,7 +183,7 @@ async def lte_connect(_retry: bool = False) -> bool:
 
         next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
 
-        if (await modem.set_rat(next_rat)).result != ModemState.OK:
+        if not await modem.set_rat(next_rat):
             print('  - Failed to switch RAT')
             return False
         
@@ -193,35 +193,36 @@ async def lte_connect(_retry: bool = False) -> bool:
     return True
 
 async def unlock_sim() -> bool:
-    if (await modem.set_op_state(ModemOpState.NO_RF)).result != ModemState.OK:
+    if not await modem.set_op_state(ModemOpState.NO_RF):
         print('  - Failed to set operational state to: NO RF')
         return False
 
     # Give the modem time to detect the SIM
     asyncio.sleep(2)
-    if (await modem.unlock_sim(pin=SIM_PIN)).result != ModemState.OK:
+    if await modem.unlock_sim(pin=SIM_PIN):
+        print('  - SIM unlocked')
+    else:
         print('  - Failed to unlock SIM card')
         return False
-    else:
-        print('  - SIM unlocked')
    
     return True
 
 async def setup():
     global socket_id
+    global modem_rsp
+
     print('Walter Counter Example')
     print('---------------')
     print('Find your walter at: https://walterdemo.quickspot.io/')
     print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode(), end='\n\n')
 
-    await modem.begin(debug_log=False)
+    await modem.begin() 
 
-    if (await modem.check_comm()).result != ModemState.OK:
+    if not await modem.check_comm():
         print('Modem communication error')
         return False
-   
-    modem_rsp: ModemRsp = await modem.get_op_state()
-    if modem_rsp.result == ModemState.OK and modem_rsp.op_state is not None:
+
+    if await modem.get_op_state(rsp=modem_rsp) and modem_rsp.op_state is not None:
         print(f'Modem operatonal state: {ModemOpState.get_value_name(modem_rsp.op_state)}')
     else:
         print('Failed to retrieve modem operational state')
@@ -229,19 +230,17 @@ async def setup():
 
     if SIM_PIN != None and not await unlock_sim():
         return False
-   
-    modem_rsp = await modem.create_PDP_context(
+    
+    if not await modem.create_PDP_context(
         apn=CELL_APN,
         auth_user=APN_USERNAME,
-        auth_pass=APN_PASSWORD
-    )
-    if modem_rsp.result != ModemState.OK:
-        print('Failed to create PDP context')
+        auth_pass=APN_PASSWORD,
+        rsp=modem_rsp
+    ):
+        print('Failed to create socket')
         return False
    
-    pdp_ctx_id = modem_rsp.pdp_ctx_id
-   
-    if APN_USERNAME and (await modem.authenticate_PDP_context()).result != ModemState.OK:
+    if APN_USERNAME and not await modem.authenticate_PDP_context():
         print('Failed to authenticate PDP context')
 
     print('Connecting to LTE Network')
@@ -249,23 +248,24 @@ async def setup():
         return False
    
     print('Creating socket')
-    modem_rsp = await modem.create_socket(pdp_context_id=pdp_ctx_id)
-    if modem_rsp.result != ModemState.OK:
+    if await modem.create_socket(pdp_context_id=modem_rsp.pdp_ctx_id, rsp=modem_rsp):
+        socket_id = modem_rsp.socket_id
+    else:
         print('Failed to create socket')
-        return False
-   
-    socket_id = modem_rsp.socket_id
-   
-    if (await modem.config_socket(socket_id=socket_id)).result != ModemState.OK:
-        print('Faield to config socket')
-        return False
+        return False   
 
-    if (await modem.connect_socket(
+    print('Configuring socket')
+    if not await modem.config_socket(socket_id=socket_id):
+        print('Failed to config socket')
+        return False
+    
+    print('Connecting socket')
+    if not await modem.connect_socket(
         remote_host=SERVER_ADDRESS,
         remote_port=SERVER_PORT,
         local_port=SERVER_PORT,
         socket_id=socket_id
-        )).result != ModemState.OK:
+    ):
         print('Failed to connect socket')
         return False
     
@@ -278,8 +278,8 @@ async def loop():
     data_buffer.append(counter >> 8)
     data_buffer.append(counter & 0xff)
 
-    modem_rsp: ModemRsp = await modem.socket_send(data=data_buffer, socket_id=socket_id)
-    if modem_rsp.result != ModemState.OK:
+    print('Attempting to transmit data')
+    if not await modem.socket_send(data=data_buffer, socket_id=socket_id):
         print('Failed to transmit data')
         return False
     
