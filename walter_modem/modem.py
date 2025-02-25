@@ -2,7 +2,7 @@ import time
 from machine import Pin
 
 from .core import ModemCore
-import mixins
+import walter_modem.mixins as mixins
 from .enums import (
     ModemCmdType,
     ModemCMEErrorReportsType,
@@ -114,7 +114,7 @@ class Modem(
             at_rsp=b'OK'
         )
     
-    async def config_cereg_error_reports(self,
+    async def config_cereg_reports(self,
         reports_type: int = ModemCEREGReportsType.ENABLED,
         rsp: ModemRsp = None
     ) -> bool:
