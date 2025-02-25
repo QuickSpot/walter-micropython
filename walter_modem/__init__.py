@@ -1,5 +1,5 @@
 from .modem import Modem
-import enums
-import structs
+from . import enums
+from . import structs
 
 __all__ = ['Modem', 'enums', 'structs']
