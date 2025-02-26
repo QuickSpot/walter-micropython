@@ -91,6 +91,9 @@ class ModemCore:
     WALTER_MODEM_MAX_HTTP_PROFILES = 3
     """The max nr of http profiles"""
 
+    WALTER_MODEM_MAX_TLS_PROFILES = 6
+    """The maximum number of TLS profiles that the library can support"""
+
     WALTER_MODEM_OPERATOR_MAX_SIZE = 16
     """The maximum number of characters of an operator name"""
 
