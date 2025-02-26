@@ -26,3 +26,6 @@ out/
 .idea/**/markdown-navigator/
 
 .idea/$CACHE_FILE$
+
+# Ignore config.py files from examples
+examples/**/config.py
