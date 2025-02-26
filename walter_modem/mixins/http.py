@@ -4,10 +4,12 @@ from ..enums import (
     ModemHttpContextState,
     ModemHttpQueryCmd,
     ModemHttpSendCmd,
-    ModemHttpPostParam
+    ModemHttpPostParam,
+    ModemRspType
 )
 from ..structs import (
     ModemRsp,
+    ModemHttpResponse
 )
 from ..utils import (
     modem_bool,
@@ -51,6 +53,16 @@ class ModemHTTP(ModemCore):
             self._http_context_list[profile_id].state = ModemHttpContextState.IDLE
             if rsp: rsp.result = ModemState.ERROR
             return False
+        
+        if self._http_context_list[profile_id].content_length == 0:
+            self._http_context_list[profile_id].state = ModemHttpContextState.IDLE
+
+            rsp.type = ModemRspType.HTTP_RESPONSE
+            rsp.http_response = ModemHttpResponse()
+            rsp.http_response.http_status = self._http_context_list[profile_id].http_status
+            rsp.http_response.content_length = 0
+            rsp.result = ModemState.NO_DATA
+            return True
 
         self._http_current_profile = profile_id
 
