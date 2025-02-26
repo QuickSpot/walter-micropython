@@ -2,6 +2,11 @@ import asyncio
 import json
 import sys
 
+from micropython import const
+from machine import Pin, I2C
+from hdc1080 import HDC1080
+from lps22hb import LPS22HB
+
 from walter_modem import Modem
 from walter_modem.enums import (
     ModemNetworkRegState,
@@ -18,26 +23,14 @@ from walter_modem.structs import (
 
 import config
 
-modem = Modem()
-modem_rsp = ModemRsp()
-
-IC2_BUS_POWER_PIN = 1
-IC2_SDA_PIN = 42
-IC2_SCL_PIN = 2
-
-
-def get_temperature_data():
-    # TODO: actually impliment
-    return 18
-
-def get_rsrp_data():
-    # TODO: actaully impliment
-    return -100
+hdc1080: HDC1080
+lps22hb: LPS22HB
 
 def get_data() -> dict:
     data_map = {
-        'temperature': get_temperature_data,
-        'rsrp': get_rsrp_data
+        'temperature': hdc1080.temperature,
+        'humidity': hdc1080.humidity,
+        'pressure': lps22hb.read_pressure,
     }
 
     data = {}
@@ -48,6 +41,8 @@ def get_data() -> dict:
 
     return data
 
+modem = Modem()
+modem_rsp = ModemRsp()
 
 async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
     """
@@ -150,20 +145,27 @@ async def unlock_sim() -> bool:
    
     return True
 
-async def await_http_response(http_profile: int, timeout: int = 10) -> bool:
+async def await_http_response(http_profile: int, timeout: int = 30) -> bool:
     global modem_rsp
 
     for _ in range(timeout):
-        print('if http_did_ring')
         if await modem.http_did_ring(profile_id=http_profile, rsp=modem_rsp):
-            print('was true')
             return True
         
         await asyncio.sleep(1)
-    
+
+    if not await modem.http_close(http_profile):
+        # account for edge case where ring was received between last check and close attempt
+        if await modem.http_did_ring(profile_id=http_profile, rsp=modem_rsp):
+            return True
+        else:
+            # Cannot close nor read out, something is wrong with the modem or modem library
+            raise RuntimeError('Possible fault in modem or modem-library state')
     return False
 
 def urlencode(params: dict) -> str:
+    if len(params) <= 0:
+        return ''
     return '&'.join(f'{key}={value}' for key, value in params.items())
 
 async def fetch(
@@ -175,6 +177,7 @@ async def fetch(
     global modem_rsp
 
     uri = f'{path}{"?" + query_string if query_string is not None else ""}'
+    print(uri)
     if await modem.http_query(
         profile_id=http_profile,
         uri=uri,
@@ -188,12 +191,10 @@ async def fetch(
         print(f'  Failed to fetch data (profile: {http_profile}, uri: {uri})')
         return False
 
-async def setup():
+async def modem_setup():
     global modem_rsp
-    print('Walter Feels Example')
-    print('---------------', end='\n\n')
 
-    await modem.begin(debug_log=True)
+    await modem.begin()
 
     if not await modem.check_comm():
         print('Modem communication error')
@@ -238,10 +239,81 @@ async def setup():
     
     return True
 
+async def setup() -> bool:
+    global hdc1080
+    global lps22hb
+
+    print('Walter Feels Example')
+    print('---------------', end='\n\n')
+
+    # Output pins
+    PWR_3V3_EN_PIN = Pin(0, Pin.OUT)
+    PWR_12V_EN_PIN = Pin(43, Pin.OUT)
+    I2C_BUS_PWR_EN_PIN = Pin(1, Pin.OUT)
+    CAN_EN_PIN = Pin(44, Pin.OUT)
+    SDI12_TX_EN_PIN = Pin(10, Pin.OUT)
+    SDI12_RX_EN_PIN = Pin(9, Pin.OUT)
+    RS232_TX_EN_PIN = Pin(17, Pin.OUT)
+    RS232_RX_EN_PIN = Pin(16, Pin.OUT)
+    RS485_TX_EN_PIN = Pin(18, Pin.OUT)
+    RS485_RX_EN_PIN = Pin(8, Pin.OUT)
+    CO2_EN_PIN = Pin(13, Pin.OUT)
+    CO2_SCL_PIN = Pin(11, Pin.OUT)
+
+    # Input pins
+    I2C_SDA_PIN = Pin(42, Pin.IN)
+    I2C_SCL_PIN = Pin(2, Pin.IN)
+    SD_CMD_PIN = Pin(6, Pin.IN)
+    SD_CLK_PIN = Pin(5, Pin.IN)
+    SD_DAT0_PIN = Pin(4, Pin.IN)
+    GPIO_A_PIN = Pin(39, Pin.IN)
+    GPIO_B_PIN = Pin(38, Pin.IN)
+    SER_RX_PIN = Pin(41, Pin.IN)
+    SER_TX_PIN = Pin(40, Pin.IN)
+    CAN_RX_PIN = Pin(7, Pin.IN)
+    CAN_TX_PIN = Pin(15, Pin.IN)
+    CO2_SDA_PIN = Pin(12, Pin.IN)
+
+    # Disable all peripherals
+    PWR_3V3_EN_PIN.value(1)
+    PWR_12V_EN_PIN.value(0)
+    I2C_BUS_PWR_EN_PIN.value(0)
+    CAN_EN_PIN.value(1)
+    SDI12_TX_EN_PIN.value(0)
+    SDI12_RX_EN_PIN.value(0)
+    RS232_TX_EN_PIN.value(0)
+    RS232_RX_EN_PIN.value(1)
+    RS485_TX_EN_PIN.value(0)
+    RS485_RX_EN_PIN.value(1)
+    CO2_EN_PIN.value(1)
+
+
+    # Initialize I2C
+    i2c = I2C(0, scl=I2C_SCL_PIN, sda=I2C_SDA_PIN)
+
+    # Initialize modem
+    if not await modem_setup():
+        print('Failed to setup modem')
+        return False
+
+    # Enable 3.3V and I2C bus power, wait for sensors to boot
+    PWR_3V3_EN_PIN.value(0)
+    I2C_BUS_PWR_EN_PIN.value(1)
+    asyncio.sleep_ms(50)
+
+    # Initialize the sensors
+    hdc1080 = HDC1080(i2c)
+    hdc1080.config(humid_res=14, temp_res=14, mode=1)
+    lps22hb = LPS22HB(i2c)
+    lps22hb.begin()
+
+    return True
+
 async def loop():
     global modem_rsp
 
     data = get_data()
+    print(data)
     if await fetch(
         http_profile=0,
         path='/external/api/batch/update',
@@ -254,6 +326,7 @@ async def main():
         if not await setup():
             print('Failed to complete setup, raising runtime error to stop')
             raise RuntimeError()
+        
         while True:
             await loop()
             await asyncio.sleep(10)

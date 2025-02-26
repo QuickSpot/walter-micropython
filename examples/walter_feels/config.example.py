@@ -37,7 +37,8 @@ Your device auth token
 
 BLYNK_DEVICE_PINS = {
     'temperature': None,
-    'rsrp': None
+    'humitidy': None,
+    'pressure': None
 }
 """
 Virtual Pins corresponding to the supported measurements
