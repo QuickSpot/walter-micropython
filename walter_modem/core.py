@@ -184,7 +184,10 @@ class ModemCore:
             size = await rx_stream.readinto(incoming_uart_data)
             if self.debug_log:
                 for line in incoming_uart_data[:size].splitlines():
-                    print(f'walter.py - DEBUG: RX: "{bytes_to_str(line)}"')
+                    print(
+                        'WalterModem (core, _uart_reader) - DEBUG: RX: '
+                        f'"{bytes_to_str(line)}"'
+                    )
             for b in incoming_uart_data[:size]:
                 if self._parser_data.state == ModemRspParserState.START_CR:
                     if b == ModemCore.CR:
@@ -290,7 +293,10 @@ class ModemCore:
     async def _process_queue_cmd(self, tx_stream, cmd):
         if cmd.type == ModemCmdType.TX:
             if self.debug_log:
-                print(f'walter.py - DEBUG: TX: "{bytes_to_str(cmd.at_cmd)}"')
+                print(
+                    f'WalterModem (core, _process_queue_cmd) - DEBUG: TX:'
+                    f'"{bytes_to_str(cmd.at_cmd)}"'
+                )
             tx_stream.write(cmd.at_cmd)
             tx_stream.write(b'\r\n')
             await tx_stream.drain()
@@ -300,7 +306,10 @@ class ModemCore:
         or cmd.type == ModemCmdType.DATA_TX_WAIT:
             if cmd.state == ModemCmdState.NEW:
                 if self.debug_log:
-                    print(f'walter.py - DEBUG: TX: "{bytes_to_str(cmd.at_cmd)}"')
+                    print(
+                        'WalterModem (core, _process_queue_cmd) - DEBUG: TX: '
+                        f'"{bytes_to_str(cmd.at_cmd)}"'
+                    )
                 tx_stream.write(cmd.at_cmd)
                 if cmd.type == ModemCmdType.DATA_TX_WAIT:
                     tx_stream.write(b'\n')
@@ -322,7 +331,10 @@ class ModemCore:
                             await self._finish_queue_cmd(cmd, ModemState.ERROR)
                     else:
                         if self.debug_log:
-                            print(f'walter.py - DEBUG: TX: "{bytes_to_str(cmd.at_cmd)}"')
+                            print(
+                                'WalterModem (core, _process_queue_cmd) - DEBUG: TX: '
+                                f'"{bytes_to_str(cmd.at_cmd)}"'
+                            )
                         tx_stream.write(cmd.at_cmd)
                         if cmd.type == ModemCmdType.DATA_TX_WAIT:
                             tx_stream.write(b'\n')
@@ -372,7 +384,10 @@ class ModemCore:
         elif at_rsp.startswith(b'>') or at_rsp.startswith(b'>>>'):
             if cmd and cmd.data and cmd.type == ModemCmdType.DATA_TX_WAIT:
                 if self.debug_log:
-                    print(f'walter.py - DEBUG: TX: "{bytes_to_str(cmd.data)}"')
+                    print(
+                        'WalterModem (core, _process_queue_rsp) - DEBUG: TX: '
+                        f'"{bytes_to_str(cmd.data)}"'
+                    )
                 tx_stream.write(cmd.data)
                 await tx_stream.drain()
 
@@ -595,9 +610,7 @@ class ModemCore:
             socket_id = int(at_rsp[len('+SQNSH: '):].decode())
             try:
                 _socket = self._socket_list[socket_id - 1]
-            except Exception as err:
-                print('walter.py - ERROR: (Modem, _process_queue_rsp; +SQNSH): ', err)
-                sys.print_exception(err)
+            except Exception:
                 return
 
             self._socket = _socket
@@ -809,7 +822,11 @@ class ModemCore:
             else:
                 qitem = await self._task_queue.get()
                 if not isinstance(qitem, ModemTaskQueueItem):
-                    print('walter.py - ERROR: (Modem, _queue_worker) Invalid task queue item: %s %s' % (type(qitem), str(qitem)))
+                    if self.debug_log:
+                        print(
+                            'WalterModem (core, _queue_worker) - ERROR: '
+                            f'Invalid task queue item: {type(qitem)}, {str(qitem)}'
+                        )
                     continue
 
             # process or enqueue new command or response
