@@ -900,7 +900,10 @@ class ModemCore:
         # we expect the queue runner to release the (b)lock.
         await cmd.event.wait()
 
-        return cmd.rsp.result == ModemState.OK
+        return (
+            cmd.rsp.result == ModemState.OK or
+            (cmd.rsp.type == ModemRspType.HTTP_RESPONSE and cmd.rsp.result == ModemState.NO_DATA)
+        )
 
     async def begin(self, debug_log: bool = False):
         self.debug_log = debug_log
