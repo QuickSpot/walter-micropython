@@ -38,7 +38,13 @@ Your device auth token
 BLYNK_DEVICE_PINS = {
     'temperature': None,
     'humitidy': None,
-    'pressure': None
+    'pressure': None,
+    'input_voltage': None,
+    'input_current': None,
+    'system_voltage': None,
+    'battery_voltage': None,
+    'battery_current': None,
+    'battery_percentage': None
 }
 """
 Virtual Pins corresponding to the supported measurements

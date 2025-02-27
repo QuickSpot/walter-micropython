@@ -2,10 +2,10 @@ import asyncio
 import json
 import sys
 
-from micropython import const
 from machine import Pin, I2C
 from hdc1080 import HDC1080
 from lps22hb import LPS22HB
+from ltc4015 import LTC4015
 
 from walter_modem import Modem
 from walter_modem.enums import (
@@ -25,12 +25,19 @@ import config
 
 hdc1080: HDC1080
 lps22hb: LPS22HB
+ltc4015: LTC4015
 
 def get_data() -> dict:
     data_map = {
         'temperature': hdc1080.temperature,
         'humidity': hdc1080.humidity,
         'pressure': lps22hb.read_pressure,
+        'input_voltage': ltc4015.get_input_voltage,
+        'input_current': ltc4015.get_input_current,
+        'system_voltage': ltc4015.get_system_voltage,
+        'battery_voltage': ltc4015.get_battery_voltage,
+        'battery_current': ltc4015.get_charge_current,
+        'battery_percentage': lambda: ltc4015.get_qcount() * 100 / 65535
     }
 
     data = {}
@@ -239,9 +246,19 @@ async def modem_setup():
     
     return True
 
+async def ltc4015_setup():
+    ltc4015.initialize()
+    ltc4015.suspend_charging()
+    ltc4015.enable_force_telemetry()
+    asyncio.sleep_ms(100)
+    ltc4015.disable_force_telemetry()
+    ltc4015.start_charging()
+    ltc4015.enable_mppt()
+
 async def setup() -> bool:
     global hdc1080
     global lps22hb
+    global ltc4015
 
     print('Walter Feels Example')
     print('---------------', end='\n\n')
@@ -291,6 +308,13 @@ async def setup() -> bool:
     # Initialize I2C
     i2c = I2C(0, scl=I2C_SCL_PIN, sda=I2C_SDA_PIN)
 
+    # Initialize charging
+    ltc4015 = LTC4015(i2c, 3, 4)
+    I2C_BUS_PWR_EN_PIN.value(1)
+    ltc4015.initialize()
+    ltc4015.enable_coulomb_counter()
+    I2C_BUS_PWR_EN_PIN.value(0)
+
     # Initialize modem
     if not await modem_setup():
         print('Failed to setup modem')
@@ -303,9 +327,10 @@ async def setup() -> bool:
 
     # Initialize the sensors
     hdc1080 = HDC1080(i2c)
-    hdc1080.config(humid_res=14, temp_res=14, mode=1)
+    hdc1080.config(mode=1)
     lps22hb = LPS22HB(i2c)
     lps22hb.begin()
+    await ltc4015_setup()
 
     return True
 
