@@ -137,7 +137,7 @@ class Modem(
     
     async def get_rssi(self, rsp: ModemRsp = None) -> bool:
         """
-        Retrieves the RSRQ and RSRP signal quality indicators.
+        Retrieves the RSSI information.
 
         :param rsp: Reference to a modem response instance
 
