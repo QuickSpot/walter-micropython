@@ -44,7 +44,8 @@ BLYNK_DEVICE_PINS = {
     'system_voltage': None,
     'battery_voltage': None,
     'battery_current': None,
-    'battery_percentage': None
+    'battery_percentage': None,
+    'rsrp': None
 }
 """
 Virtual Pins corresponding to the supported measurements

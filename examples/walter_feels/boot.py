@@ -27,6 +27,10 @@ hdc1080: HDC1080
 lps22hb: LPS22HB
 ltc4015: LTC4015
 
+modem = Modem()
+modem_rsp = ModemRsp()
+rsrp = False
+
 def get_data() -> dict:
     data_map = {
         'temperature': hdc1080.temperature,
@@ -37,19 +41,17 @@ def get_data() -> dict:
         'system_voltage': ltc4015.get_system_voltage,
         'battery_voltage': ltc4015.get_battery_voltage,
         'battery_current': ltc4015.get_charge_current,
-        'battery_percentage': lambda: ltc4015.get_qcount() * 100 / 65535
+        'battery_percentage': lambda: ltc4015.get_qcount() * 100 / 65535,
+        'rsrp': lambda: modem_rsp.signal_quality.rsrp if rsrp else None
     }
 
     data = {}
 
     for data_type, pin in config.BLYNK_DEVICE_PINS.items():
-        if pin:
-            data[pin] = data_map[data_type]()
+        if pin and (value := data_map[data_type]()) is not None:
+            data[pin] = value
 
     return data
-
-modem = Modem()
-modem_rsp = ModemRsp()
 
 async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
     """
@@ -184,7 +186,6 @@ async def fetch(
     global modem_rsp
 
     uri = f'{path}{"?" + query_string if query_string is not None else ""}'
-    print(uri)
     if await modem.http_query(
         profile_id=http_profile,
         uri=uri,
@@ -192,7 +193,6 @@ async def fetch(
         extra_header_line=extra_header_line,
         rsp=modem_rsp
     ):
-        print('awaiting http response')
         return await await_http_response(http_profile=0)
     else:
         print(f'  Failed to fetch data (profile: {http_profile}, uri: {uri})')
@@ -336,15 +336,29 @@ async def setup() -> bool:
 
 async def loop():
     global modem_rsp
+    global rsrp
+
+    if await modem.get_signal_quality(rsp=modem_rsp):
+        rsrp = True
 
     data = get_data()
-    print(data)
     if await fetch(
         http_profile=0,
         path='/external/api/batch/update',
         query_string=f'token={config.BLYNK_TOKEN}&{urlencode(data)}'
     ):
-        print(modem_rsp.http_response.http_status)
+        if modem_rsp.http_response.http_status == 200:
+            print('sent data:')
+            for pin, value in data.items():
+                data_type = '?'
+                for k, v in config.BLYNK_DEVICE_PINS.items():
+                    if v == pin:
+                        data_type = k
+                        break
+                print(f'  {data_type} ({pin}): {value}')
+        else:
+            print(f'HTTP status: {modem_rsp.http_response.http_status}')
+            print(json.loads(modem_rsp.http_response.data))
 
 async def main():
     try:
