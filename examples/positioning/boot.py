@@ -1,39 +1,3 @@
-"""
-Copyright (C) 2023, DPTechnics bv
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without
-modification, are permitted provided that the following conditions are met:
-
-  1. Redistributions of source code must retain the above copyright notice,
-     this list of conditions and the following disclaimer.
-
-  2. Redistributions in binary form must reproduce the above copyright
-     notice, this list of conditions and the following disclaimer in the
-     documentation and/or other materials provided with the distribution.
-
-  3. Neither the name of DPTechnics bv nor the names of its contributors may
-     be used to endorse or promote products derived from this software
-     without specific prior written permission.
-
-  4. This software, with or without modification, must only be used with a
-     Walter board from DPTechnics bv.
-
-  5. Any software provided in binary form under this license must not be
-     reverse engineered, decompiled, modified and/or disassembled.
-
-THIS SOFTWARE IS PROVIDED BY DPTECHNICS BV “AS IS” AND ANY EXPRESS OR IMPLIED
-WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY, NONINFRINGEMENT, AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL DPTECHNICS BV OR CONTRIBUTORS BE LIABLE FOR ANY
-DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
-(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
-LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
-ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
-SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-"""
-
 import asyncio
 import esp32
 import network
@@ -41,75 +5,40 @@ import sys
 import struct
 import ubinascii
 
-from walter import (
-    Modem
-)
-
-from _walter import (
+from walter_modem import Modem
+from walter_modem.enums import (
     ModemCMEError,
     ModemGNSSAction,
     ModemGNSSAssistanceType,
     ModemNetworkRegState,
     ModemNetworkSelMode,
+    ModemTlsValidation,
     ModemOpState,
     ModemRai,
     ModemRat,
-    ModemRsp,
-    ModemRspType,
-    ModemState
+    ModemTlsVersion,
+    ModemRspType
+)
+from walter_modem.structs import (
+    ModemRsp
 )
 
-CELL_APN = ''
-"""
-The cellular Access Point Name (APN).
-Leave blank to enable automatic APN detection, which is sufficient for most networks.
-Manually set this only if your network provider specifies a particular APN.
-"""
-
-APN_USERNAME = ''
-"""
-The username for APN authentication.
-Typically, this is not required and should be left blank.
-Only provide a username if your network provider explicitly mandates it.
-"""
-
-APN_PASSWORD = ''
-"""
-The password for APN authentication.
-This is generally unnecessary and should remain blank.
-Set a password only if it is specifically required by your network provider.
-"""
-
-SERVER_ADDRESS = 'walterdemo.quickspot.io'
-"""
-The address of the Walter Demo server.
-"""
-
-SERVER_PORT = 1999
-"""
-The UDP port of the Walter Demo server.
-"""
-
-SIM_PIN = None
-"""
-Optional: Set this only if your SIM card requires a PIN for activation. 
-Most IoT SIMs do not need this.
-"""
-
-PACKET_SIZE = 29
-"""
-The size in bytes of hte uploaded data packet.
-"""
-
-MAX_GNSS_CONFIDENCE = 255.0
-"""
-The maximum GNSS confidence threshold.
-All GNSS fixes with a confidence value below this number are considered valid.
-"""
+import config
 
 modem = Modem()
 """
 The modem instance
+"""
+
+modem_rsp = ModemRsp()
+"""
+The modem response object that's (re-)used 
+when we need information from the modem.
+"""
+
+socket_id: int
+"""
+Variable to store the socket_id once made.
 """
 
 async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
@@ -122,13 +51,12 @@ async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState
     :return: True if the current state matches any of the provided states, False if timed out.
     """
     for _ in range(timeout):
-        if modem.get_network_reg_state().reg_state in states:
+        if modem.get_network_reg_state() in states:
             return True
         
         await asyncio.sleep(1)
     
     return False
-
 
 async def lte_connect(_retry: bool = False) -> bool:
     """
@@ -142,65 +70,65 @@ async def lte_connect(_retry: bool = False) -> bool:
 
     :return bool: True on success, False on failure.
     """
+    global modem_rsp
+
     if modem.get_network_reg_state() in (
         ModemNetworkRegState.REGISTERED_HOME,
         ModemNetworkRegState.REGISTERED_ROAMING
     ):
         return True
     
-    if (await modem.set_op_state(ModemOpState.FULL)).result != ModemState.OK:
-        print('    ↳ Failed to set operational state to full')
+    if not await modem.set_op_state(ModemOpState.FULL):
+        print('    - Failed to set operational state to full')
         return False
     
-    if (await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC)).result != ModemState.OK:
-        print('    ↳ Failed to set network selection mode to automatic')
+    if not await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC):
+        print('    - Failed to set network selection mode to automatic')
         return False
     
-    print('    ↳ Waiting for network registration')
+    print('    - Waiting for network registration')
     if not await wait_for_network_reg_state(
         300,
         ModemNetworkRegState.REGISTERED_HOME,
         ModemNetworkRegState.REGISTERED_ROAMING
     ):
-        modem_rsp: ModemRsp = await modem.get_rat()
-
-        if (
-            modem_rsp.result != ModemState.OK or
-            (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK
-        ):
-            print('    ↳ Failed to connect using current RAT')
-            return False
+        if await modem.get_rat(rsp=modem_rsp):
+            if not await modem.set_op_state(ModemOpState.MINIMUM):
+                print('    - Failed to connected using current RAT')
+                return False
 
         if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
-            print('    ↳ Unexpected: modem not on standby after 5 seconds')
+            print('    - Unexpected: modem not on standby after 5 seconds')
             return False
         
         rat = modem_rsp.rat
 
         if _retry:
-            print('    ↳ Failed to connect using LTE-M and NB-IoT, no connection possible')
+            print('    - Failed to connect using LTE-M and NB-IoT, no connection possible')
             
             if rat != ModemRat.LTEM:
-                if (await modem.set_rat(ModemRat.LTEM)).result != ModemState.OK:
-                    print('    ↳ Failed to set RAT back to *preferred* LTEM')
+                if not await modem.set_rat(ModemRat.LTEM):
+                    print('    - Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
             
             return False
         
-        print(f'    ↳ Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
-        print(f'    ↳ Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
+        print('    - Failed to connect to LTE network using: '
+              f'{"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
+        print('    - Switching modem to '
+              f'{"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
 
         next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
 
-        if (await modem.set_rat(next_rat)).result != ModemState.OK:
-            print('    ↳ Failed to switch RAT')
+        if not await modem.set_rat(next_rat):
+            print('    - Failed to switch RAT')
             return False
         
         await modem.reset()
         return await lte_connect(_retry=True)
     
     return True
-    
+
 async def lte_disconnect() -> bool:
     """
     Disconnect from the LTE network
@@ -213,22 +141,24 @@ async def lte_disconnect() -> bool:
     if modem.get_network_reg_state() == ModemNetworkRegState.NOT_SEARCHING:
         return True
     
-    if (await modem.set_op_state(ModemOpState.MINIMUM)).result != ModemState.OK:
-        print('    ↳ Failed to set operational state to minimum')
+    if not await modem.set_op_state(ModemOpState.MINIMUM):
+        print('    - Failed to set operational state to minimum')
         return False
 
     if await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
         return True
     
-    print('    ↳ Failed to disconnect, modem network registration state still not "NOT SEARCHING" after 5 seconds')
+    print('    - Failed to disconnect, modem network registration state still not'
+          '"NOT SEARCHING" after 5 seconds')
     return False
 
-async def lte_transmit(address: str, port: int, buffer: bytearray) -> bool:
+async def lte_transmit(socket_id: int, address: str, port: int, buffer: bytearray) -> bool:
     """
     Transmit to an UDP socket
 
-    This function will configure the modem to set up, connect, transmit and close to an UDP socket.
+    This will connect to the given address, transmit the data and then close the socket.
 
+    :param socket_id: The id of the modem socket to use for the connect
     :param address: The address of the server to connect to.
     :param port: The socket port to connect to.
     :param buffer: The buffer containing the packet data.
@@ -236,35 +166,49 @@ async def lte_transmit(address: str, port: int, buffer: bytearray) -> bool:
 
     :return bool: True on success, False on failure
     """
-    print('  ↳ Connecting to LTE')
-    if not await lte_connect():
+    if not await modem.connect_socket(
+        remote_host=address,
+        remote_port=port,
+        socket_id=socket_id,
+        local_port=port
+    ):
+        print('  - Failed to connect to UDP socket')
         return False
+    
+    print(f'  - Connected to UDP server: {address}:{port}')
 
-    if (await modem.create_socket()).result != ModemState.OK:
-        print('  ↳ Failed to create a new UDP socket')
+    if not await modem.socket_send(
+        data=buffer,
+        socket_id=1,
+        rai=ModemRai.NO_INFO
+    ):
+        print('  - Failed to transmit to UDP socket')
         return False
     
-    if (await modem.config_socket()).result != ModemState.OK:
-        print('  ↳ Failed to configure UDP socket')
-        return False
-    
-    if (await modem.connect_socket(address, port, port)).result != ModemState.OK:
-        print('  ↳ Failed to connect to UDP socket')
-        return False
-    
-    print(f'  ↳ Connected to UDP server: {address}:{port}')
-
-    if (await modem.socket_send(buffer, ModemRai.NO_INFO, 1)).result != ModemState.OK:
-        print('  ↳ Failed to transmit to UDP socket')
-        return False
-    
-    if (await modem.close_socket()).result != ModemState.OK:
-        print('  ↳ Failed to close UDP socket')
+    if not await modem.close_socket(
+        socket_id=socket_id
+    ):
+        print('  - Failed to close UDP socket')
         return False
     
     return True
 
-def check_assistance_data(modem_rsp) -> tuple[bool, bool]:
+async def unlock_sim() -> bool:
+    if not await modem.set_op_state(ModemOpState.NO_RF):
+        print('  - Failed to set operational state to: NO RF')
+        return False
+
+    # Give the modem time to detect the SIM
+    asyncio.sleep(2)
+    if await modem.unlock_sim(pin=config.SIM_PIN):
+        print('  - SIM unlocked')
+    else:
+        print('  - Failed to unlock SIM card')
+        return False
+   
+    return True
+
+def check_assistance_data() -> tuple[bool, bool]:
     """
     Check the assistance data in the modem response.
 
@@ -281,14 +225,16 @@ def check_assistance_data(modem_rsp) -> tuple[bool, bool]:
     update_ephemeris = (not ephemeris.available) or (ephemeris.time_to_update <= 0)
 
     if almanac.available:
-        print(f'    ↳ Almanac data is available and should be updated within {almanac.time_to_update}')
+        print('    - Almanac data is available and '
+              f'should be updated within {almanac.time_to_update}')
     else:
-        print('    ↳ Almanac data is not available.')
+        print('    - Almanac data is not available.')
 
     if ephemeris.available:
-        print(f'    ↳ Real-time ephemeris data is available and should be updated within {ephemeris.time_to_update}')
+        print('    - Real-time ephemeris data is available and '
+              f'should be updated within {ephemeris.time_to_update}')
     else:
-        print('    ↳ Real-time ephemeris data is not available.')
+        print('    - Real-time ephemeris data is not available.')
 
     return update_almanac, update_ephemeris
 
@@ -301,105 +247,114 @@ async def update_gnss_assistance() -> bool:
 
     :return bool: True on success, False on failure
     """
-    modem_rsp: ModemRsp = await modem.get_clock()
-    if modem_rsp.result != ModemState.OK:
-        print('  ↳ Failed to retrieve modem time')
+    global modem_rsp
+
+    if not await modem.get_clock(rsp=modem_rsp):
+        print('  - Failed to retrieve modem time')
         return False
     
     if not modem_rsp.clock:
-        print('  ↳ Modem time is invalid, connecting to LTE')
+        print('  - Modem time is invalid, connecting to LTE')
         if not await lte_connect():
-            print('  ↳ Failed to connect to LTE')
+            print('  - Failed to connect to LTE')
             return False
         
     for i in range(5):
-        modem_rsp = await modem.get_clock()
-        if modem_rsp.result != ModemState.OK:
-            print('  ↳ Failed to retrieve modem time')
+        if not await modem.get_clock(rsp=modem_rsp):
+            print('  - Failed to retrieve modem time')
             return False
         
         if modem_rsp.clock:
-            print(f'  ↳ Synchronised clock with network: {modem_rsp.clock}')
+            print(f'  - Synchronised clock with network: {modem_rsp.clock}')
             break
         elif i == 4:
-            print('  ↳ Could not sync time with network')
+            print('  - Could not sync time with network')
 
         await asyncio.sleep(.5)
 
-    modem_rsp = await modem.get_gnss_assistance_status()
-    if (
-        modem_rsp.result != ModemState.OK or 
-        modem_rsp.type != ModemRspType.GNSS_ASSISTANCE_DATA
-    ):
-        print('  ↳ Failed to request GNSS assistance status')
-        return False
+    if not await modem.get_gnss_assistance_status(rsp=modem_rsp):
+        if modem_rsp.type != ModemRspType.GNSS_ASSISTANCE_DATA:
+            print('  - Failed to request GNSS assistance status')
+            return False
     
-    update_almanac, update_ephemeris = check_assistance_data(modem_rsp)
+    update_almanac, update_ephemeris = check_assistance_data()
     
     if update_almanac:
-        print('  ↳ Updating Almanac data')
+        print('  - Updating Almanac data')
         if not await lte_connect():
-            print('  ↳ Failed to connect to LTE network')
+            print('  - Failed to connect to LTE network')
             return False
         
-        if ((await modem.update_gnss_assistance(ModemGNSSAssistanceType.ALMANAC)).result
-            != ModemState.OK):
-            print('  ↳ Failed to update almanac data')
+        if not await modem.update_gnss_assistance(ModemGNSSAssistanceType.ALMANAC):
+            print('  - Failed to update almanac data')
             return False
         
     if update_ephemeris:
-        print('  ↳ Updating Ephemeris data')
+        print('  - Updating Ephemeris data')
         if not await lte_connect():
-            print('  ↳ Failed to connect to LTE network')
+            print('  - Failed to connect to LTE network')
             return False
         
-        if (
-            (await modem.update_gnss_assistance(ModemGNSSAssistanceType.REALTIME_EPHEMERIS)).result
-            != ModemState.OK):
-            print('  ↳ Failed to update ephemeris data')
+        if not await modem.update_gnss_assistance(ModemGNSSAssistanceType.REALTIME_EPHEMERIS):
+            print('  - Failed to update ephemeris data')
             return False
         
-    return True
-
-async def unlock_sim() -> bool:
-    if (await modem.set_op_state(ModemOpState.NO_RF)).result != ModemState.OK:
-        print('  ↳ Failed to set operational state to: NO RF')
-        return False
-
-    # Give the modem time to detect the SIM
-    asyncio.sleep(2)
-    if (await modem.unlock_sim(pin=SIM_PIN)).result != ModemState.OK:
-        print('  ↳ Failed to unlock SIM card')
-        return False
-    else:
-        print('  ↳ SIM unlocked')
-   
     return True
 
 async def setup():
+    global socket_id
+
     print('Walter Positioning Example')
     print('---------------')
     print('Find your walter at: https://walterdemo.quickspot.io/')
-    print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode(), end='\n\n')
+    print('Walter\'s MAC is: %s'
+          % ubinascii.hexlify(network.WLAN().config('mac'),':').decode(), end='\n\n')
+    
+    await modem.begin()
 
-    await modem.begin(debug_log=False)
-
-    if SIM_PIN != None and not await unlock_sim():
+    if not await modem.check_comm():
+        print('Modem communication error')
+        return False
+    
+    if config.SIM_PIN != None and not await unlock_sim():
+        return False
+    
+    if not await modem.create_PDP_context(
+        apn=config.CELL_APN,
+        auth_user=config.APN_USERNAME,
+        auth_pass=config.APN_PASSWORD,
+        rsp=modem_rsp
+    ):
+        print('Failed to create socket')
         return False
    
-    modem_rsp = await modem.create_PDP_context(
-        apn=CELL_APN,
-        auth_user=APN_USERNAME,
-        auth_pass=APN_PASSWORD
-    )
-    if modem_rsp.result != ModemState.OK:
-        print('Failed to create PDP context')
+    if config.APN_USERNAME and not await modem.authenticate_PDP_context():
+        print('Failed to authenticate PDP context')
+
+    print('Connecting to LTE Network')
+    if not await lte_connect():
         return False
+   
+    print('Creating socket')
+    if await modem.create_socket(pdp_context_id=modem_rsp.pdp_ctx_id, rsp=modem_rsp):
+        socket_id = modem_rsp.socket_id
+    else:
+        print('Failed to create socket')
+        return False   
 
-    if (await modem.config_gnss()).result != ModemState.OK:
+    if not await modem.config_socket(socket_id=socket_id):
+        print('Failed to config socket')
+        return False
+    
+    if not await modem.config_gnss():
         print('Failed to configure GNSS subsystem')
-
+        return False
+    
+    return True
+    
 async def loop():
+    global modem_rsp
+
     print('Checking GNSS assistance data...')
     if not await update_gnss_assistance():
         print('Failed to update GNSS assistance data')
@@ -408,24 +363,29 @@ async def loop():
     gnss_fix = None
     for i in range(5):
         if i > 0:
-            print(f'  ↳ trying again, run: {i+1}/5')
+            print(f'  - trying again, run: {i+1}/5')
         await lte_disconnect()
-        modem_rsp: ModemRsp = await modem.perform_gnss_action(ModemGNSSAction.GET_SINGLE_FIX)
-        if modem_rsp.result != ModemState.OK:
-            print('  ↳ Failed to request GNSS fix', ModemCMEError.get_value_name(modem_rsp.cme_error))
+
+        if not await modem.perform_gnss_action(
+            action=ModemGNSSAction.GET_SINGLE_FIX,
+            rsp=modem_rsp
+        ):
+            print('  - Failed to request GNSS fix',
+                  ModemCMEError.get_value_name(modem_rsp.cme_error))
             continue
-        
-        print('  ↳ Requested GNSS fix')
-        print('  ↳ Waiting for GNSS fix')
+
+        print('  - Requested GNSS fix')
+        print('  - Waiting for GNSS fix')
         gnss_fix = await modem.wait_for_gnss_fix()
 
-        if gnss_fix.estimated_confidence <= MAX_GNSS_CONFIDENCE:
-            print(f'  ↳ Fix success, estimated confidence: {gnss_fix.estimated_confidence}')
+        if gnss_fix.estimated_confidence <= config.MAX_GNSS_CONFIDENCE:
+            print(f'  - Fix success, estimated confidence: {gnss_fix.estimated_confidence}')
             break
 
-    if gnss_fix.estimated_confidence > MAX_GNSS_CONFIDENCE:
-        print(f'  ↳ GNSS fix confidence ({gnss_fix.estimated_confidence:.2f}) exceeds max confidence of {MAX_GNSS_CONFIDENCE}')
-        print('  ↳ Not accurate enough, values will not be used')
+    if gnss_fix.estimated_confidence > config.MAX_GNSS_CONFIDENCE:
+        print(f'  - GNSS fix confidence ({gnss_fix.estimated_confidence:.2f}) '
+              f'exceeds max confidence of {config.MAX_GNSS_CONFIDENCE}')
+        print('  - Not accurate enough, values will not be used')
         
 
     if gnss_fix != None:
@@ -444,7 +404,7 @@ async def loop():
         lat: float = gnss_fix.latitude
         lon: float = gnss_fix.longitude
 
-        if gnss_fix.estimated_confidence > MAX_GNSS_CONFIDENCE:
+        if gnss_fix.estimated_confidence > config.MAX_GNSS_CONFIDENCE:
             gnss_fix.sats = []
             lat = 0.0
             lon = 0.0
@@ -457,9 +417,9 @@ async def loop():
     if not await lte_connect():
         print('Failed to connect to LTE')
 
-    modem_rsp: ModemRsp = await modem.get_cell_information()
-    if modem_rsp.result != ModemState.OK:
-        print('Failed to request cell information', ModemCMEError.get_value_name(modem_rsp.cme_error))
+    if not await modem.get_cell_information(rsp=modem_rsp):
+        print('Failed to request cell information',
+              ModemCMEError.get_value_name(modem_rsp.cme_error))
     else:
         print('Connected on band {} using operator {} ({}{})'.format(
             modem_rsp.cell_information.band,
@@ -498,20 +458,29 @@ async def loop():
         data_buffer.extend(b'\x00' * 11)
 
     print('Transmitting data to server')
-    await lte_transmit(SERVER_ADDRESS, SERVER_PORT, data_buffer)
-    await asyncio.sleep(5)
+    await lte_transmit(
+        socket_id=socket_id,
+        address=config.SERVER_ADDRESS,
+        port=config.SERVER_PORT,
+        buffer=data_buffer
+    )
 
 async def main():
     try:
-        await setup()
+        if not await setup():
+            print('Failed to complete setup, raising runtime error to stop')
+            raise RuntimeError()
+        
         while True:
             await loop()
+            print(f'sleeping for {config.SLEEP_TIME}sec')
+            await asyncio.sleep(config.SLEEP_TIME)
     except Exception as err:
         print('ERROR: (boot.py, main): ')
         sys.print_exception(err)
-        print('Waiting 5 minutes before exiting')
+        print(f'Waiting {config.SLEEP_TIME} seconds before exiting')
         # Sleep a while to prevent getting stuck in an infite crash loop
         # And give time for the serial over usb to function
-        asyncio.sleep(300)
+        asyncio.sleep(config.SLEEP_TIME)
 
 asyncio.run(main())
