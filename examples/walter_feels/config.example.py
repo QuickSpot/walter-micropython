@@ -48,5 +48,10 @@ BLYNK_DEVICE_PINS = {
     'rsrp': None
 }
 """
-Virtual Pins corresponding to the supported measurements
+Virtual Pins corresponding to the supported measurements (eg. 'v4')
+"""
+
+SLEEP_TIME = 300
+"""
+The time (in seconds) to sleep between readouts
 """

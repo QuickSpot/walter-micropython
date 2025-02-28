@@ -368,7 +368,8 @@ async def main():
         
         while True:
             await loop()
-            await asyncio.sleep(10)
+            print('sleeping for 5min')
+            await asyncio.sleep(config.SLEEP_TIME)
     except Exception as err:
         print('ERROR: (boot.py, main): ')
         sys.print_exception(err)
