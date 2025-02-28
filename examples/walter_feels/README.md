@@ -67,9 +67,9 @@ Then, copy it to the board alongside `boot.py`:
 mpremote cp examples/walter_feels/config.py :config.py
 ```
 
-### 3. Copy the Main Script
+### 3. Copy the Example Script
 
-Copy the main script onto the board:
+Copy the boot.py script onto the board:
 
 ```shell
 mpremote cp examples/walter_feels/boot.py :boot.py
@@ -82,4 +82,3 @@ mpremote cp examples/walter_feels/boot.py :boot.py
 3. Insert the SIM card before starting the script.
 
 Micropython automatically runs `boot.py` (unless the device is in safe-boot mode).
-
