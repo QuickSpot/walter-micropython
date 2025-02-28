@@ -23,7 +23,8 @@ class Modem(
     mixins.ModemGNSS,
     mixins.ModemHTTP,
     mixins.ModemPDP,
-    mixins.ModemSocket
+    mixins.ModemSocket,
+    mixins.ModemMQTT
 ):
     def __init__(self):
         ModemCore.__init__(self)
@@ -384,3 +385,60 @@ class Modem(
             at_cmd=cmd,
             at_rsp=b'OK',
         )
+    
+    async def _tls_upload_key(self,
+        is_private_key: bool,
+        slot_idx: int,
+        key,
+        rsp: ModemRsp = None
+    ) -> bool:
+        """
+        Coroutine to store a certificate or a key in the NVRAM of the modem
+        """
+        key_type = 'privatekey' if is_private_key else 'certificate'
+        return self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+SQNSNVW={modem_string(key_type)},{slot_idx},{len(key)}',
+            at_rsp=b'OK',
+            data=key,
+            cmd_type=ModemCmdType.DATA_TX_WAIT
+        )
+
+    # TODO: update docstring to match style of others
+    async def tls_provision_keys(self,
+        walter_certificate,
+        walter_private_key,
+        ca_certificate,
+        rsp: ModemRsp = None
+        ) -> bool:
+        """
+        Coroutine to store certificates and/or keys in the NVRAM of the modem.
+        This is a wrapper for _tls_upload_key, which does the actual uploading.
+        Basically a copy of the Arduino example, including the slot numbers of the
+        NVRAM, which seem arbitrary.
+        """
+        if walter_certificate:
+            if not await self._tls_upload_key(False, 5, walter_certificate, rsp):
+                if self.debug_log: print('WalterModem (modem, tls_rpovision_keys) - DEBUG: ERROR: '
+                                         'Failed to upload client certificate.')
+                return False
+            if self.debug_log: print('WalterModem (modem, tls_rpovision_keys) - DEBUG: INFO:'
+                                     'Certificate stored in NVRAM slot 5.')
+
+        if walter_private_key:
+            if not await self._tls_upload_key(True, 0, walter_private_key, rsp):
+                if self.debug_log: print('WalterModem (modem, tls_rpovision_keys) - DEBUG: ERROR:'
+                                         'Failed to upload private key.')
+                return False
+            print('WalterModem (modem, tls_provision_keys) - DEBUG: INFO: '
+                  'Private key stored in NVRAM slot 0.')
+
+        if ca_certificate:
+            if not await self._tls_upload_key(False, 6, ca_certificate, rsp):
+                print('WalterModem (modem, tls_rpovision_keys) - DEBUG: ERROR:'
+                      'Failed to upload CA certificate.')
+                return False
+            print('WalterModem (modem, tls_rpovision_keys) - DEBUG: INFO:'
+                  'CA certificate stored in NVRAM slot 6.')
+
+        return True
