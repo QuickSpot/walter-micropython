@@ -41,7 +41,7 @@ def get_data() -> dict:
         'system_voltage': ltc4015.get_system_voltage,
         'battery_voltage': ltc4015.get_battery_voltage,
         'battery_current': ltc4015.get_charge_current,
-        'battery_percentage': lambda: ltc4015.get_qcount() * 100 / 65535,
+        'battery_percentage': ltc4015.get_estimated_battery_percentage,
         'rsrp': lambda: modem_rsp.signal_quality.rsrp if rsrp else None
     }
 

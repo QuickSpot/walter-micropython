@@ -142,7 +142,9 @@ class LTC4015:
         t_chem = (tmp >> CHEM_SHIFT) & 0x0F
         self.cell_count = tmp & 0x0F
 
-        if t_chem < 4:
+        if self.cell_count == 0:
+            self.chemistry = INVALID
+        elif t_chem < 4:
             self.chemistry = LI_ION
         elif t_chem < 7:
             self.chemistry = LIFEPO4
@@ -172,7 +174,9 @@ class LTC4015:
         return v_bat * self.cell_count
 
     def get_charge_current(self) -> float:
-        return float(self.read_word(IBAT)) * 0.00146487 / self.Rsnsb
+        if self.cell_count > 0:
+            return float(self.read_word(IBAT)) * 0.00146487 / self.Rsnsb
+        return 0
 
     def get_die_temp(self) -> float:
         rawdie = self.read_word(DIE_TEMP)
@@ -187,3 +191,6 @@ class LTC4015:
             return "Lead Acid"
         else:
             return "Invalid"
+        
+    def get_estimated_battery_percentage(self) -> float:
+        return self.get_qcount() * 100 / 65535 if self.cell_count > 0 else 0
