@@ -278,8 +278,8 @@ async def setup() -> bool:
     CO2_SCL_PIN = Pin(11, Pin.OUT)
 
     # Input pins
-    I2C_SDA_PIN = Pin(42, Pin.IN)
-    I2C_SCL_PIN = Pin(2, Pin.IN)
+    I2C_SDA_PIN = Pin(42, Pin.OPEN_DRAIN, Pin.PULL_UP)
+    I2C_SCL_PIN = Pin(2, Pin.OPEN_DRAIN, Pin.PULL_UP)
     SD_CMD_PIN = Pin(6, Pin.IN)
     SD_CLK_PIN = Pin(5, Pin.IN)
     SD_DAT0_PIN = Pin(4, Pin.IN)
@@ -303,7 +303,6 @@ async def setup() -> bool:
     RS485_TX_EN_PIN.value(0)
     RS485_RX_EN_PIN.value(1)
     CO2_EN_PIN.value(1)
-
 
     # Initialize I2C
     i2c = I2C(0, scl=I2C_SCL_PIN, sda=I2C_SDA_PIN)
