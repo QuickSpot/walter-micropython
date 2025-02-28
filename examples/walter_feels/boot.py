@@ -236,7 +236,7 @@ async def modem_setup():
         port=443,
         tls_profile_id=1
     ):
-        print('Faield to configure HTTP profile')
+        print('Failed to configure HTTP profile')
         return False
     
     print('Connecting to LTE Network')
