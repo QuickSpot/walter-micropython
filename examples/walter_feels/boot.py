@@ -367,14 +367,14 @@ async def main():
         
         while True:
             await loop()
-            print('sleeping for 5min')
+            print(f'sleeping for {config.SLEEP_TIME}sec')
             await asyncio.sleep(config.SLEEP_TIME)
     except Exception as err:
         print('ERROR: (boot.py, main): ')
         sys.print_exception(err)
-        print('Waiting 5 minutes before exiting')
+        print(f'Waiting {config.SLEEP_TIME} seconds before exiting')
         # Sleep a while to prevent getting stuck in an infite crash loop
         # And give time for the serial over usb to function
-        asyncio.sleep(300)
+        asyncio.sleep(config.SLEEP_TIME)
 
 asyncio.run(main())
