@@ -54,6 +54,8 @@ Place them in the `lib` folder on Walter under their respective directories as `
 Use `mpremote` to copy them *(if multiple devices are connected, use `connect` as shown above)*:
 
 ```shell
+mpremote mkdir :lib/lps22hb
+mpremote mkdir :lib/ltc4015
 mpremote cp examples/walter_feels/lps22hb.py :lib/lps22hb/__init__.py
 mpremote cp examples/walter_feels/ltc4015.py :lib/ltc4015/__init__.py
 ```
