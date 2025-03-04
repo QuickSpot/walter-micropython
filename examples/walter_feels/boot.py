@@ -310,8 +310,8 @@ async def setup() -> bool:
     CO2_SCL_PIN = Pin(11, Pin.OUT)
 
     # Input pins
-    I2C_SDA_PIN = Pin(42, Pin.OPEN_DRAIN, Pin.PULL_UP)
-    I2C_SCL_PIN = Pin(2, Pin.OPEN_DRAIN, Pin.PULL_UP)
+    I2C_SDA_PIN = Pin(42, Pin.OPEN_DRAIN)
+    I2C_SCL_PIN = Pin(2, Pin.OPEN_DRAIN)
     SD_CMD_PIN = Pin(6, Pin.IN)
     SD_CLK_PIN = Pin(5, Pin.IN)
     SD_DAT0_PIN = Pin(4, Pin.IN)
@@ -356,7 +356,7 @@ async def setup() -> bool:
     # Enable 3.3V and I2C bus power, wait for sensors to boot
     PWR_3V3_EN_PIN.value(0)
     I2C_BUS_PWR_EN_PIN.value(1)
-    asyncio.sleep_ms(50)
+    asyncio.sleep(1)
 
     # Initialize the sensors
     hdc1080 = HDC1080(i2c)
