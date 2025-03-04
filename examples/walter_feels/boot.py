@@ -27,6 +27,7 @@ hdc1080: HDC1080
 lps22hb: LPS22HB
 ltc4015: LTC4015
 
+wdt = WDT(timeout=max(60000, (config.SLEEP_TIME * 1000) + 10000))
 modem = Modem()
 modem_rsp = ModemRsp()
 rsrp = False
@@ -67,6 +68,7 @@ async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState
             return True
         
         await asyncio.sleep(1)
+        wdt.feed()
     
     return False
 
@@ -94,9 +96,13 @@ async def lte_connect(_retry: bool = False) -> bool:
         print('  - Failed to set operational state to full')
         return False
     
+    wdt.feed()
+    
     if not await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC):
         print('  - Failed to set network selection mode to automatic')
         return False
+    
+    wdt.feed()
     
     print('  - Waiting for network registration')
     if not await wait_for_network_reg_state(
@@ -106,12 +112,17 @@ async def lte_connect(_retry: bool = False) -> bool:
     ):
         if await modem.get_rat(rsp=modem_rsp):
             if not await modem.set_op_state(ModemOpState.MINIMUM):
+                wdt.feed()
                 print('  - Failed to connected using current RAT')
                 return False
+            
+        wdt.feed()
 
         if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
             print('  - Unexpected: modem not on standby after 5 seconds')
             return False
+        
+        wdt.feed()
         
         rat = modem_rsp.rat
 
@@ -122,8 +133,12 @@ async def lte_connect(_retry: bool = False) -> bool:
                 if not await modem.set_rat(ModemRat.LTEM):
                     print('  - Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
+
+                wdt.feed()
             
             return False
+        
+        wdt.feed()
         
         print(f'  - Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
         print(f'  - Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
@@ -134,6 +149,8 @@ async def lte_connect(_retry: bool = False) -> bool:
             print('  - Failed to switch RAT')
             return False
         
+        wdt.feed()
+
         await modem.reset()
         return await lte_connect(_retry=True)
     
@@ -143,6 +160,8 @@ async def unlock_sim() -> bool:
     if not await modem.set_op_state(ModemOpState.NO_RF):
         print('  - Failed to set operational state to: NO RF')
         return False
+    
+    wdt.feed()
 
     # Give the modem time to detect the SIM
     asyncio.sleep(2)
@@ -151,6 +170,8 @@ async def unlock_sim() -> bool:
     else:
         print('  - Failed to unlock SIM card')
         return False
+    
+    wdt.feed()
    
     return True
 
@@ -161,6 +182,7 @@ async def await_http_response(http_profile: int, timeout: int = 30) -> bool:
         if await modem.http_did_ring(profile_id=http_profile, rsp=modem_rsp):
             return True
         
+        wdt.feed()
         await asyncio.sleep(1)
 
     if not await modem.http_close(http_profile):
@@ -206,6 +228,8 @@ async def modem_setup():
     if not await modem.check_comm():
         print('Modem communication error')
         return False
+    
+    wdt.feed()
 
     if config.SIM_PIN != None and not await unlock_sim():
         return False
@@ -218,6 +242,8 @@ async def modem_setup():
     ):
         print('Failed to create pdp context')
         return False
+    
+    wdt.feed()
    
     if config.APN_USERNAME and not await modem.authenticate_PDP_context(modem_rsp.pdp_ctx_id):
         print('Failed to authenticate PDP context')
@@ -230,6 +256,8 @@ async def modem_setup():
         print('Failed to configure TLS profile')
         return False
     
+    wdt.feed()
+    
     if not await modem.http_config_profile(
         profile_id=0,
         server_address=config.BLYNK_SERVER_ADDRESS,
@@ -239,10 +267,14 @@ async def modem_setup():
         print('Failed to configure HTTP profile')
         return False
     
+    wdt.feed()
+    
     print('Connecting to LTE Network')
     if not await lte_connect():
         print('Failed to connect to LTE Network')
         return False
+    
+    wdt.feed()
     
     return True
 
@@ -262,6 +294,7 @@ async def setup() -> bool:
 
     print('Walter Feels Example')
     print('---------------', end='\n\n')
+    wdt.feed()
 
     # Output pins
     PWR_3V3_EN_PIN = Pin(0, Pin.OUT)
@@ -318,6 +351,8 @@ async def setup() -> bool:
     if not await modem_setup():
         print('Failed to setup modem')
         return False
+    
+    wdt.feed()
 
     # Enable 3.3V and I2C bus power, wait for sensors to boot
     PWR_3V3_EN_PIN.value(0)
@@ -337,8 +372,12 @@ async def loop():
     global modem_rsp
     global rsrp
 
+    wdt.feed()
+
     if await modem.get_signal_quality(rsp=modem_rsp):
         rsrp = True
+
+    wdt.feed()
 
     data = get_data()
     if await fetch(
