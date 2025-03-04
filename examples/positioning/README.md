@@ -25,11 +25,13 @@ To run this example you will need the following items:
 
 ## Installation
 
-Follow the instructions in the main [README](../../README.md) to install the modem library.
+Follow the instructions in the main [README](../../README.md)
+to install the modem library.
 
 ### 1. Configuration
 
-Copy `config.example.py`, rename it to `config.py`, and update the values as needed.
+Copy `config.example.py`, rename it to `config.py`,
+and update the values as needed.
 Then, copy it to the board alongside `boot.py`:
 
 ```shell
@@ -44,10 +46,16 @@ Copy the boot.py script onto the board:
 mpremote cp examples/positioning/boot.py :boot.py
 ```
 
+> [!NOTE]
+> If `mpremote` is not in your system's PATH,
+> you can run it using `python -m mpremote` instead.
+
 ## Running the Example
 
 1. Connect the LTE antenna to Walter.
-2. **Do not run the example without an antenna connected**—this could damage the modem's radio frontend.
+2. **Do not run the example without an antenna connected**
+   , this could damage the modem's radio frontend.
 3. Insert the SIM card before starting the script.
 
-Micropython automatically runs `boot.py` (unless the device is in safe-boot mode).
+Micropython automatically runs `boot.py`
+*(unless the device is in safe-boot mode)*.

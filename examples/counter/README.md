@@ -15,22 +15,30 @@ To run this example you will need the following items:
 - A SIM card
 - USB-C cable to flash Walter
 
-## Installation Running the Example
+## Installation
 
-Follow the instructions in the main [README](../../README.md) to install the modem library.
+Follow the instructions in the main [README](../../README.md)
+to install the modem library.
 
 ## Running the Example
 
-Since this is a small example script, you can run this example without copying it onto the board,
-using [mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html):\
-*As long as the computer is attached / the command is not interrupted it will keep running*
+Since this is a small example script,
+you can run this example without copying it onto the board, using
+[mpremote](https://docs.micropython.org/en/latest/reference/mpremote.html):\
+*The script will continue running as long as the computer remains connected
+and the command is not interrupted.*
 
 ```shell
 mpremote run examples/counter/boot.py
 ```
 
-If you prefer to copy the example script onto the board, you can copy it like so:
+If you prefer to copy the example script onto the board,
+you can copy it like so:
 
 ```shell
 mpremote cp examples/counter/boot.py :boot.py
 ```
+
+> [!NOTE]
+> If `mpremote` is not in your system's PATH,
+> you can run it using `python -m mpremote` instead.
