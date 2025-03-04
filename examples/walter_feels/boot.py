@@ -165,7 +165,7 @@ async def unlock_sim() -> bool:
     wdt.feed()
 
     # Give the modem time to detect the SIM
-    asyncio.sleep(2)
+    await asyncio.sleep(2)
     if await modem.unlock_sim(pin=config.SIM_PIN):
         print('  - SIM unlocked')
     else:
@@ -256,6 +256,7 @@ async def modem_setup():
    
     if config.APN_USERNAME and not await modem.authenticate_PDP_context(modem_rsp.pdp_ctx_id):
         print('Failed to authenticate PDP context')
+        return False
     
     if not await modem.tls_config_profile(
         profile_id=1,
@@ -291,7 +292,7 @@ async def ltc4015_setup():
     ltc4015.initialize()
     ltc4015.suspend_charging()
     ltc4015.enable_force_telemetry()
-    asyncio.sleep_ms(100)
+    await asyncio.sleep_ms(100)
     ltc4015.disable_force_telemetry()
     ltc4015.start_charging()
     ltc4015.enable_mppt()
@@ -366,7 +367,7 @@ async def setup() -> bool:
     # Enable 3.3V and I2C bus power, wait for sensors to boot
     PWR_3V3_EN_PIN.value(0)
     I2C_BUS_PWR_EN_PIN.value(1)
-    asyncio.sleep(1)
+    await asyncio.sleep(1)
 
     # Initialize the sensors
     hdc1080 = HDC1080(i2c)
