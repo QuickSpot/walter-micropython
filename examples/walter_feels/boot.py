@@ -2,7 +2,7 @@ import asyncio
 import json
 import sys
 
-from machine import Pin, I2C
+from machine import Pin, I2C, WDT, reset
 from hdc1080 import HDC1080
 from lps22hb import LPS22HB
 from ltc4015 import LTC4015
@@ -175,24 +175,23 @@ async def unlock_sim() -> bool:
    
     return True
 
-async def await_http_response(http_profile: int, timeout: int = 30) -> bool:
+async def await_http_response(http_profile: int, timeout_before_hard_reset: int = 300) -> bool:
     global modem_rsp
 
-    for _ in range(timeout):
+    for _ in range(timeout_before_hard_reset):
         if await modem.http_did_ring(profile_id=http_profile, rsp=modem_rsp):
             return True
         
         wdt.feed()
         await asyncio.sleep(1)
 
-    if not await modem.http_close(http_profile):
-        # account for edge case where ring was received between last check and close attempt
-        if await modem.http_did_ring(profile_id=http_profile, rsp=modem_rsp):
-            return True
-        else:
-            # Cannot close nor read out, something is wrong with the modem or modem library
-            raise RuntimeError('Possible fault in modem or modem-library state')
-    return False
+    # Hard reset because with query, we cannot manually close the connection,
+    # It is managed (and thus closed) by the modem itself
+    print(
+        f'Modem is still waiting for response after {timeout_before_hard_reset}s'
+        '(timeout_before_hard_reset)')
+    print('Hard resetting...')
+    reset()
 
 def urlencode(params: dict) -> str:
     if len(params) <= 0:
@@ -411,9 +410,10 @@ async def main():
     except Exception as err:
         print('ERROR: (boot.py, main): ')
         sys.print_exception(err)
-        print(f'Waiting {config.SLEEP_TIME} seconds before exiting')
+        print(f'Waiting 10 seconds before hard resetting')
         # Sleep a while to prevent getting stuck in an infite crash loop
         # And give time for the serial over usb to function
-        asyncio.sleep(config.SLEEP_TIME)
+        await asyncio.sleep(10)
+        reset()
 
 asyncio.run(main())
