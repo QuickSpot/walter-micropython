@@ -27,6 +27,7 @@ hdc1080: HDC1080
 lps22hb: LPS22HB
 ltc4015: LTC4015
 
+consecutive_failed_requests = 0
 wdt = WDT(timeout=max(60000, (config.SLEEP_TIME * 1000) + 10000))
 modem = Modem()
 modem_rsp = ModemRsp()
@@ -205,6 +206,11 @@ async def fetch(
     extra_header_line: str = None
 ) -> bool:
     global modem_rsp
+    global consecutive_failed_requests
+
+    if consecutive_failed_requests > 5:
+        # If requests keep failing, something may be wrong
+        reset()
 
     uri = f'{path}{"?" + query_string if query_string is not None else ""}'
     if await modem.http_query(
@@ -214,7 +220,11 @@ async def fetch(
         extra_header_line=extra_header_line,
         rsp=modem_rsp
     ):
-        return await await_http_response(http_profile=0)
+        if not await await_http_response(http_profile=0):
+            consecutive_failed_requests += 1
+            return False
+        consecutive_failed_requests = 0
+        return True
     else:
         print(f'  Failed to fetch data (profile: {http_profile}, uri: {uri})')
         return False
