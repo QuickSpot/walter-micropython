@@ -25,9 +25,10 @@ Optional: Set this only if your SIM card requires a PIN for activation.
 Most IoT SIMs do not need this.
 """
 
-BLYNK_SERVER_ADDRESS = 'blynk.cloud'
+BLYNK_SERVER_ADDRESS = 'lon1.blynk.cloud'
 """
-The blynk server address: eg: "blynk.cloud", "lon1.blynk.cloud", ...
+The blynk server address: eg: "lon1.blynk.cloud".
+Do not use blynk.cloud, this will result in a 308 (Permanent Redirect)
 """
 
 BLYNK_TOKEN = ''
