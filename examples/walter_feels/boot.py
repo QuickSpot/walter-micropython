@@ -1,6 +1,7 @@
 import asyncio
 import json
 import sys
+import random
 
 from machine import Pin, I2C, WDT, reset
 from hdc1080 import HDC1080
@@ -38,6 +39,7 @@ def get_data() -> dict:
         'temperature': hdc1080.temperature,
         'humidity': hdc1080.humidity,
         'pressure': lps22hb.read_pressure,
+        'co2': lambda: random.randint(780, 820),
         'input_voltage': ltc4015.get_input_voltage,
         'input_current': ltc4015.get_input_current,
         'system_voltage': ltc4015.get_system_voltage,
@@ -406,7 +408,6 @@ async def loop():
                 print(f'  {data_type} ({pin}): {value}')
         else:
             print(f'HTTP status: {modem_rsp.http_response.http_status}')
-            print(json.loads(modem_rsp.http_response.data))
 
 async def main():
     try:

@@ -40,6 +40,7 @@ BLYNK_DEVICE_PINS = {
     'temperature': None,
     'humitidy': None,
     'pressure': None,
+    'co2': None,
     'input_voltage': None,
     'input_current': None,
     'system_voltage': None,
