@@ -16,42 +16,7 @@ from walter_modem.structs import (
     ModemRat
 )
 
-CELL_APN = ''
-"""
-The cellular Access Point Name (APN).
-Leave blank to enable automatic APN detection, which is sufficient for most networks.
-Manually set this only if your network provider specifies a particular APN.
-"""
-
-APN_USERNAME = ''
-"""
-The username for APN authentication.
-Typically, this is not required and should be left blank.
-Only provide a username if your network provider explicitly mandates it.
-"""
-
-APN_PASSWORD = ''
-"""
-The password for APN authentication.
-This is generally unnecessary and should remain blank.
-Set a password only if it is specifically required by your network provider.
-"""
-
-SIM_PIN = None
-"""
-Optional: Set this only if your SIM card requires a PIN for activation. 
-Most IoT SIMs do not need this.
-"""
-
-SERVER_ADDRESS = 'walterdemo.quickspot.io'
-"""
-The address of the Walter Demo server.
-"""
-
-SERVER_PORT = 1999
-"""
-The UDP port of the Walter Demo server.
-"""
+import config
 
 modem = Modem()
 """
@@ -69,6 +34,10 @@ The id of the socket
 """
 
 modem_rsp = ModemRsp()
+"""
+The modem response object.
+We re-use this single one, for memory efficiency.
+"""
 
 async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
     """
@@ -163,7 +132,7 @@ async def unlock_sim() -> bool:
 
     # Give the modem time to detect the SIM
     asyncio.sleep(2)
-    if await modem.unlock_sim(pin=SIM_PIN):
+    if await modem.unlock_sim(pin=config.SIM_PIN):
         print('  - SIM unlocked')
     else:
         print('  - Failed to unlock SIM card')
@@ -192,19 +161,19 @@ async def setup():
         print('Failed to retrieve modem operational state')
         return False
 
-    if SIM_PIN != None and not await unlock_sim():
+    if config.SIM_PIN != None and not await unlock_sim():
         return False
     
     if not await modem.create_PDP_context(
-        apn=CELL_APN,
-        auth_user=APN_USERNAME,
-        auth_pass=APN_PASSWORD,
+        apn=config.CELL_APN,
+        auth_user=config.APN_USERNAME,
+        auth_pass=config.APN_PASSWORD,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if APN_USERNAME and not await modem.authenticate_PDP_context():
+    if config.APN_USERNAME and not await modem.authenticate_PDP_context():
         print('Failed to authenticate PDP context')
 
     print('Connecting to LTE Network')
@@ -225,9 +194,9 @@ async def setup():
     
     print('Connecting socket')
     if not await modem.connect_socket(
-        remote_host=SERVER_ADDRESS,
-        remote_port=SERVER_PORT,
-        local_port=SERVER_PORT,
+        remote_host=config.SERVER_ADDRESS,
+        remote_port=config.SERVER_PORT,
+        local_port=config.SERVER_PORT,
         socket_id=socket_id
     ):
         print('Failed to connect socket')

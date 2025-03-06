@@ -17,8 +17,24 @@ To run this example you will need the following items:
 
 ## Installation
 
-Follow the instructions in the main [README](../../README.md)
-to install the modem library.
+> [!TIP]
+> If you have not installed the modem library yet,
+> you can find the documentation
+> [here](https://www.quickspot.io/documentation.html#/walter-modem/setup/micropython).
+
+### 1. Configuration
+
+Copy `config.example.py`, rename it to `config.py`,
+and update the values as needed.
+Then, copy it to the board:
+
+```shell
+mpremote cp examples/positioning/config.py :config.py
+```
+
+> [!NOTE]
+> If `mpremote` is not in your system's PATH,
+> you can run it using `python -m mpremote` instead.
 
 ## Running the Example
 
@@ -38,7 +54,3 @@ you can copy it like so:
 ```shell
 mpremote cp examples/counter/boot.py :boot.py
 ```
-
-> [!NOTE]
-> If `mpremote` is not in your system's PATH,
-> you can run it using `python -m mpremote` instead.
