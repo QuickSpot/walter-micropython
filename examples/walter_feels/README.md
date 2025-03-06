@@ -28,8 +28,10 @@ To run this example, you will need the following:
 
 ## Installation
 
-Follow the instructions in the main [README](../../README.md)
-to install the modem library.
+> [!TIP]
+> If you have not installed the modem library yet,
+> you can find the documentation
+> [here](https://www.quickspot.io/documentation.html#/walter-modem/setup/micropython).
 
 ### 1. Install Dependencies
 
@@ -76,7 +78,7 @@ mpremote cp examples/walter_feels/ltc4015.py :lib/ltc4015/__init__.py
 
 Copy `config.example.py`, rename it to `config.py`,
 and update the values as needed.
-Then, copy it to the board alongside `boot.py`:
+Then, copy it to the board:
 
 ```shell
 mpremote cp examples/walter_feels/config.py :config.py
@@ -97,7 +99,7 @@ mpremote cp examples/walter_feels/boot.py :boot.py
    this could damage the modem's radio frontend.
 3. Insert the SIM card before starting the script.
 
-Micropython automatically runs `boot.py`
+Micropython automatically runs `boot.py` on startup\
 *(unless the device is in safe-boot mode)*.
 
 > [!NOTE]
