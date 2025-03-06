@@ -99,3 +99,7 @@ mpremote cp examples/walter_feels/boot.py :boot.py
 
 Micropython automatically runs `boot.py`
 *(unless the device is in safe-boot mode)*.
+
+> [!NOTE]
+> If it looks like it's doing nothing, it may be waiting for network registration.\
+> Give it some time, if it fails on any step it will log/print that.
