@@ -5,7 +5,8 @@ from ..enums import (
 )
 from ..structs import (
     ModemRsp,
-    ModemMQTTResponse
+    ModemMQTTResponse,
+    ModemMqttMessage
 )
 from ..utils import (
     modem_string,
@@ -18,19 +19,32 @@ class ModemMQTT(ModemCore):
         user_name: str = '',
         password: str = '',
         tls_profile_id: int = None,
+        library_message_buffer: int = 16,
         rsp: ModemRsp = None
     ) -> bool:
         """
-        Configure the MQTT client (without connecting)
+        Configure the MQTT client without connecting.
 
-        :param client_id: MQTT client ID to be used, defaults to device MAC
-        :param user_name: Optional username for auth
-        :param password: Optional password for auth
-        :param tls_profile_id: Optional TlS profile ID to be used
-        :param rsp: Reference to a modem response instance
+        :param client_id: MQTT client ID to use (defaults to the device MAC).
+        :param user_name: Optional username for authentication.
+        :param password: Optional password for authentication.
+        :param tls_profile_id: Optional TLS profile ID to use.
+        :param library_message_buffer: Size of the library's internal MQTT message buffer (defaults to 16).
+            This buffer stores metadata for received messages but does not hold their payloads.
+            The modem itself supports up to 100 messages, but increasing this buffer significantly
+            may consume excessive memory and is not recommended.
+        :param rsp: Reference to a modem response instance.
 
-        :return: True on success, False on failure
+        :return: True on success, False on failure.
         """
+
+        if library_message_buffer >= 50:
+            print('WalterModem WARNING: High lib message buffer, '
+                  'Setting the MQTT Message Buffer too high may consume excessive memory')
+
+        for _ in range(library_message_buffer):
+            self._mqtt_msg_buffer.append(ModemMqttMessage('', 0, 0, None))
+
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSMQTTCFG=0,{},{},{}{}'.format(

@@ -161,8 +161,6 @@ class ModemCore:
 
         self._mqtt_msg_buffer: list[ModemMqttMessage] = []
         """Inbox for MQTT messages"""
-        for _ in range(ModemCore.WALTER_MODEM_MQTT_MAX_PENDING_RINGS):
-            self._mqtt_msg_buffer.append(ModemMqttMessage('', 0, 0, None))
 
     def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
         # According to modem documentation;
