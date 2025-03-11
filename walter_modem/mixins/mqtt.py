@@ -130,10 +130,16 @@ class ModemMQTT(ModemCore):
 
         :return: True on success, False on failure
         """
+        async def complete_handler(result, rsp, complete_handler_arg):
+            if result == ModemState.OK:
+                self._mqtt_subscriptions.append(complete_handler_arg)
+
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+SQNSMQTTSUBSCRIBE=0,{modem_string(topic)},{qos}',
-            at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic))
+            at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic)),
+            complete_handler=complete_handler,
+            complete_handler_arg=(topic, qos)
         )
     
     async def mqtt_did_ring(self,

@@ -45,7 +45,8 @@ from .structs import (
 from .utils import (
     bytes_to_str,
     parse_cclk_time,
-    parse_gnss_time
+    parse_gnss_time,
+    modem_string
 )
 
 class ModemCore:
@@ -161,6 +162,8 @@ class ModemCore:
 
         self._mqtt_msg_buffer: list[ModemMqttMessage] = []
         """Inbox for MQTT messages"""
+
+        self._mqtt_subscriptions: list[tuple[str, int]] = []
 
     def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
         # According to modem documentation;
@@ -806,6 +809,13 @@ class ModemCore:
             _, result_code_str = at_rsp[len("+SQNSMQTTONCONNECT:"):].decode().split(',')
             result_code = int(result_code_str)
 
+            if self._mqtt_status == ModemMqttState.CONNECTED:
+                for (topic, qos) in self._mqtt_subscriptions:
+                    asyncio.create_task(self._run_cmd(
+                        at_cmd=f'AT+SQNSMQTTSUBSCRIBE=0,{modem_string(topic)},{qos}',
+                        at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic)),
+                    ))
+
             if result_code:
                 self._mqtt_status = ModemMqttState.DISCONNECTED
             else:
@@ -815,8 +825,13 @@ class ModemCore:
             _, result_code_str = at_rsp[len("+SQNSMQTTONDISCONNECT:"):].decode().split(',')
             result_code = int(result_code_str)
 
-            # TODO: handle error message when resultcode != 0
+            if result_code != 0:
+                result = ModemState.ERROR
+
             self._mqtt_status = ModemMqttState.DISCONNECTED
+            self._mqtt_subscriptions = []
+            for msg in self._mqtt_msg_buffer:
+                msg.free = True
 
         elif at_rsp.startswith("+SQNSMQTTONMESSAGE:0,"):
             parts = at_rsp[len("+SQNSMQTTONMESSAGE:"):].decode().split(',')
@@ -947,9 +962,9 @@ class ModemCore:
                     cur_cmd = None
 
     async def _run_cmd(self,
-        rsp: ModemRsp | None,
         at_cmd: str,
         at_rsp: str, 
+        rsp: ModemRsp | None = None,
         ring_return: list | None = None,
         cmd_type: int = ModemCmdType.TX_WAIT,
         data = None,
