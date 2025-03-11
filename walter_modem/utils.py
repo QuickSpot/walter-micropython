@@ -116,4 +116,4 @@ def modem_bool(a_bool):
         return 0
 
 def log(level, msg):
-    print(f'WalterModem [{level:>9}]: {msg}')
+    print(f'WalterModem [{level:<9}]: {msg}')

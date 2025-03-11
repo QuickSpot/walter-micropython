@@ -42,7 +42,7 @@ class ModemMQTT(ModemCore):
 
         if library_message_buffer >= 50:
             log('WARNING',
-                'High lib message buffer\n'
+                'High lib message buffer '
                 'Setting the MQTT Message Buffer too high may consume excessive memory')
 
         for _ in range(library_message_buffer):
