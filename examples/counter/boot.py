@@ -111,8 +111,10 @@ async def lte_connect(_retry: bool = False) -> bool:
             
             return False
         
-        print(f'  - Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
-        print(f'  - Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
+        print('  - Failed to connect to LTE network using: '
+              f'{"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
+        print('  - Switching modem to '
+              f'{"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
 
         next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
 
@@ -147,7 +149,8 @@ async def setup():
     print('Walter Counter Example')
     print('---------------')
     print('Find your walter at: https://walterdemo.quickspot.io/')
-    print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode(), end='\n\n')
+    print('Walter\'s MAC is: %s' % ubinascii.hexlify(network.WLAN().config('mac'),':').decode(),
+          end='\n\n')
 
     await modem.begin() 
 
