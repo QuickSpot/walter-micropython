@@ -256,7 +256,7 @@ class ModemRspType(Enum):
     GNSS_ASSISTANCE_DATA = 11
     CLOCK = 12
     MQTT = 13
-    HTTP_RESPONSE = 14
+    HTTP = 14
     COAP = 15
     CELL_INFO = 16
     REG_STATE = 50
@@ -289,6 +289,10 @@ class ModemHttpContextState(Enum):
     IDLE = 0
     EXPECT_RING = 1
     GOT_RING = 2
+
+class ModemMqttState(Enum):
+    CONNECTED = 0
+    DISCONNECTED = 0
 
 class ModemSocketProto(Enum):
     """Protocol used by the socket."""

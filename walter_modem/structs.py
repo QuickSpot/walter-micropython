@@ -157,6 +157,10 @@ class ModemHttpResponse:
         self.data = b''
         self.content_type = ''
 
+class ModemMQTTResponse:
+    def __init__(self, topic, qos):
+        self.topic = topic
+        self.qos = qos
 
 class ModemSignalQuality:
     """Grouping the RSRQ and RSPR signal quality parameters."""
@@ -216,15 +220,29 @@ class ModemRsp:
         self.clock: float | None = None
         """Unix timestamp of the current time and date in the modem."""
 
-        """ TODO  mqtt_data"""
-
         self.http_response: ModemHttpResponse | None = None
         """HTTP response"""
 
-        """ TODO  coap_response"""
+        self.mqtt_response: ModemMQTTResponse | None = None
+
+        #TODO: coap_response
 
         self.cell_information: ModemCellInformation | None = None
 
+class ModemMqttMessage:
+    def __init__(self, topic, length, qos, message_id = None, payload = None):
+        self.topic = topic
+        """The topic to which the message is published"""
+        self.length = length
+        """The length of the payload"""
+        self.qos = qos
+        """The quality of service"""
+        self.message_id = message_id
+        """The message ID"""
+        self.payload = payload
+        """The payload of the message"""
+        self.free = True
+        """Has the message been received from the buffer of the modem?"""
 
 class ModemCmd:
     """Structure epresenting an AT command to be added to the command queue."""
@@ -258,6 +276,9 @@ class ModemCmd:
         
         self.rsp = None
         """Pointer to the response object to store the command results in."""
+
+        self.ring_return = None
+        """Optional pointer to any mutable variable which may be provided with a ring"""
         
         self.complete_handler = None
         """
