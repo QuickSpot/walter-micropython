@@ -46,7 +46,8 @@ from .utils import (
     bytes_to_str,
     parse_cclk_time,
     parse_gnss_time,
-    modem_string
+    modem_string,
+    log
 )
 
 class ModemCore:
@@ -193,11 +194,9 @@ class ModemCore:
                 msg.payload = None
                 msg.free = False
                 return
-        
-        print(
-            'WalterModem - WARNING: '
-            'Modem Library\'s MQTT Message Buffer is full, incoming message was dropped'
-        )
+            
+        log('WARNING',
+            'Modem Library\'s MQTT Message Buffer is full, incoming message was dropped')
 
     async def _queue_rx_buffer(self):
         """
@@ -244,10 +243,8 @@ class ModemCore:
             if self.debug_log and size > 0:
                 for line in incoming_uart_data[:size].splitlines():
                     if len(line) > 0:
-                        print(
-                            'WalterModem (core, _uart_reader) - DEBUG: RX: '
-                            f'{bytes_to_str(line)}'
-                        )
+                        log('DEBUG, RX', bytes_to_str(line))
+
             for b in incoming_uart_data[:size]:
                 if self._parser_data.state == ModemRspParserState.START_CR:
                     if b == ModemCore.CR:
@@ -353,10 +350,8 @@ class ModemCore:
     async def _process_queue_cmd(self, tx_stream, cmd):
         if cmd.type == ModemCmdType.TX:
             if self.debug_log:
-                print(
-                    f'WalterModem (core, _process_queue_cmd) - DEBUG: TX:'
-                    f'{bytes_to_str(cmd.at_cmd)}'
-                )
+                log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+
             tx_stream.write(cmd.at_cmd)
             tx_stream.write(b'\r\n')
             await tx_stream.drain()
@@ -366,10 +361,8 @@ class ModemCore:
         or cmd.type == ModemCmdType.DATA_TX_WAIT:
             if cmd.state == ModemCmdState.NEW:
                 if self.debug_log:
-                    print(
-                        'WalterModem (core, _process_queue_cmd) - DEBUG: TX: '
-                        f'{bytes_to_str(cmd.at_cmd)}'
-                    )
+                    log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+                    
                 tx_stream.write(cmd.at_cmd)
                 if cmd.type == ModemCmdType.DATA_TX_WAIT:
                     tx_stream.write(b'\n')
@@ -391,10 +384,8 @@ class ModemCore:
                             await self._finish_queue_cmd(cmd, ModemState.ERROR)
                     else:
                         if self.debug_log:
-                            print(
-                                'WalterModem (core, _process_queue_cmd) - DEBUG: TX: '
-                                f'{bytes_to_str(cmd.at_cmd)}'
-                            )
+                            log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+
                         tx_stream.write(cmd.at_cmd)
                         if cmd.type == ModemCmdType.DATA_TX_WAIT:
                             tx_stream.write(b'\n')
@@ -444,10 +435,8 @@ class ModemCore:
         elif at_rsp.startswith(b'>') or at_rsp.startswith(b'>>>'):
             if cmd and cmd.data and cmd.type == ModemCmdType.DATA_TX_WAIT:
                 if self.debug_log:
-                    print(
-                        'WalterModem (core, _process_queue_rsp) - DEBUG: TX: '
-                        f'{bytes_to_str(cmd.data)}'
-                    )
+                    log('DEBUG, TX', bytes_to_str(cmd.data))
+                    
                 tx_stream.write(cmd.data)
                 await tx_stream.drain()
 
@@ -846,10 +835,9 @@ class ModemCore:
             self._add_msg_to_mqtt_buffer(message_id, topic, length, qos)
 
         elif at_rsp.startswith("+SQNSMQTTMEMORYFULL"):
-            print(
-                'WalterModem - WARNING: '
-                'Sequans Modem\'s MQTT Memory full'
-            )
+            log('WARNING',
+                'Sequans Modem\'s MQTT Memory full')
+
             for msg in self._mqtt_msg_buffer:
                 msg.free = True
 
@@ -937,10 +925,8 @@ class ModemCore:
             else:
                 qitem = await self._task_queue.get()
                 if not isinstance(qitem, ModemTaskQueueItem):
-                    print(
-                        'WalterModem (core, _queue_worker) - ERROR: '
-                        f'Invalid task queue item: {type(qitem)}, {str(qitem)}'
-                    )
+                    log('ERROR',
+                        f'Invalid task queue item: {type(qitem)}, {str(qitem)}')
 
             # process or enqueue new command or response
             if qitem.cmd:

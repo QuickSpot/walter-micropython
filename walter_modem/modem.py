@@ -16,7 +16,8 @@ from .structs import (
     ModemRsp,
 )
 from .utils import (
-    modem_string
+    modem_string,
+    log
 )
 
 class Modem(
@@ -419,26 +420,26 @@ class Modem(
         """
         if walter_certificate:
             if not await self._tls_upload_key(False, 5, walter_certificate, rsp):
-                if self.debug_log: print('WalterModem (modem, tls_rpovision_keys) - DEBUG: ERROR: '
-                                         'Failed to upload client certificate.')
+                if self.debug_log: log('DEBUG'
+                    'Failed to upload client certificate.')
                 return False
-            if self.debug_log: print('WalterModem (modem, tls_rpovision_keys) - DEBUG: INFO:'
-                                     'Certificate stored in NVRAM slot 5.')
+            if self.debug_log: log('DEBUG',
+                'Certificate stored in NVRAM slot 5.')
 
         if walter_private_key:
             if not await self._tls_upload_key(True, 0, walter_private_key, rsp):
-                if self.debug_log: print('WalterModem (modem, tls_rpovision_keys) - DEBUG: ERROR:'
-                                         'Failed to upload private key.')
+                if self.debug_log: log('DEBUG',
+                    'Failed to upload private key.')
                 return False
-            print('WalterModem (modem, tls_provision_keys) - DEBUG: INFO: '
-                  'Private key stored in NVRAM slot 0.')
+            if self.debug_log: log('DEBUG',
+                'Private key stored in NVRAM slot 0.')
 
         if ca_certificate:
             if not await self._tls_upload_key(False, 6, ca_certificate, rsp):
-                print('WalterModem (modem, tls_rpovision_keys) - DEBUG: ERROR:'
-                      'Failed to upload CA certificate.')
+                if self.debug_log: log('DEBUG',
+                    'Failed to upload CA certificate.')
                 return False
-            print('WalterModem (modem, tls_rpovision_keys) - DEBUG: INFO:'
-                  'CA certificate stored in NVRAM slot 6.')
+            if self.debug_log: log('DEBUG',
+                'CA certificate stored in NVRAM slot 6.')
 
         return True

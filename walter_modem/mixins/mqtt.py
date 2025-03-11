@@ -10,7 +10,8 @@ from ..structs import (
 )
 from ..utils import (
     modem_string,
-    get_mac
+    get_mac,
+    log
 )
 
 class ModemMQTT(ModemCore):
@@ -39,8 +40,9 @@ class ModemMQTT(ModemCore):
         """
 
         if library_message_buffer >= 50:
-            print('WalterModem - WARNING: High lib message buffer, '
-                  'Setting the MQTT Message Buffer too high may consume excessive memory')
+            log('WARNING',
+                'High lib message buffer\n'
+                'Setting the MQTT Message Buffer too high may consume excessive memory')
 
         for _ in range(library_message_buffer):
             self._mqtt_msg_buffer.append(ModemMqttMessage('', 0, 0, None))
