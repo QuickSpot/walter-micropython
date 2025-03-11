@@ -30,7 +30,8 @@ class ModemMQTT(ModemCore):
         :param user_name: Optional username for authentication.
         :param password: Optional password for authentication.
         :param tls_profile_id: Optional TLS profile ID to use.
-        :param library_message_buffer: Size of the library's internal MQTT message buffer (defaults to 16).
+        :param library_message_buffer: Size of the library's internal MQTT message buffer 
+            (defaults to 16).
             This buffer stores metadata for received messages but does not hold their payloads.
             The modem itself supports up to 100 messages, but increasing this buffer significantly
             may consume excessive memory and is not recommended.
