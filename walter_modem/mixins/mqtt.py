@@ -177,7 +177,8 @@ class ModemMQTT(ModemCore):
         self._mqtt_msg_buffer[msg_index].free = True
 
         async def complete_handler(result, rsp, complete_handler_arg):
-            rsp.mqtt_response = complete_handler_arg
+            if result == ModemState.OK:
+                rsp.mqtt_response = complete_handler_arg
 
         return await self._run_cmd(
             rsp=rsp,
