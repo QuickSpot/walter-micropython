@@ -131,7 +131,7 @@ async def unlock_sim() -> bool:
         return False
 
     # Give the modem time to detect the SIM
-    asyncio.sleep(2)
+    await asyncio.sleep(2)
     if await modem.unlock_sim(pin=config.SIM_PIN):
         print('  - SIM unlocked')
     else:
@@ -234,6 +234,6 @@ async def main():
         print('Waiting 5 minutes before exiting')
         # Sleep a while to prevent getting stuck in an infite crash loop
         # And give time for the serial over usb to function
-        asyncio.sleep(300)
+        await asyncio.sleep(300)
 
 asyncio.run(main())
