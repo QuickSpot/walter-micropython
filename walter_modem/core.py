@@ -841,7 +841,7 @@ class ModemCore:
             for msg in self._mqtt_msg_buffer:
                 msg.free = True
 
-        elif at_rsp and cmd.at_cmd.startswith("AT+SQNSMQTTRCVMESSAGE=0"):
+        elif cmd and cmd.at_cmd and cmd.at_cmd.startswith("AT+SQNSMQTTRCVMESSAGE=0"):
             if cmd.rsp.type != ModemRspType.MQTT:
                 cmd.rsp.type = ModemRspType.MQTT
             
