@@ -12,11 +12,9 @@ from walter_modem.enums import (
     ModemGNSSAssistanceType,
     ModemNetworkRegState,
     ModemNetworkSelMode,
-    ModemTlsValidation,
     ModemOpState,
     ModemRai,
     ModemRat,
-    ModemTlsVersion,
     ModemRspType
 )
 from walter_modem.structs import (

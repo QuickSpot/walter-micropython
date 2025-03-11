@@ -1,6 +1,5 @@
 import asyncio
 import time
-import sys
 
 from machine import UART
 from .queue import Queue
