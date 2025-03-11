@@ -39,7 +39,7 @@ class ModemMQTT(ModemCore):
         """
 
         if library_message_buffer >= 50:
-            print('WalterModem WARNING: High lib message buffer, '
+            print('WalterModem - WARNING: High lib message buffer, '
                   'Setting the MQTT Message Buffer too high may consume excessive memory')
 
         for _ in range(library_message_buffer):
