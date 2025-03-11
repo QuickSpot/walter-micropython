@@ -1,8 +1,14 @@
+import network
 import time
+import ubinascii
+
 
 from .enums import (
     ModemPDPType
 )
+
+def get_mac() -> str:
+    return ubinascii.hexlify(network.WLAN().config('mac'),':').decode()
 
 def bytes_to_str(byte_data):
     """Convert byte data to a string."""

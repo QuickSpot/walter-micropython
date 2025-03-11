@@ -190,14 +190,19 @@ async def setup():
         print('Failed to configure TLS profile')
         return False
     
+    print('Configurng MQTT')
+    if not await modem.mqtt_config(
+        user_name=config.MQTT_USERNAME,
+        password=config.MQTT_PASSWORD,
+        tls_profile_id=1
+    ):
+        print('Failed to configure MQTT')
+        return False
+    
     print('Connecting to MQTT server')
     if not await modem.mqtt_connect(
         server_name=config.MQTT_SERVER_ADDRESS,
         port=int(config.MQTT_PORT),
-        client_id=ubinascii.hexlify(network.WLAN().config('mac'),':').decode(),
-        user_name=config.MQTT_USERNAME,
-        password=config.MQTT_PASSWORD,
-        tls_profile_id=1
     ):
         print('Failed to connect to MQTT server')
         return False
@@ -226,7 +231,7 @@ async def main():
         
         if not await modem.mqtt_publish(
             topic=topic,
-            payload=config.MESSAGE,
+            data=config.MESSAGE,
             qos=config.PUBLISH_QOS
         ):
             print('Failed to publish message')

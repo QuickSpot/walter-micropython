@@ -8,20 +8,28 @@ from ..structs import (
     ModemMQTTResponse
 )
 from ..utils import (
-    modem_string
+    modem_string,
+    get_mac
 )
 
 class ModemMQTT(ModemCore):
-    async def _mqtt_config(self,
-        client_id: str,
-        user_name: str,
-        password: str,
+    async def mqtt_config(self,
+        client_id: str = get_mac(),
+        user_name: str = '',
+        password: str = '',
         tls_profile_id: int = None,
         rsp: ModemRsp = None
     ) -> bool:
         """
-        Coroutine to configure a connection to an MQTT broker,
-        called internally just before establishing the connection.
+        Configure the MQTT client (without connecting)
+
+        :param client_id: MQTT client ID to be used, defaults to device MAC
+        :param user_name: Optional username for auth
+        :param password: Optional password for auth
+        :param tls_profile_id: Optional TlS profile ID to be used
+        :param rsp: Reference to a modem response instance
+
+        :return: True on success, False on failure
         """
         return await self._run_cmd(
             rsp=rsp,
@@ -34,9 +42,35 @@ class ModemMQTT(ModemCore):
             at_rsp=b'OK'
         )
 
+    async def mqtt_connect(self,
+        server_name: str,
+        port: int,
+        keep_alive: int = 60,
+        rsp: ModemRsp = None
+    ) -> bool:
+        """
+        Initialize MQTT and establish a connection.
+
+        :param server_name: MQTT broker hostname
+        :param port: Port to connect to
+        :param keep_alive: Maximum keepalive time (in seconds), defaults to 60
+        :param rsp: Reference to a modem response instance
+
+        :return: True on success, False on failure
+        """
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+SQNSMQTTCONNECT=0,{modem_string(server_name)},{port},{keep_alive}',
+            at_rsp=b'+SQNSMQTTONCONNECT:0,'
+        )
+    
     async def mqtt_disconnect(self, rsp: ModemRsp = None) -> bool:
         """
         Disconnect from an MQTT broker
+
+        :param rsp: Reference to a modem response instance
+
+        :return: True on success, False on failure
         """
         return await self._run_cmd(
             rsp=rsp,
@@ -44,55 +78,43 @@ class ModemMQTT(ModemCore):
             at_rsp=b'+SQNSMQTTONDISCONNECT:0,0'
         )
 
-    async def mqtt_connect(self,
-        server_name: str,
-        port: int,
-        client_id: str,
-        user_name: str,
-        password: str,
-        tls_profile_id: int = None,
-        rsp: ModemRsp = None
-    ) -> bool:
-        """
-        Coroutine to establish a connection to an MQTT broker,
-        also wrapping the configuration of the connection.
-        This follows the logic of the Arduino example.
-        """
-        if not await self._mqtt_config(client_id, user_name, password, tls_profile_id, rsp):
-            print('Failed to configure mqtt client.')
-            return rsp
-
-        print('MQTT client configured.')
-        return await self._run_cmd(
-            rsp=rsp,
-            at_cmd=f'AT+SQNSMQTTCONNECT=0,{modem_string(server_name)},{port}',
-            at_rsp=b'+SQNSMQTTONCONNECT:0,'
-        )
-
     async def mqtt_publish(self,
         topic: str,
-        payload,
-        qos,
+        data,
+        qos: int,
         rsp: ModemRsp = None
     ) -> bool:
         """
-        Coroutine to publish a new MQTT message to a given topic
+        Publish the passed data on the given MQTT topic using the earlier eastablished connection.
+
+        :param topic: The topic to publish on
+        :param payload: The data to publish
+        :param qos: Quality of Service (0: at least once, 1: at least once, 2: exactly once)
+        :param rsp: Reference to a modem response instance
+
+        :return: True on success, False on failure
         """
         return await self._run_cmd(
             rsp=rsp,
-            at_cmd=f'AT+SQNSMQTTPUBLISH=0,{modem_string(topic)},{qos},{len(payload)}',
+            at_cmd=f'AT+SQNSMQTTPUBLISH=0,{modem_string(topic)},{qos},{len(data)}',
             at_rsp=b'+SQNSMQTTONPUBLISH:0,',
-            data=payload,
+            data=data,
             cmd_type=ModemCmdType.DATA_TX_WAIT
         )
 
     async def mqtt_subscribe(self,
         topic: str,
-        qos,
+        qos: int,
         rsp: ModemRsp = None
     ) -> bool:
         """
-        Coroutine to subscribe to an MQTT topic
+        Subscribe to a given MQTT topic using the earlier established connection.
+
+        :param topic: The topic to subscribe to
+        :param qos: Quality of Service (0: at least once, 1: at least once, 2: exactly once)
+        :param rsp: Reference to a modem response instance
+
+        :return: True on success, False on failure
         """
         return await self._run_cmd(
             rsp=rsp,
@@ -106,6 +128,13 @@ class ModemMQTT(ModemCore):
         rsp: ModemRsp = None
         ) -> bool:
         """
+        Poll if the modem has reported any incoming MQTT messages received on topics
+        that we are subscribed on.
+
+        WARNING: No more than 1 message with QoS 0 are stored in the buffer,
+        every new message with QoS 0 overwrites the previous
+        (this only applies to messages with QoS 0)
+
         :param msg_list: Refence to a list where the received messages will be put.
         :param topic: The exact topic to filter on, leave as None for all topics
         :param rsp: Reference to a modem response instance
