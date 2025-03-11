@@ -1,7 +1,6 @@
 import asyncio
 import network
 import sys
-import ubinascii
 
 from walter_modem import Modem
 
