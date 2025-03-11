@@ -224,7 +224,7 @@ async def loop():
 async def main():
     try:
         if not await setup():
-            print('Failed to complete setup, raising runtime error to stop')
+            print('Failed to complete setup, raising runtime error to stop the script.')
             raise RuntimeError()
         while True:
             await loop()
