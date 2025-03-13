@@ -136,8 +136,8 @@ class ModemSocket(ModemCore):
 
         :param remote_host: The remote IPv4/IPv6 or hostname to connect to.
         :param remote_port: The remote port to connect on.
-        :param socket_id: The id of the socket to connect or -1 to re-use the last one.
         :param local_port: The local port in case of an UDP socket.
+        :param socket_id: The id of the socket to connect or -1 to re-use the last one.
         :param protocol: The protocol to use, UDP by default.
         :type protocol: ModemSocketProto
         :param accept_any_remote: How to accept remote UDP packets.
