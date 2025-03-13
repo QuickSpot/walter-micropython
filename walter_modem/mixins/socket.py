@@ -124,7 +124,7 @@ class ModemSocket(ModemCore):
     async def connect_socket(self,
         remote_host: str,
         remote_port: int,
-        local_port: int,
+        local_port: int = 0,
         socket_id: int = -1,
         protocol: int = ModemSocketProto.UDP,
         accept_any_remote: int = ModemSocketAcceptAnyRemote.DISABLED,
