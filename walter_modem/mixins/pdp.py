@@ -1,15 +1,15 @@
 from ..core import ModemCore
 from ..enums import (
-    ModemPDPAuthProtocol,
-    ModemPDPType,
-    ModemPDPHeaderCompression,
-    ModemPDPDataCompression,
-    ModemPDPIPv4AddrAllocMethod,
-    ModemPDPRequestType,
-    ModemPDPPCSCFDiscoveryMethod,
-    ModemPDPContextState,
-    ModemState,
-    ModemRspType
+    WalterModemPDPAuthProtocol,
+    WalterModemPDPType,
+    WalterModemPDPHeaderCompression,
+    WalterModemPDPDataCompression,
+    WalterModemPDPIPv4AddrAllocMethod,
+    WalterModemPDPRequestType,
+    WalterModemPDPPCSCFDiscoveryMethod,
+    WalterModemPDPContextState,
+    WalterModemState,
+    WalterModemRspType
 )
 from ..structs import (
     ModemRsp,
@@ -23,16 +23,16 @@ from ..utils import (
 class ModemPDP(ModemCore):
     async def create_PDP_context(self,
         apn: str = '',
-        auth_proto: int = ModemPDPAuthProtocol.NONE,
+        auth_proto: int = WalterModemPDPAuthProtocol.NONE,
         auth_user: str = None,
         auth_pass: str = None,
-        type: int = ModemPDPType.IP,
+        type: int = WalterModemPDPType.IP,
         pdp_address: str = None,
-        header_comp: int = ModemPDPHeaderCompression.OFF,
-        data_comp: int = ModemPDPDataCompression.OFF,
-        ipv4_alloc_method: int = ModemPDPIPv4AddrAllocMethod.DHCP,
-        request_type: int = ModemPDPRequestType.NEW_OR_HANDOVER,
-        pcscf_method: int = ModemPDPPCSCFDiscoveryMethod.AUTO,
+        header_comp: int = WalterModemPDPHeaderCompression.OFF,
+        data_comp: int = WalterModemPDPDataCompression.OFF,
+        ipv4_alloc_method: int = WalterModemPDPIPv4AddrAllocMethod.DHCP,
+        request_type: int = WalterModemPDPRequestType.NEW_OR_HANDOVER,
+        pcscf_method: int = WalterModemPDPPCSCFDiscoveryMethod.AUTO,
         for_IMCN: bool = False,
         use_NSLPI: bool  = True,
         use_secure_PCO: bool = False,
@@ -75,13 +75,13 @@ class ModemPDP(ModemCore):
         """
         ctx = None
         for pdp_ctx in self._pdp_ctx_list:
-            if pdp_ctx.state == ModemPDPContextState.FREE:
-                pdp_ctx.state = ModemPDPContextState.RESERVED
+            if pdp_ctx.state == WalterModemPDPContextState.FREE:
+                pdp_ctx.state = WalterModemPDPContextState.RESERVED
                 ctx = pdp_ctx
                 break
 
         if ctx == None:
-            if rsp: rsp.result = ModemState.NO_FREE_PDP_CONTEXT
+            if rsp: rsp.result = WalterModemState.NO_FREE_PDP_CONTEXT
             return False
         
         self._pdp_ctx = ctx
@@ -106,11 +106,11 @@ class ModemPDP(ModemCore):
 
         async def complete_handler(result, rsp, complete_handler_arg):
             ctx = complete_handler_arg
-            rsp.type = ModemRspType.PDP_CTX_ID
+            rsp.type = WalterModemRspType.PDP_CTX_ID
             rsp.pdp_ctx_id = ctx.id
 
-            if result == ModemState.OK:
-                ctx.state = ModemPDPContextState.INACTIVE
+            if result == WalterModemState.OK:
+                ctx.state = WalterModemPDPContextState.INACTIVE
 
         return await self._run_cmd(
             rsp=rsp,
@@ -144,13 +144,13 @@ class ModemPDP(ModemCore):
         try:
             ctx = self._pdp_ctx_list[context_id - 1]
         except Exception:
-            if rsp: rsp.result = ModemState.NO_SUCH_PDP_CONTEXT
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
         
         self._pdp_ctx = ctx
 
-        if ctx.auth_proto == ModemPDPAuthProtocol.NONE:
-            if rsp: rsp.result = ModemState.OK
+        if ctx.auth_proto == WalterModemPDPAuthProtocol.NONE:
+            if rsp: rsp.result = WalterModemState.OK
             return True
         
         return await self._run_cmd(
@@ -182,18 +182,18 @@ class ModemPDP(ModemCore):
             else:
                 ctx = self._pdp_ctx_list[context_id - 1]
         except Exception:
-            if rsp: rsp.result = ModemState.NO_SUCH_PDP_CONTEXT
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
         
         self._pdp_ctx = ctx
 
         async def complete_handler(result, rsp, complete_handler_arg):
             ctx = complete_handler_arg
-            if result == ModemState.OK:
-                ctx.state = ModemPDPContextState.ACTIVE
+            if result == WalterModemState.OK:
+                ctx.state = WalterModemPDPContextState.ACTIVE
 
                 for pdp_ctx in self._pdp_ctx_list:
-                    pdp_ctx.state = ModemPDPContextState.INACTIVE
+                    pdp_ctx.state = WalterModemPDPContextState.INACTIVE
                 
             return await self._run_cmd(
                 rsp=rsp,
@@ -216,8 +216,8 @@ class ModemPDP(ModemCore):
         :return bool: True on success, False on failure
         """
         async def complete_handler(result, rsp, complete_handler_arg):
-            if result == ModemState.OK and self._pdp_ctx:
-                self._pdp_ctx.state = ModemPDPContextState.ATTACHED
+            if result == WalterModemState.OK and self._pdp_ctx:
+                self._pdp_ctx.state = WalterModemPDPContextState.ATTACHED
 
         return await self._run_cmd(
             rsp=rsp,
@@ -241,7 +241,7 @@ class ModemPDP(ModemCore):
             else:
                 ctx = self._pdp_ctx_list[context_id - 1]
         except Exception:
-            if rsp: rsp.result = ModemState.NO_SUCH_PDP_CONTEXT
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
         
         self._pdp_ctx = ctx

@@ -6,8 +6,8 @@ import asyncio
 from walter_modem import Modem
 
 from walter_modem.enums import (
-    ModemState,
-    ModemOpState
+    WalterModemState,
+    WalterModemOpState
 )
 
 from walter_modem.structs import (
@@ -39,7 +39,7 @@ async def main():
         return False
 
     if await modem.get_op_state(rsp=modem_rsp) and modem_rsp.op_state is not None:
-        print(f'Modem operatonal state: {ModemOpState.get_value_name(modem_rsp.op_state)}')
+        print(f'Modem operatonal state: {WalterModemOpState.get_value_name(modem_rsp.op_state)}')
     else:
         print('Failed to retrieve modem operational state')
         return False

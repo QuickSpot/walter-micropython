@@ -4,7 +4,7 @@ import ubinascii
 
 
 from .enums import (
-    ModemPDPType
+    WalterModemPDPType
 )
 
 def get_mac() -> str:
@@ -87,19 +87,19 @@ def parse_gnss_time(time_str: str) -> float | None:
     return time_val
 
 def pdp_type_as_string(pdp_type: int) -> str:
-    if pdp_type == ModemPDPType.X25:
+    if pdp_type == WalterModemPDPType.X25:
         return '"X.25"'
-    if pdp_type == ModemPDPType.IP:
+    if pdp_type == WalterModemPDPType.IP:
         return '"IP"'
-    if pdp_type == ModemPDPType.IPV6:
+    if pdp_type == WalterModemPDPType.IPV6:
         return '"IPV6"'
-    if pdp_type == ModemPDPType.IPV4V6:
+    if pdp_type == WalterModemPDPType.IPV4V6:
         return '"IPV4V6"'
-    if pdp_type == ModemPDPType.OSPIH:
+    if pdp_type == WalterModemPDPType.OSPIH:
         return '"OPSIH"'
-    if pdp_type == ModemPDPType.PPP:
+    if pdp_type == WalterModemPDPType.PPP:
         return '"PPP"'
-    if pdp_type == ModemPDPType.NON_IP:
+    if pdp_type == WalterModemPDPType.NON_IP:
         return '"Non-IP"'
     return ''
 

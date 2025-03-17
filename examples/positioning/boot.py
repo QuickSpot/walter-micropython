@@ -7,15 +7,15 @@ import ubinascii
 
 from walter_modem import Modem
 from walter_modem.enums import (
-    ModemCMEError,
-    ModemGNSSAction,
-    ModemGNSSAssistanceType,
-    ModemNetworkRegState,
-    ModemNetworkSelMode,
-    ModemOpState,
-    ModemRai,
-    ModemRat,
-    ModemRspType
+    WalterModemCMEError,
+    WalterModemGNSSAction,
+    WalterModemGNSSAssistanceType,
+    WalterModemNetworkRegState,
+    WalterModemNetworkSelMode,
+    WalterModemOpState,
+    WalterModemRai,
+    WalterModemRat,
+    WalterModemRspType
 )
 from walter_modem.structs import (
     ModemRsp
@@ -39,7 +39,7 @@ socket_id: int
 Variable to store the socket_id once made.
 """
 
-async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
+async def wait_for_network_reg_state(timeout: int, *states: WalterModemNetworkRegState) -> bool:
     """
     Wait for the modem network registration state to reach the desired state(s).
     
@@ -71,31 +71,31 @@ async def lte_connect(_retry: bool = False) -> bool:
     global modem_rsp
 
     if modem.get_network_reg_state() in (
-        ModemNetworkRegState.REGISTERED_HOME,
-        ModemNetworkRegState.REGISTERED_ROAMING
+        WalterModemNetworkRegState.REGISTERED_HOME,
+        WalterModemNetworkRegState.REGISTERED_ROAMING
     ):
         return True
     
-    if not await modem.set_op_state(ModemOpState.FULL):
+    if not await modem.set_op_state(WalterModemOpState.FULL):
         print('    - Failed to set operational state to full')
         return False
     
-    if not await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC):
+    if not await modem.set_network_selection_mode(WalterModemNetworkSelMode.AUTOMATIC):
         print('    - Failed to set network selection mode to automatic')
         return False
     
     print('    - Waiting for network registration')
     if not await wait_for_network_reg_state(
         300,
-        ModemNetworkRegState.REGISTERED_HOME,
-        ModemNetworkRegState.REGISTERED_ROAMING
+        WalterModemNetworkRegState.REGISTERED_HOME,
+        WalterModemNetworkRegState.REGISTERED_ROAMING
     ):
         if await modem.get_rat(rsp=modem_rsp):
-            if not await modem.set_op_state(ModemOpState.MINIMUM):
+            if not await modem.set_op_state(WalterModemOpState.MINIMUM):
                 print('    - Failed to connected using current RAT')
                 return False
 
-        if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
+        if not await wait_for_network_reg_state(5, WalterModemNetworkRegState.NOT_SEARCHING):
             print('    - Unexpected: modem not on standby after 5 seconds')
             return False
         
@@ -104,19 +104,19 @@ async def lte_connect(_retry: bool = False) -> bool:
         if _retry:
             print('    - Failed to connect using LTE-M and NB-IoT, no connection possible')
             
-            if rat != ModemRat.LTEM:
-                if not await modem.set_rat(ModemRat.LTEM):
+            if rat != WalterModemRat.LTEM:
+                if not await modem.set_rat(WalterModemRat.LTEM):
                     print('    - Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
             
             return False
         
         print('    - Failed to connect to LTE network using: '
-              f'{"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
+              f'{"LTE-M" if rat == WalterModemRat.LTEM else "NB-IoT"}')
         print('    - Switching modem to '
-              f'{"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
+              f'{"NB-IoT" if rat == WalterModemRat.LTEM else "LTE-M"} and retrying...')
 
-        next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
+        next_rat = WalterModemRat.NBIOT if rat == WalterModemRat.LTEM else WalterModemRat.LTEM
 
         if not await modem.set_rat(next_rat):
             print('    - Failed to switch RAT')
@@ -136,14 +136,14 @@ async def lte_disconnect() -> bool:
 
     :return bool: True on success, False on failure
     """
-    if modem.get_network_reg_state() == ModemNetworkRegState.NOT_SEARCHING:
+    if modem.get_network_reg_state() == WalterModemNetworkRegState.NOT_SEARCHING:
         return True
     
-    if not await modem.set_op_state(ModemOpState.MINIMUM):
+    if not await modem.set_op_state(WalterModemOpState.MINIMUM):
         print('    - Failed to set operational state to minimum')
         return False
 
-    if await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
+    if await wait_for_network_reg_state(5, WalterModemNetworkRegState.NOT_SEARCHING):
         return True
     
     print('    - Failed to disconnect, modem network registration state still not'
@@ -178,7 +178,7 @@ async def lte_transmit(socket_id: int, address: str, port: int, buffer: bytearra
     if not await modem.socket_send(
         data=buffer,
         socket_id=1,
-        rai=ModemRai.NO_INFO
+        rai=WalterModemRai.NO_INFO
     ):
         print('  - Failed to transmit to UDP socket')
         return False
@@ -192,7 +192,7 @@ async def lte_transmit(socket_id: int, address: str, port: int, buffer: bytearra
     return True
 
 async def unlock_sim() -> bool:
-    if not await modem.set_op_state(ModemOpState.NO_RF):
+    if not await modem.set_op_state(WalterModemOpState.NO_RF):
         print('  - Failed to set operational state to: NO RF')
         return False
 
@@ -271,7 +271,7 @@ async def update_gnss_assistance() -> bool:
         await asyncio.sleep(.5)
 
     if not await modem.get_gnss_assistance_status(rsp=modem_rsp):
-        if modem_rsp.type != ModemRspType.GNSS_ASSISTANCE_DATA:
+        if modem_rsp.type != WalterModemRspType.GNSS_ASSISTANCE_DATA:
             print('  - Failed to request GNSS assistance status')
             return False
     
@@ -283,7 +283,7 @@ async def update_gnss_assistance() -> bool:
             print('  - Failed to connect to LTE network')
             return False
         
-        if not await modem.update_gnss_assistance(ModemGNSSAssistanceType.ALMANAC):
+        if not await modem.update_gnss_assistance(WalterModemGNSSAssistanceType.ALMANAC):
             print('  - Failed to update almanac data')
             return False
         
@@ -293,7 +293,7 @@ async def update_gnss_assistance() -> bool:
             print('  - Failed to connect to LTE network')
             return False
         
-        if not await modem.update_gnss_assistance(ModemGNSSAssistanceType.REALTIME_EPHEMERIS):
+        if not await modem.update_gnss_assistance(WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS):
             print('  - Failed to update ephemeris data')
             return False
         
@@ -365,11 +365,11 @@ async def loop():
         await lte_disconnect()
 
         if not await modem.perform_gnss_action(
-            action=ModemGNSSAction.GET_SINGLE_FIX,
+            action=WalterModemGNSSAction.GET_SINGLE_FIX,
             rsp=modem_rsp
         ):
             print('  - Failed to request GNSS fix',
-                  ModemCMEError.get_value_name(modem_rsp.cme_error))
+                  WalterModemCMEError.get_value_name(modem_rsp.cme_error))
             continue
 
         print('  - Requested GNSS fix')
@@ -417,7 +417,7 @@ async def loop():
 
     if not await modem.get_cell_information(rsp=modem_rsp):
         print('Failed to request cell information',
-              ModemCMEError.get_value_name(modem_rsp.cme_error))
+              WalterModemCMEError.get_value_name(modem_rsp.cme_error))
     else:
         print('Connected on band {} using operator {} ({}{})'.format(
             modem_rsp.cell_information.band,

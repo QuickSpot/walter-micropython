@@ -1,11 +1,11 @@
 from ..core import ModemCore
 from ..enums import (
-    ModemState,
-    ModemHttpContextState,
-    ModemHttpQueryCmd,
-    ModemHttpSendCmd,
-    ModemHttpPostParam,
-    ModemRspType
+    WalterModemState,
+    WalterModemHttpContextState,
+    WalterModemHttpQueryCmd,
+    WalterModemHttpSendCmd,
+    WalterModemHttpPostParam,
+    WalterModemRspType
 )
 from ..structs import (
     ModemRsp,
@@ -28,47 +28,47 @@ class ModemHTTP(ModemCore):
         :return bool: True on success, False on failure
         """
         if self._http_current_profile != 0xff:
-            if rsp: rsp.result = ModemState.ERROR
+            if rsp: rsp.result = WalterModemState.ERROR
             return False
 
         if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
-        if self._http_context_list[profile_id].state == ModemHttpContextState.IDLE:
-            if rsp: rsp.result = ModemState.NOT_EXPECTING_RING
+        if self._http_context_list[profile_id].state == WalterModemHttpContextState.IDLE:
+            if rsp: rsp.result = WalterModemState.NOT_EXPECTING_RING
             return False
 
-        if self._http_context_list[profile_id].state == ModemHttpContextState.EXPECT_RING:
-            if rsp: rsp.result = ModemState.AWAITING_RING
+        if self._http_context_list[profile_id].state == WalterModemHttpContextState.EXPECT_RING:
+            if rsp: rsp.result = WalterModemState.AWAITING_RING
             return False
 
-        if self._http_context_list[profile_id].state != ModemHttpContextState.GOT_RING:
-            if rsp: rsp.result = ModemState.ERROR
+        if self._http_context_list[profile_id].state != WalterModemHttpContextState.GOT_RING:
+            if rsp: rsp.result = WalterModemState.ERROR
             return False
 
         # ok, got ring. http context fields have been filled.
         # http status 0 means: timeout (or also disconnected apparently)
         if self._http_context_list[profile_id].http_status == 0:
-            self._http_context_list[profile_id].state = ModemHttpContextState.IDLE
-            if rsp: rsp.result = ModemState.ERROR
+            self._http_context_list[profile_id].state = WalterModemHttpContextState.IDLE
+            if rsp: rsp.result = WalterModemState.ERROR
             return False
         
         if self._http_context_list[profile_id].content_length == 0:
-            self._http_context_list[profile_id].state = ModemHttpContextState.IDLE
+            self._http_context_list[profile_id].state = WalterModemHttpContextState.IDLE
 
-            rsp.type = ModemRspType.HTTP_RESPONSE
+            rsp.type = WalterModemRspType.HTTP_RESPONSE
             rsp.http_response = ModemHttpResponse()
             rsp.http_response.http_status = self._http_context_list[profile_id].http_status
             rsp.http_response.content_length = 0
-            rsp.result = ModemState.NO_DATA
+            rsp.result = WalterModemState.NO_DATA
             return True
 
         self._http_current_profile = profile_id
 
         async def complete_handler(result, rsp, complete_handler_arg):
             modem = complete_handler_arg
-            modem._http_context_list[modem._http_current_profile].state = ModemHttpContextState.IDLE
+            modem._http_context_list[modem._http_current_profile].state = WalterModemHttpContextState.IDLE
             modem._http_current_profile = 0xff
 
         return await self._run_cmd(
@@ -108,11 +108,11 @@ class ModemHTTP(ModemCore):
         :return bool: True on success, False on failure
         """
         if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES or profile_id < 0:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
         if tls_profile_id and tls_profile_id > ModemCore.WALTER_MODEM_MAX_TLS_PROFILES:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
         cmd = 'AT+SQNHTTPCFG={},"{}",{},{},"{}","{}"'.format(
@@ -142,7 +142,7 @@ class ModemHTTP(ModemCore):
         :return bool: True on success, False on failure
         """
         if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
         return await self._run_cmd(
@@ -161,7 +161,7 @@ class ModemHTTP(ModemCore):
         :return bool: True on success, False on failure
         """
         if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
         return await self._run_cmd(
@@ -181,7 +181,7 @@ class ModemHTTP(ModemCore):
         :return bool:
         """
         if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
         # note: in my observation the SQNHTTPCONNECT command is to be avoided.
@@ -199,7 +199,7 @@ class ModemHTTP(ModemCore):
     async def http_query(self,
         profile_id: int,
         uri: str,
-        query_cmd: int = ModemHttpQueryCmd.GET,
+        query_cmd: int = WalterModemHttpQueryCmd.GET,
         extra_header_line: str = None,
         rsp: ModemRsp = None
     ) -> bool:
@@ -218,18 +218,18 @@ class ModemHTTP(ModemCore):
         :return bool: True on success, False on failure
         """
         if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
-        if self._http_context_list[profile_id].state != ModemHttpContextState.IDLE:
-            if rsp: rsp.result = ModemState.BUSY
+        if self._http_context_list[profile_id].state != WalterModemHttpContextState.IDLE:
+            if rsp: rsp.result = WalterModemState.BUSY
             return False
 
         async def complete_handler(result, rsp, complete_handler_arg):
             ctx = complete_handler_arg
 
-            if result == ModemState.OK:
-                ctx.state = ModemHttpContextState.EXPECT_RING
+            if result == WalterModemState.OK:
+                ctx.state = WalterModemHttpContextState.EXPECT_RING
 
         return await self._run_cmd(
             rsp=rsp,
@@ -246,8 +246,8 @@ class ModemHTTP(ModemCore):
         profile_id: int,
         uri: str,
         data,
-        send_cmd = ModemHttpSendCmd.POST,
-        post_param = ModemHttpPostParam.UNSPECIFIED,
+        send_cmd = WalterModemHttpSendCmd.POST,
+        post_param = WalterModemHttpPostParam.UNSPECIFIED,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -267,20 +267,20 @@ class ModemHTTP(ModemCore):
         :return bool: True on success, False on failure
         """
         if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
-        if self._http_context_list[profile_id].state != ModemHttpContextState.IDLE:
-            if rsp: rsp.result = ModemState.BUSY
+        if self._http_context_list[profile_id].state != WalterModemHttpContextState.IDLE:
+            if rsp: rsp.result = WalterModemState.BUSY
             return False
 
         async def complete_handler(result, rsp, complete_handler_arg):
             ctx = complete_handler_arg
 
-            if result == ModemState.OK:
-                ctx.state = ModemHttpContextState.EXPECT_RING
+            if result == WalterModemState.OK:
+                ctx.state = WalterModemHttpContextState.EXPECT_RING
 
-        if post_param == ModemHttpPostParam.UNSPECIFIED:
+        if post_param == WalterModemHttpPostParam.UNSPECIFIED:
             return await self._run_cmd(
                 rsp=rsp,
                 at_cmd='AT+SQNHTTPSND={},{},{},{}'.format(

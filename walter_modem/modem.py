@@ -4,13 +4,13 @@ from machine import Pin
 from .core import ModemCore
 import walter_modem.mixins as mixins
 from .enums import (
-    ModemCmdType,
-    ModemCMEErrorReportsType,
-    ModemCEREGReportsType,
-    ModemSQNMONIReportsType,
-    ModemNetworkSelMode,
-    ModemOperatorFormat,
-    ModemState
+    WalterModemCmdType,
+    WalterModemCMEErrorReportsType,
+    WalterModemCEREGReportsType,
+    WalterModemSQNMONIReportsType,
+    WalterModemNetworkSelMode,
+    WalterModemOperatorFormat,
+    WalterModemState
 )
 from .structs import (
     ModemRsp,
@@ -61,7 +61,7 @@ class Modem(
             rsp=rsp,
             at_cmd='',
             at_rsp=b'+SYSSTART',
-            cmd_type=ModemCmdType.WAIT
+            cmd_type=WalterModemCmdType.WAIT
         )
     
     async def check_comm(self, rsp: ModemRsp = None) -> bool:
@@ -96,7 +96,7 @@ class Modem(
 
     
     async def config_cme_error_reports(self,
-        reports_type: int = ModemCMEErrorReportsType.NUMERIC,
+        reports_type: int = WalterModemCMEErrorReportsType.NUMERIC,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -117,7 +117,7 @@ class Modem(
         )
     
     async def config_cereg_reports(self,
-        reports_type: int = ModemCEREGReportsType.ENABLED,
+        reports_type: int = WalterModemCEREGReportsType.ENABLED,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -167,7 +167,7 @@ class Modem(
         )
     
     async def get_cell_information(self,
-        reports_type: int = ModemSQNMONIReportsType.SERVING_CELL,
+        reports_type: int = WalterModemSQNMONIReportsType.SERVING_CELL,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -295,9 +295,9 @@ class Modem(
         )
 
     async def set_network_selection_mode(self,
-        mode: int = ModemNetworkSelMode.AUTOMATIC,
+        mode: int = WalterModemNetworkSelMode.AUTOMATIC,
         operator_name: str = '',
-        operator_format: int = ModemOperatorFormat.LONG_ALPHANUMERIC,
+        operator_format: int = WalterModemOperatorFormat.LONG_ALPHANUMERIC,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -316,7 +316,7 @@ class Modem(
         self._operator.format = operator_format
         self._operator.name = operator_name
 
-        if mode == ModemNetworkSelMode.AUTOMATIC:
+        if mode == WalterModemNetworkSelMode.AUTOMATIC:
             return await self._run_cmd(
                 rsp=rsp,
                 at_cmd=f'AT+COPS={mode}',
@@ -360,7 +360,7 @@ class Modem(
         :return bool: True on success, False on failure
         """
         if profile_id > ModemCore.WALTER_MODEM_MAX_TLS_PROFILES or profile_id <= 0:
-            if rsp: rsp.result = ModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
         
         cmd = 'AT+SQNSPCFG={},{},"",{}'.format(
@@ -402,7 +402,7 @@ class Modem(
             at_cmd=f'AT+SQNSNVW={modem_string(key_type)},{slot_idx},{len(key)}',
             at_rsp=b'OK',
             data=key,
-            cmd_type=ModemCmdType.DATA_TX_WAIT
+            cmd_type=WalterModemCmdType.DATA_TX_WAIT
         )
 
     # TODO: update docstring to match style of others

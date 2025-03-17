@@ -11,7 +11,7 @@ class Enum:
 
         return cls._reverse_mapping.get(value, f"Unknown code: {value}")
 
-class ModemState(Enum):
+class WalterModemState(Enum):
     """Grouped status codes of functions and operational components of the modem."""
     OK = 0
     ERROR = 1
@@ -27,7 +27,7 @@ class ModemState(Enum):
     BUSY = 11
     NO_DATA = 12
 
-class ModemSimState(Enum):
+class WalterModemSimState(Enum):
     """SIM card states."""
     READY = 0
     PIN_REQUIRED = 1
@@ -46,20 +46,20 @@ class ModemSimState(Enum):
     CORPORATE_SIM_REQUIRED = 14
     CORPORATE_PUK_REQUIRED = 15
 
-class ModemRat(Enum):
+class WalterModemRat(Enum):
     """Types of 3GPP access technologies supported by Walter."""
     LTEM = 0
     NBIOT = 1
     AUTO = 2
 
-class ModemOpState(Enum):
+class WalterModemOpState(Enum):
     """Modem operational modes."""
     MINIMUM = 0
     FULL = 1
     NO_RF = 4
     MANUFACTURING = 5
 
-class ModemNetworkRegState(Enum):
+class WalterModemNetworkRegState(Enum):
     """Modem network registration states."""
     NOT_SEARCHING = 0
     REGISTERED_HOME = 1
@@ -74,13 +74,13 @@ class ModemNetworkRegState(Enum):
     REGISTERED_CSFB_NOT_PREFERRED_ROAMING = 10
     REGISTERED_TEMP_CONN_LOSS = 80
 
-class ModemCMEErrorReportsType(Enum):
+class WalterModemCMEErrorReportsType(Enum):
     """Modem CME error reporting methods."""
     OFF = 0
     NUMERIC = 1
     VERBOSE = 2
     
-class ModemCEREGReportsType(Enum):
+class WalterModemCEREGReportsType(Enum):
     """CEREG unsolicited reporting methods."""
     OFF = 0
     ENABLED = 1
@@ -89,7 +89,7 @@ class ModemCEREGReportsType(Enum):
     ENABLED_UE_PSM_WITH_LOCATION= 4
     ENABLED_UE_PSM_WITH_LOCATION_EMM_CAUSE = 5
 
-class ModemCMEError(Enum):
+class WalterModemCMEError(Enum):
     """CME error codes."""
     EQUIPMENT_FAILURE = 0
     NO_CONNECTION = 1
@@ -144,7 +144,7 @@ class ModemCMEError(Enum):
     HW_CONFIG_FAILED_PINS_ALREADY_ASSIGNED = 54
     WRONG_STATE = 551
 
-class ModemSQNMONIReportsType(Enum):
+class WalterModemSQNMONIReportsType(Enum):
     """SQNMONI cell information reporting scopes"""
     SERVING_CELL = 0
     INTRA_FREQUENCY_CELLS = 1
@@ -152,7 +152,7 @@ class ModemSQNMONIReportsType(Enum):
     ALL_CELLS = 7
     SERVING_CELL_WITH_CINR = 9
 
-class ModemRspParserState(Enum):
+class WalterModemRspParserState(Enum):
     """RAW RX response parser states."""
     START_CR = 0
     START_LF = 1
@@ -165,7 +165,7 @@ class ModemRspParserState(Enum):
     RAW = 8
 
 
-class ModemCmdType(Enum):
+class WalterModemCmdType(Enum):
     """Queue task supported commands."""
     TX = 0
     TX_WAIT = 1
@@ -173,7 +173,7 @@ class ModemCmdType(Enum):
     DATA_TX_WAIT = 3
 
 
-class ModemCmdState(Enum):
+class WalterModemCmdState(Enum):
     """AT command FSM supported states."""
     NEW = 2
     PENDING = 3
@@ -181,7 +181,7 @@ class ModemCmdState(Enum):
     COMPLETE = 6
 
 
-class ModemPDPContextState(Enum):
+class WalterModemPDPContextState(Enum):
     """PDP context states."""
     FREE = 0
     RESERVED = 1
@@ -189,7 +189,7 @@ class ModemPDPContextState(Enum):
     ACTIVE = 3
     ATTACHED = 4
 
-class ModemPDPType(Enum):
+class WalterModemPDPType(Enum):
     """Supported packet data protocol types."""
     X25 = 0
     IP = 1
@@ -199,7 +199,7 @@ class ModemPDPType(Enum):
     PPP = 5
     NON_IP = 6
 
-class ModemPDPHeaderCompression(Enum):
+class WalterModemPDPHeaderCompression(Enum):
     """Supported packet data protocol header compression mechanisms."""
     OFF = 0
     ON = 1
@@ -208,7 +208,7 @@ class ModemPDPHeaderCompression(Enum):
     RFC3095 = 4
     UNSPEC = 99
 
-class ModemPDPDataCompression(Enum):
+class WalterModemPDPDataCompression(Enum):
     """Supported packet data protocol data compression mechanisms."""
     OFF = 0
     ON = 1
@@ -216,12 +216,12 @@ class ModemPDPDataCompression(Enum):
     V44 = 3
     UNSPEC = 99
 
-class ModemPDPIPv4AddrAllocMethod(Enum):
+class WalterModemPDPIPv4AddrAllocMethod(Enum):
     """Supported packet data protocol IPv4 address allocation methods."""
     NAS = 0
     DHCP = 1
 
-class ModemPDPRequestType(Enum):
+class WalterModemPDPRequestType(Enum):
     """Supported packet data protocol request types."""
     NEW_OR_HANDOVER = 0
     EMERGENCY = 1
@@ -229,18 +229,18 @@ class ModemPDPRequestType(Enum):
     HANDOVER = 3
     EMERGENCY_HANDOVER = 4
 
-class ModemPDPPCSCFDiscoveryMethod(Enum):
+class WalterModemPDPPCSCFDiscoveryMethod(Enum):
     """Supported types of P-CSCF discovery in a packet data context."""
     AUTO = 0
     NAS = 1
 
-class ModemPDPAuthProtocol(Enum):
+class WalterModemPDPAuthProtocol(Enum):
     """PDP context authentication protocols."""
     NONE = 0
     PAP = 1
     CHAP = 2
 
-class ModemRspType(Enum):
+class WalterModemRspType(Enum):
     """Implemented response types."""
     NO_DATA = 0
     OP_STATE = 1
@@ -261,20 +261,20 @@ class ModemRspType(Enum):
     CELL_INFO = 16
     REG_STATE = 50
 
-class ModemNetworkSelMode(Enum):
+class WalterModemNetworkSelMode(Enum):
     """Support network selection modes."""
     AUTOMATIC = 0
     MANUAL = 1
     UNREGISTER = 2
     MANUAL_AUTO_FALLBACK = 4
 
-class ModemOperatorFormat(Enum):
+class WalterModemOperatorFormat(Enum):
     """Supported netowrk operator formats."""
     LONG_ALPHANUMERIC = 0
     SHORT_ALPHANUMERIC = 1
     NUMERIC = 2
 
-class ModemSocketState(Enum):
+class WalterModemSocketState(Enum):
     """State of a socket."""
     FREE = 0
     RESERVED = 1
@@ -284,22 +284,22 @@ class ModemSocketState(Enum):
     LISTENING = 5
     CLOSED = 6
 
-class ModemHttpContextState(Enum):
+class WalterModemHttpContextState(Enum):
     """State of an http context."""
     IDLE = 0
     EXPECT_RING = 1
     GOT_RING = 2
 
-class ModemMqttState(Enum):
+class WalterModemMqttState(Enum):
     CONNECTED = 0
     DISCONNECTED = 0
 
-class ModemSocketProto(Enum):
+class WalterModemSocketProto(Enum):
     """Protocol used by the socket."""
     TCP = 0
     UDP = 1
 
-class ModemSocketAcceptAnyRemote(Enum):
+class WalterModemSocketAcceptAnyRemote(Enum):
     """
     Possible methodologies on how a socket handles data from other hosts
     besides the IP-address and remote port it is configured for.
@@ -308,7 +308,7 @@ class ModemSocketAcceptAnyRemote(Enum):
     REMOTE_RX_ONLY = 1
     REMOTE_RX_AND_TX = 2
 
-class ModemRai(Enum):
+class WalterModemRai(Enum):
     """
     In case of an NB-IoT connection the RAI (Release Assistance Information).
     The RAI is used to indicate to the entwork (MME) if there are going to be
@@ -318,14 +318,14 @@ class ModemRai(Enum):
     NO_FURTHER_RXTX_EXPECTED = 1
     ONLY_SINGLE_RXTX_EXPECTED = 2
 
-class ModemGNSSLocMode(Enum):
+class WalterModemGNSSLocMode(Enum):
     """
     The GNSS location modus. When set to 'on-device location', the GNSS sybsystem
     will compute position and speed and estimate the error on these parameters.
     """
     ON_DEVICE_LOCATION = 0
 
-class ModemGNSSSensMode(Enum):
+class WalterModemGNSSSensMode(Enum):
     """
     The possible sensitivity settings use by Walter's GNSS receiver.
     his sets the amount of time that the receiver is actually on.
@@ -335,7 +335,7 @@ class ModemGNSSSensMode(Enum):
     MEDIUM = 2
     HIGH = 3
 
-class ModemGNSSAcqMode(Enum):
+class WalterModemGNSSAcqMode(Enum):
     """
     The possible GNSS acquisition modes.
     In a cold or warm start situation Walter has no clue where he is on earth.
@@ -346,13 +346,13 @@ class ModemGNSSAcqMode(Enum):
     HOT_START = 1
 
 
-class ModemGNSSAction(Enum):
+class WalterModemGNSSAction(Enum):
     """Supported actions that Walter's GNSS can execute."""
     GET_SINGLE_FIX = 0
     CANCEL = 1
 
 
-class ModemGNSSFixStatus(Enum):
+class WalterModemGNSSFixStatus(Enum):
     """GNSS fix statuses."""
     READY = 0
     STOPPED_BY_USER = 1
@@ -360,27 +360,27 @@ class ModemGNSSFixStatus(Enum):
     LTE_CONCURRENCY = 3
 
 
-class ModemGNSSAssistanceType(Enum):
+class WalterModemGNSSAssistanceType(Enum):
     """GNSS assistance types."""
     ALMANAC = 0
     REALTIME_EPHEMERIS = 1
     PREDICTED_EPHEMERIS = 2
 
 
-class ModemHttpQueryCmd(Enum):
+class WalterModemHttpQueryCmd(Enum):
     """Possible commands for an HTTP query operation."""
     GET = 0
     HEAD = 1
     DELETE = 2
 
 
-class ModemHttpSendCmd(Enum):
+class WalterModemHttpSendCmd(Enum):
     """Possible commands for an HTTP send operation."""
     POST = 0
     PUT = 1
 
 
-class ModemHttpPostParam(Enum):
+class WalterModemHttpPostParam(Enum):
     """Possible post params for a HTTP send operation."""
     URL_ENCODED = 0
     TEXT_PLAIN = 1
@@ -389,14 +389,14 @@ class ModemHttpPostParam(Enum):
     JSON = 4
     UNSPECIFIED = 99
 
-class ModemTlsValidation(Enum):
+class WalterModemTlsValidation(Enum):
     """The TLS validation policy."""
     NONE = 0
     CA = 1
     URL = 4
     URL_AND_CA = 5
 
-class ModemTlsVersion(Enum):
+class WalterModemTlsVersion(Enum):
     """The TLS version to use."""
     TLS_VERSION_10 = 0
     TLS_VERSION_11 = 1

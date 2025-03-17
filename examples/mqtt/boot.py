@@ -5,18 +5,18 @@ import sys
 from walter_modem import Modem
 
 from walter_modem.enums import (
-    ModemNetworkRegState,
-    ModemState,
-    ModemOpState,
-    ModemNetworkSelMode,
-    ModemPDPAuthProtocol,
-    ModemTlsValidation,
-    ModemTlsVersion
+    WalterModemNetworkRegState,
+    WalterModemState,
+    WalterModemOpState,
+    WalterModemNetworkSelMode,
+    WalterModemPDPAuthProtocol,
+    WalterModemTlsValidation,
+    WalterModemTlsVersion
 )
 
 from walter_modem.structs import (
     ModemRsp,
-    ModemRat
+    WalterModemRat
 )
 
 import config
@@ -33,9 +33,9 @@ We re-use this single one, for memory efficiency.
 """
 
 def match_auth_proto():
-    if config.AUTH_PROTOCOL == 'PAP': return ModemPDPAuthProtocol.PAP
-    if config.AUTH_PROTOCOL == 'CHAP': return ModemPDPAuthProtocol.CHAP
-    return ModemPDPAuthProtocol.NONE
+    if config.AUTH_PROTOCOL == 'PAP': return WalterModemPDPAuthProtocol.PAP
+    if config.AUTH_PROTOCOL == 'CHAP': return WalterModemPDPAuthProtocol.CHAP
+    return WalterModemPDPAuthProtocol.NONE
 
 pdp_auth_proto = match_auth_proto()
 
@@ -46,7 +46,7 @@ def get_unique_topic():
 
 topic = config.MQTT_TOPIC if config.MQTT_TOPIC is not None else get_unique_topic()
 
-async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
+async def wait_for_network_reg_state(timeout: int, *states: WalterModemNetworkRegState) -> bool:
     """
     Wait for the modem network registration state to reach the desired state(s).
     
@@ -78,31 +78,31 @@ async def lte_connect(_retry: bool = False) -> bool:
     global modem_rsp
 
     if modem.get_network_reg_state() in (
-        ModemNetworkRegState.REGISTERED_HOME,
-        ModemNetworkRegState.REGISTERED_ROAMING
+        WalterModemNetworkRegState.REGISTERED_HOME,
+        WalterModemNetworkRegState.REGISTERED_ROAMING
     ):
         return True
     
-    if not await modem.set_op_state(ModemOpState.FULL):
+    if not await modem.set_op_state(WalterModemOpState.FULL):
         print('  - Failed to set operational state to full')
         return False
     
-    if not await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC):
+    if not await modem.set_network_selection_mode(WalterModemNetworkSelMode.AUTOMATIC):
         print('  - Failed to set network selection mode to automatic')
         return False
     
     print('  - Waiting for network registration')
     if not await wait_for_network_reg_state(
         300,
-        ModemNetworkRegState.REGISTERED_HOME,
-        ModemNetworkRegState.REGISTERED_ROAMING
+        WalterModemNetworkRegState.REGISTERED_HOME,
+        WalterModemNetworkRegState.REGISTERED_ROAMING
     ):
         if await modem.get_rat(rsp=modem_rsp):
-            if not await modem.set_op_state(ModemOpState.MINIMUM):
+            if not await modem.set_op_state(WalterModemOpState.MINIMUM):
                 print('  - Failed to connected using current RAT')
                 return False
 
-        if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
+        if not await wait_for_network_reg_state(5, WalterModemNetworkRegState.NOT_SEARCHING):
             print('  - Unexpected: modem not on standby after 5 seconds')
             return False
         
@@ -111,17 +111,17 @@ async def lte_connect(_retry: bool = False) -> bool:
         if _retry:
             print('  - Failed to connect using LTE-M and NB-IoT, no connection possible')
             
-            if rat != ModemRat.LTEM:
-                if not await modem.set_rat(ModemRat.LTEM):
+            if rat != WalterModemRat.LTEM:
+                if not await modem.set_rat(WalterModemRat.LTEM):
                     print('  - Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
             
             return False
         
-        print(f'  - Failed to connect to LTE network using: {"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
-        print(f'  - Switching modem to {"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
+        print(f'  - Failed to connect to LTE network using: {"LTE-M" if rat == WalterModemRat.LTEM else "NB-IoT"}')
+        print(f'  - Switching modem to {"NB-IoT" if rat == WalterModemRat.LTEM else "LTE-M"} and retrying...')
 
-        next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
+        next_rat = WalterModemRat.NBIOT if rat == WalterModemRat.LTEM else WalterModemRat.LTEM
 
         if not await modem.set_rat(next_rat):
             print('  - Failed to switch RAT')
@@ -133,7 +133,7 @@ async def lte_connect(_retry: bool = False) -> bool:
     return True
 
 async def unlock_sim() -> bool:
-    if not await modem.set_op_state(ModemOpState.NO_RF):
+    if not await modem.set_op_state(WalterModemOpState.NO_RF):
         print('  - Failed to set operational state to: NO RF')
         return False
 
@@ -183,8 +183,8 @@ async def setup():
     
     if not await modem.tls_config_profile(
         profile_id=1,
-        tls_validation=ModemTlsValidation.NONE,
-        tls_version=ModemTlsVersion.TLS_VERSION_13
+        tls_validation=WalterModemTlsValidation.NONE,
+        tls_version=WalterModemTlsVersion.TLS_VERSION_13
     ):
         print('Failed to configure TLS profile')
         return False
@@ -218,9 +218,9 @@ async def loop():
         print(f'New MQTT message (topic: {modem_rsp.mqtt_response.topic}, qos: {modem_rsp.mqtt_response.qos})')
         print(mqtt_messages.pop())
     else:
-        if modem_rsp.result != ModemState.NO_DATA:
+        if modem_rsp.result != WalterModemState.NO_DATA:
             print('Fault with mqtt_did_ring: '
-                  f'{ModemState.get_value_name(modem_rsp.result)}')
+                  f'{WalterModemState.get_value_name(modem_rsp.result)}')
 
 async def main():
     try:

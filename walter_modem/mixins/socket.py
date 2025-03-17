@@ -1,12 +1,12 @@
 from ..core import ModemCore
 from ..enums import (
-    ModemState,
-    ModemRspType,
-    ModemSocketState,
-    ModemSocketProto,
-    ModemSocketAcceptAnyRemote,
-    ModemRai,
-    ModemCmdType
+    WalterModemState,
+    WalterModemRspType,
+    WalterModemSocketState,
+    WalterModemSocketProto,
+    WalterModemSocketAcceptAnyRemote,
+    WalterModemRai,
+    WalterModemCmdType
 )
 from ..structs import (
     ModemRsp,
@@ -44,20 +44,20 @@ class ModemSocket(ModemCore):
             else:
                 ctx = self._pdp_ctx_list[pdp_context_id - 1]
         except Exception:
-            if rsp: rsp.result = ModemState.NO_SUCH_PDP_CONTEXT
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
         
         self._pdp_ctx = ctx
 
         socket = None
         for _socket in self._socket_list:
-            if _socket.state == ModemSocketState.FREE:
-                _socket.state = ModemSocketState.RESERVED
+            if _socket.state == WalterModemSocketState.FREE:
+                _socket.state = WalterModemSocketState.RESERVED
                 socket = _socket
                 break
 
         if socket == None:
-            if rsp: rsp.result = ModemState.NO_FREE_SOCKET
+            if rsp: rsp.result = WalterModemState.NO_FREE_SOCKET
             return False
 
         self._socket = socket
@@ -70,11 +70,11 @@ class ModemSocket(ModemCore):
 
         async def complete_handler(result, rsp, complete_handler_arg):
             sock = complete_handler_arg
-            rsp.type = ModemRspType.SOCKET_ID
+            rsp.type = WalterModemRspType.SOCKET_ID
             rsp.socket_id = sock.id
 
-            if result == ModemState.OK:
-                sock.state = ModemSocketState.CREATED
+            if result == WalterModemState.OK:
+                sock.state = WalterModemSocketState.CREATED
         
         return await self._run_cmd(
             rsp=rsp,
@@ -102,7 +102,7 @@ class ModemSocket(ModemCore):
             else:
                 socket = self._socket_list[socket_id - 1]
         except Exception:
-            if rsp: rsp.result = ModemState.NO_SUCH_SOCKET
+            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
             return False
         
         self._socket = socket
@@ -110,8 +110,8 @@ class ModemSocket(ModemCore):
         async def complete_handler(result, rsp, complete_handler_arg):
             sock = complete_handler_arg
 
-            if result == ModemState.OK:
-                sock.state = ModemSocketState.CONFIGURED
+            if result == WalterModemState.OK:
+                sock.state = WalterModemSocketState.CONFIGURED
 
         return await self._run_cmd(
             rsp=rsp,
@@ -126,8 +126,8 @@ class ModemSocket(ModemCore):
         remote_port: int,
         local_port: int = 0,
         socket_id: int = -1,
-        protocol: int = ModemSocketProto.UDP,
-        accept_any_remote: int = ModemSocketAcceptAnyRemote.DISABLED,
+        protocol: int = WalterModemSocketProto.UDP,
+        accept_any_remote: int = WalterModemSocketAcceptAnyRemote.DISABLED,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -149,7 +149,7 @@ class ModemSocket(ModemCore):
         try:
             socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
         except Exception:
-            if rsp: rsp.result = ModemState.NO_SUCH_SOCKET
+            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
             return False
         
         self._socket = socket
@@ -162,8 +162,8 @@ class ModemSocket(ModemCore):
 
         async def complete_handler(result, rsp, complete_handler_arg):
             sock = complete_handler_arg
-            if result == ModemState.OK:
-                sock.state = ModemSocketState.OPENED
+            if result == WalterModemState.OK:
+                sock.state = WalterModemSocketState.OPENED
 
         return await self._run_cmd(
             rsp=rsp,
@@ -191,15 +191,15 @@ class ModemSocket(ModemCore):
         try:
             socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
         except Exception:
-            if rsp: rsp.result = ModemState.NO_SUCH_SOCKET
+            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
             return False
         
         self._socket = socket
 
         async def complete_handler(result, rsp, complete_handler_arg):
             sock = complete_handler_arg
-            if result == ModemState.OK:
-                sock.state = ModemSocketState.FREE
+            if result == WalterModemState.OK:
+                sock.state = WalterModemSocketState.FREE
 
         return await self._run_cmd(
             rsp=rsp,
@@ -212,7 +212,7 @@ class ModemSocket(ModemCore):
     async def socket_send(self,
         data,
         socket_id: int = -1,
-        rai: int = ModemRai.NO_INFO,
+        rai: int = WalterModemRai.NO_INFO,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -229,7 +229,7 @@ class ModemSocket(ModemCore):
         try:
             _socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
         except Exception:
-            if rsp: rsp.result = ModemState.NO_SUCH_SOCKET
+            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
             return False
         
         self._socket = _socket
@@ -238,6 +238,6 @@ class ModemSocket(ModemCore):
             rsp=rsp,
             at_cmd=f'AT+SQNSSENDEXT={_socket.id},{len(data)},{rai}',
             at_rsp=b'OK',
-            cmd_type=ModemCmdType.DATA_TX_WAIT,
+            cmd_type=WalterModemCmdType.DATA_TX_WAIT,
             data=data
         )

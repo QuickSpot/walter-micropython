@@ -1,7 +1,7 @@
 from ..core import ModemCore
 from ..enums import (
-    ModemCmdType,
-    ModemState
+    WalterModemCmdType,
+    WalterModemState
 )
 from ..structs import (
     ModemRsp,
@@ -116,7 +116,7 @@ class ModemMQTT(ModemCore):
             at_cmd=f'AT+SQNSMQTTPUBLISH=0,{modem_string(topic)},{qos},{len(data)}',
             at_rsp=b'+SQNSMQTTONPUBLISH:0,',
             data=data,
-            cmd_type=ModemCmdType.DATA_TX_WAIT
+            cmd_type=WalterModemCmdType.DATA_TX_WAIT
         )
 
     async def mqtt_subscribe(self,
@@ -134,7 +134,7 @@ class ModemMQTT(ModemCore):
         :return: True on success, False on failure
         """
         async def complete_handler(result, rsp, complete_handler_arg):
-            if result == ModemState.OK:
+            if result == WalterModemState.OK:
                 self._mqtt_subscriptions.append(complete_handler_arg)
 
         return await self._run_cmd(
@@ -176,7 +176,7 @@ class ModemMQTT(ModemCore):
                     break
 
         if msg is None:
-            if rsp: rsp.result = ModemState.NO_DATA
+            if rsp: rsp.result = WalterModemState.NO_DATA
             return False
         
         at_cmd = f'AT+SQNSMQTTRCVMESSAGE=0,{modem_string(msg.topic)}'
@@ -186,7 +186,7 @@ class ModemMQTT(ModemCore):
         self._mqtt_msg_buffer[msg_index].free = True
 
         async def complete_handler(result, rsp, complete_handler_arg):
-            if result == ModemState.OK:
+            if result == WalterModemState.OK:
                 rsp.mqtt_response = complete_handler_arg
 
         return await self._run_cmd(

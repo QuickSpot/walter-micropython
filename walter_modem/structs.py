@@ -1,30 +1,30 @@
 from asyncio import Event
 
 from .enums import (
-    ModemCMEError,
-    ModemCmdState,
-    ModemCmdType,
-    ModemGNSSFixStatus,
-    ModemHttpContextState,
-    ModemNetworkRegState,
-    ModemOpState,
-    ModemOperatorFormat,
-    ModemPDPAuthProtocol,
-    ModemPDPContextState,
-    ModemPDPDataCompression,
-    ModemPDPHeaderCompression,
-    ModemPDPIPv4AddrAllocMethod,
-    ModemPDPPCSCFDiscoveryMethod,
-    ModemPDPRequestType,
-    ModemPDPType,
-    ModemRat,
-    ModemRspParserState,
-    ModemRspType,
-    ModemSimState,
-    ModemSocketAcceptAnyRemote,
-    ModemSocketProto,
-    ModemSocketState,
-    ModemState
+    WalterModemCMEError,
+    WalterModemCmdState,
+    WalterModemCmdType,
+    WalterModemGNSSFixStatus,
+    WalterModemHttpContextState,
+    WalterModemNetworkRegState,
+    WalterModemOpState,
+    WalterModemOperatorFormat,
+    WalterModemPDPAuthProtocol,
+    WalterModemPDPContextState,
+    WalterModemPDPDataCompression,
+    WalterModemPDPHeaderCompression,
+    WalterModemPDPIPv4AddrAllocMethod,
+    WalterModemPDPPCSCFDiscoveryMethod,
+    WalterModemPDPRequestType,
+    WalterModemPDPType,
+    WalterModemRat,
+    WalterModemRspParserState,
+    WalterModemRspType,
+    WalterModemSimState,
+    WalterModemSocketAcceptAnyRemote,
+    WalterModemSocketProto,
+    WalterModemSocketState,
+    WalterModemState
 )
 
 
@@ -48,7 +48,7 @@ class ModemGNSSFix:
     Structure represents a GNSS fix.
     """
     def __init__(self):
-        self.status = ModemGNSSFixStatus.READY
+        self.status = WalterModemGNSSFixStatus.READY
         """The status of the fix."""
         
         self.fix_id = 0
@@ -125,7 +125,7 @@ class ModemGNSSAssistance:
 class ModemOperator:
     """Represents an operator"""
     def __init__(self):
-        self.format = ModemOperatorFormat.LONG_ALPHANUMERIC
+        self.format = WalterModemOperatorFormat.LONG_ALPHANUMERIC
         """The format in which the operator is stored."""
         
         self.name = ""
@@ -135,7 +135,7 @@ class ModemOperator:
 class ModemBandSelection:
     """Represents a band selection for a given radio access technology and operator."""
     def __init__(self):
-        self.rat = ModemRat.AUTO
+        self.rat = WalterModemRat.AUTO
         """The radio access technology for which the bands are configured"""
         
         self.net_operator = ModemOperator()
@@ -175,22 +175,22 @@ class ModemSignalQuality:
 class ModemRsp:
     """Represents a response """
     def __init__(self):
-        self.result: ModemState | None = ModemState.OK
+        self.result: WalterModemState | None = WalterModemState.OK
         """The result of the executed command."""
 
-        self.type: ModemRspType | None = ModemRspType.NO_DATA
+        self.type: WalterModemRspType | None = WalterModemRspType.NO_DATA
         """The data type of the response"""
         
-        self.reg_state: ModemNetworkRegState | None = None
+        self.reg_state: WalterModemNetworkRegState | None = None
         """The network registration state of the modem."""
         
-        self.op_state: ModemOpState | None = None
+        self.op_state: WalterModemOpState | None = None
         """The operational state of the modem."""
         
-        self.sim_state: ModemSimState | None = None
+        self.sim_state: WalterModemSimState | None = None
         """The state of the SIM card"""
         
-        self.cme_error: ModemCMEError | None = None
+        self.cme_error: WalterModemCMEError | None = None
         """The CME error received from the modem."""
         
         self.pdp_ctx_id: int | None = None
@@ -247,10 +247,10 @@ class ModemMqttMessage:
 class ModemCmd:
     """Structure epresenting an AT command to be added to the command queue."""
     def __init__(self):
-        self.state = ModemCmdState.NEW
+        self.state = WalterModemCmdState.NEW
         """The current state of the command."""
         
-        self.type = ModemCmdType.TX_WAIT
+        self.type = WalterModemCmdType.TX_WAIT
         """The type of AT command."""
         
         self.at_cmd = b''
@@ -296,7 +296,7 @@ class ModemCmd:
 
 class ModemATParserData:
     def __init__(self):
-        self.state = ModemRspParserState.START_CR
+        self.state = WalterModemRspParserState.START_CR
         """The FSM state the parser currently is in."""
         
         self.line = b''
@@ -319,13 +319,13 @@ class ModemTaskQueueItem:
 class ModemPDPContext:
     """Represents a PDP context."""
     def __init__(self, id):
-        self.state = ModemPDPContextState.FREE
+        self.state = WalterModemPDPContextState.FREE
         """The state of the PDP context."""
         
         self.id = id
         """The ID of this PDP data context."""
         
-        self.type = ModemPDPType.IP
+        self.type = WalterModemPDPType.IP
         """The type of packet data protocol."""
         
         self.apn = ""
@@ -337,19 +337,19 @@ class ModemPDPContext:
         self.pdp_address2 = ""
         """A secondary IPv6 PDPaddress when dual stack is enabled."""
         
-        self.header_comp = ModemPDPHeaderCompression.UNSPEC
+        self.header_comp = WalterModemPDPHeaderCompression.UNSPEC
         """The header compression used in the PDP context"""
         
-        self.data_comp = ModemPDPDataCompression.UNSPEC
+        self.data_comp = WalterModemPDPDataCompression.UNSPEC
         """The data compression method used in the PDP context"""
         
-        self.ipv4_alloc_method = ModemPDPIPv4AddrAllocMethod.NAS
+        self.ipv4_alloc_method = WalterModemPDPIPv4AddrAllocMethod.NAS
         """The IPv4 address allocation method used in the PDP context"""
         
-        self.request_type = ModemPDPRequestType.NEW_OR_HANDOVER
+        self.request_type = WalterModemPDPRequestType.NEW_OR_HANDOVER
         """The packet data protocol request type"""
         
-        self.pcscf_method = ModemPDPPCSCFDiscoveryMethod.AUTO
+        self.pcscf_method = WalterModemPDPPCSCFDiscoveryMethod.AUTO
         """The method to use for p-CSCF discovery"""
         
         self.for_IMCN = False
@@ -375,7 +375,7 @@ class ModemPDPContext:
         """Flag indicating if NAS should be used to discover the MTU of non-IP
         PDP contexts"""
         
-        self.auth_proto = ModemPDPAuthProtocol.NONE
+        self.auth_proto = WalterModemPDPAuthProtocol.NONE
         """"The authentication protocol used to activate the PDP"""
         
         self.auth_user = ""
@@ -388,7 +388,7 @@ class ModemPDPContext:
 class ModemSocket:
     """Represents a socket."""
     def __init__(self, id):
-        self.state = ModemSocketState.FREE
+        self.state = WalterModemSocketState.FREE
         """The state of the socket."""
 
         self.id = id
@@ -410,10 +410,10 @@ class ModemSocket:
         """The number of milliseconds after which the transmit buffer is 
         effectively transmitted."""
 
-        self.protocol = ModemSocketProto.UDP
+        self.protocol = WalterModemSocketProto.UDP
         """The protocol to use."""
 
-        self.accept_any_remote = ModemSocketAcceptAnyRemote.DISABLED
+        self.accept_any_remote = WalterModemSocketAcceptAnyRemote.DISABLED
         """How to handle data from other hosts than the remote host and port 
         that the socket is configured for."""
 
@@ -440,7 +440,7 @@ class ModemHttpContext:
     """Represents a socket."""
     def __init__(self):
         self.connected = False
-        self.state = ModemHttpContextState.IDLE
+        self.state = WalterModemHttpContextState.IDLE
         self.http_status = 0
         self.content_length = 0
         self.content_type = ''

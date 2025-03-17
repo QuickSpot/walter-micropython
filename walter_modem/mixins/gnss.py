@@ -1,10 +1,10 @@
 from ..core import ModemCore
 from ..enums import (
-    ModemGNSSSensMode,
-    ModemGNSSAcqMode,
-    ModemGNSSLocMode,
-    ModemGNSSAssistanceType,
-    ModemGNSSAction
+    WalterModemGNSSSensMode,
+    WalterModemGNSSAcqMode,
+    WalterModemGNSSLocMode,
+    WalterModemGNSSAssistanceType,
+    WalterModemGNSSAction
 )
 from ..structs import (
     ModemRsp,
@@ -18,9 +18,9 @@ from ..utils import (
 class ModemGNSS(ModemCore):
     async def config_gnss(
         self,
-        sens_mode: int = ModemGNSSSensMode.HIGH,
-        acq_mode: int = ModemGNSSAcqMode.COLD_WARM_START,
-        loc_mode: int = ModemGNSSLocMode.ON_DEVICE_LOCATION,
+        sens_mode: int = WalterModemGNSSSensMode.HIGH,
+        acq_mode: int = WalterModemGNSSAcqMode.COLD_WARM_START,
+        loc_mode: int = WalterModemGNSSLocMode.ON_DEVICE_LOCATION,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -60,7 +60,7 @@ class ModemGNSS(ModemCore):
         )
     
     async def update_gnss_assistance(self,
-        type: int = ModemGNSSAssistanceType.REALTIME_EPHEMERIS, 
+        type: int = WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS, 
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -81,7 +81,7 @@ class ModemGNSS(ModemCore):
         )
     
     async def perform_gnss_action(self,
-        action: int = ModemGNSSAction.GET_SINGLE_FIX,
+        action: int = WalterModemGNSSAction.GET_SINGLE_FIX,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -93,9 +93,9 @@ class ModemGNSS(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if action == ModemGNSSAction.GET_SINGLE_FIX:
+        if action == WalterModemGNSSAction.GET_SINGLE_FIX:
             action_str = 'single'
-        elif action == ModemGNSSAction.CANCEL:
+        elif action == WalterModemGNSSAction.CANCEL:
             action_str = 'stop'
         else:
             action_str = ''

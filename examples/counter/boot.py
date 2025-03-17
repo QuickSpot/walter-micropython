@@ -6,14 +6,14 @@ import ubinascii
 from walter_modem import Modem
 
 from walter_modem.enums import (
-    ModemNetworkRegState,
-    ModemOpState,
-    ModemNetworkSelMode,
+    WalterModemNetworkRegState,
+    WalterModemOpState,
+    WalterModemNetworkSelMode,
 )
 
 from walter_modem.structs import (
     ModemRsp,
-    ModemRat
+    WalterModemRat
 )
 
 import config
@@ -39,7 +39,7 @@ The modem response object.
 We re-use this single one, for memory efficiency.
 """
 
-async def wait_for_network_reg_state(timeout: int, *states: ModemNetworkRegState) -> bool:
+async def wait_for_network_reg_state(timeout: int, *states: WalterModemNetworkRegState) -> bool:
     """
     Wait for the modem network registration state to reach the desired state(s).
     
@@ -71,31 +71,31 @@ async def lte_connect(_retry: bool = False) -> bool:
     global modem_rsp
 
     if modem.get_network_reg_state() in (
-        ModemNetworkRegState.REGISTERED_HOME,
-        ModemNetworkRegState.REGISTERED_ROAMING
+        WalterModemNetworkRegState.REGISTERED_HOME,
+        WalterModemNetworkRegState.REGISTERED_ROAMING
     ):
         return True
     
-    if not await modem.set_op_state(ModemOpState.FULL):
+    if not await modem.set_op_state(WalterModemOpState.FULL):
         print('  - Failed to set operational state to full')
         return False
     
-    if not await modem.set_network_selection_mode(ModemNetworkSelMode.AUTOMATIC):
+    if not await modem.set_network_selection_mode(WalterModemNetworkSelMode.AUTOMATIC):
         print('  - Failed to set network selection mode to automatic')
         return False
     
     print('  - Waiting for network registration')
     if not await wait_for_network_reg_state(
         300,
-        ModemNetworkRegState.REGISTERED_HOME,
-        ModemNetworkRegState.REGISTERED_ROAMING
+        WalterModemNetworkRegState.REGISTERED_HOME,
+        WalterModemNetworkRegState.REGISTERED_ROAMING
     ):
         if await modem.get_rat(rsp=modem_rsp):
-            if not await modem.set_op_state(ModemOpState.MINIMUM):
+            if not await modem.set_op_state(WalterModemOpState.MINIMUM):
                 print('  - Failed to connected using current RAT')
                 return False
 
-        if not await wait_for_network_reg_state(5, ModemNetworkRegState.NOT_SEARCHING):
+        if not await wait_for_network_reg_state(5, WalterModemNetworkRegState.NOT_SEARCHING):
             print('  - Unexpected: modem not on standby after 5 seconds')
             return False
         
@@ -104,19 +104,19 @@ async def lte_connect(_retry: bool = False) -> bool:
         if _retry:
             print('  - Failed to connect using LTE-M and NB-IoT, no connection possible')
             
-            if rat != ModemRat.LTEM:
-                if not await modem.set_rat(ModemRat.LTEM):
+            if rat != WalterModemRat.LTEM:
+                if not await modem.set_rat(WalterModemRat.LTEM):
                     print('  - Failed to set RAT back to *preferred* LTEM')
                 await modem.reset()
             
             return False
         
         print('  - Failed to connect to LTE network using: '
-              f'{"LTE-M" if rat == ModemRat.LTEM else "NB-IoT"}')
+              f'{"LTE-M" if rat == WalterModemRat.LTEM else "NB-IoT"}')
         print('  - Switching modem to '
-              f'{"NB-IoT" if rat == ModemRat.LTEM else "LTE-M"} and retrying...')
+              f'{"NB-IoT" if rat == WalterModemRat.LTEM else "LTE-M"} and retrying...')
 
-        next_rat = ModemRat.NBIOT if rat == ModemRat.LTEM else ModemRat.LTEM
+        next_rat = WalterModemRat.NBIOT if rat == WalterModemRat.LTEM else WalterModemRat.LTEM
 
         if not await modem.set_rat(next_rat):
             print('  - Failed to switch RAT')
@@ -128,7 +128,7 @@ async def lte_connect(_retry: bool = False) -> bool:
     return True
 
 async def unlock_sim() -> bool:
-    if not await modem.set_op_state(ModemOpState.NO_RF):
+    if not await modem.set_op_state(WalterModemOpState.NO_RF):
         print('  - Failed to set operational state to: NO RF')
         return False
 
@@ -159,7 +159,7 @@ async def setup():
         return False
 
     if await modem.get_op_state(rsp=modem_rsp) and modem_rsp.op_state is not None:
-        print(f'Modem operatonal state: {ModemOpState.get_value_name(modem_rsp.op_state)}')
+        print(f'Modem operatonal state: {WalterModemOpState.get_value_name(modem_rsp.op_state)}')
     else:
         print('Failed to retrieve modem operational state')
         return False
