@@ -328,7 +328,7 @@ class WalterModemGNSSLocMode(Enum):
 class WalterModemGNSSSensMode(Enum):
     """
     The possible sensitivity settings use by Walter's GNSS receiver.
-    his sets the amount of time that the receiver is actually on.
+    This sets the amount of time that the receiver is actually on.
     More sensitivity requires more power.
     """
     LOW = 1
