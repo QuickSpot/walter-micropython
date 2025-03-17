@@ -121,7 +121,7 @@ class ModemMQTT(ModemCore):
 
     async def mqtt_subscribe(self,
         topic: str,
-        qos: int,
+        qos: int = 1,
         rsp: ModemRsp = None
     ) -> bool:
         """
