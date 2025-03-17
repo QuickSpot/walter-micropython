@@ -46,22 +46,22 @@ class ModemPDP(ModemCore):
 
         :param apn: The access point name.
         :param auth_proto: The used authentication protocol.
-        :type auth_proto: ModemPDPAuthProtocol
+        :type auth_proto: WalterModemPDPAuthProtocol
         :param auth_user: Optional user to use for authentication.
         :param auth_pass: Optional password to use for authentication.
         :param type: The type of PDP context to create.
-        :type type: ModemPDPType
+        :type type: WalterModemPDPType
         :param pdp_address: Optional PDP address.
         :param header_comp: The type of header compression to use.
-        :type header_comp: ModemPDPHeaderCompression
+        :type header_comp: WalterModemPDPHeaderCompression
         :param data_comp: The type of data compression to use.
-        :type data_comp: ModemPDPDataCompression
+        :type data_comp: WalterModemPDPDataCompression
         :param ipv4_alloc_method: The IPv4 alloction method.
-        :type ipv4_alloc_method: ModemPDPIPv4AddrAllocMethod
+        :type ipv4_alloc_method: WalterModemPDPIPv4AddrAllocMethod
         :param request_type: The type of PDP requests.
-        :type request_type: ModemPDPRequestType
+        :type request_type: WalterModemPDPRequestType
         :param pcscf_method: The method to use for P-CSCF discovery.
-        :type pcscf_method: ModemPDPPCSCFDiscoveryMethod
+        :type pcscf_method: WalterModemPDPPCSCFDiscoveryMethod
         :param for_IMCN: Set when this PDP ctx is used for IM CN signalling.
         :param use_NSLPI: Set when NSLPI is used.
         :param use_secure_PCO: Set to use secure protocol config options. 

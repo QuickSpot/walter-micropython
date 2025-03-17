@@ -105,7 +105,7 @@ class Modem(
         Changing this may affect error reporting.
 
         :param reports_type: The CME error report type.
-        :type reports_type: ModemCMEErrorReportsType
+        :type reports_type: WalterModemCMEErrorReportsType
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
@@ -126,7 +126,7 @@ class Modem(
         Changing this may affect library functionality.
 
         :param reports_type: The CEREG status reports type.
-        :type reports_type: ModemCEREGReportsType
+        :type reports_type: WalterModemCEREGReportsType
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
@@ -175,7 +175,7 @@ class Modem(
 
         :param reports_type: The type of cell information to retreive,
         defaults to the cell which is currently serving the connection.
-        :type reports_type: ModemSQNMONIReportsType
+        :type reports_type: WalterModemSQNMONIReportsType
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
@@ -205,7 +205,7 @@ class Modem(
         Sets the operational state of the modem.
 
         :param op_state: The new operational state of the modem.
-        :type op_state: ModemOpState
+        :type op_state: WalterModemOpState
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
@@ -235,7 +235,7 @@ class Modem(
         Sets the Radio Access Technology (RAT) for the modem.
 
         :param rat: The new RAT
-        :type rat: ModemRat
+        :type rat: WalterModemRat
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
@@ -305,7 +305,7 @@ class Modem(
         This command is only available when the modem is in the fully operational state.
 
         :param mode: The network selection mode.
-        :type mode: ModemNetworkSelMode
+        :type mode: WalterModemNetworkSelMode
         :param operator_name: The network operator name in case manual selection has been chosen.
         :param operator_format: The format in which the network operator name is passed.
         :param rsp: Reference to a modem response instance
@@ -349,9 +349,9 @@ class Modem(
 
         :param profile_id: Security profile id (1-6)
         :param tls_version: TLS version
-        :type tls_version: ModemTlsVersion
+        :type tls_version: WalterModemTlsVersion
         :param tls_validation: TLS validation level: nothing, URL, CA+period or all
-        :type tls_validation: ModemTlsValidation
+        :type tls_validation: WalterModemTlsValidation
         :param ca_certificate_id: CA certificate for certificate validation (0-19)
         :param client_certificate_id: Client TLS certificate index (0-19)
         :param client_private_key: Client TLS private key index (0-19)

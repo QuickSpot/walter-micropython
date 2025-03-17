@@ -27,12 +27,12 @@ class ModemGNSS(ModemCore):
         Recommended to run at least once before using GNSS.
 
         :param sens_mode: The sensitivity mode.
-        :type sens_mode: ModemGNSSSensMode
+        :type sens_mode: WalterModemGNSSSensMode
         :param acq_mode: The acquisition mode.
-        :type acq_mode: ModemGNSSAcqMode
+        :type acq_mode: WalterModemGNSSAcqMode
         :param loc_mode: The GNSS location mode.
-        :type loc_mode: ModemGNSSLocMode
-        :type rsp: Reference to a modem response instance
+        :type loc_mode: WalterModemGNSSLocMode
+        :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
         """
@@ -66,7 +66,7 @@ class ModemGNSS(ModemCore):
         Real-time ephemeris being the most efficient type.
 
         :param type: The type of GNSS assistance data to update.
-        :type type: ModemGNSSAssistanceType
+        :type type: WalterModemGNSSAssistanceType
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
@@ -85,7 +85,7 @@ class ModemGNSS(ModemCore):
         Programs the GNSS subsystem to perform a specified action.
 
         :param action: The action for the GNSS subsystem to perform.
-        :type action: ModemGNSSAction
+        :type action: WalterModemGNSSAction
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure

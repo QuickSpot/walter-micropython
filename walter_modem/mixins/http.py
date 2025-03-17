@@ -101,7 +101,7 @@ class ModemHTTP(ModemCore):
         :param auth_user: Username.
         :param auth_pass: Password.
         :param tls_profile_id: If not 0, TLS is used with the given profile.
-        :type tls_profile_id: ModemTlsValidation
+        :type tls_profile_id: WalterModemTlsValidation
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
@@ -210,7 +210,7 @@ class ModemHTTP(ModemCore):
         :param profile_id: HTTP profile id (0, 1 or 2)
         :param uri: The URI
         :param query_cmd: The http request method (get, delete or head)
-        :type query_cmd: ModemHttpQueryCmd
+        :type query_cmd: WalterModemHttpQueryCmd
         :extra_header_line: additional lines to be placed in the request's header
         :param rsp: Reference to a modem response instance
 
@@ -258,9 +258,9 @@ class ModemHTTP(ModemCore):
         :param uri: The URI
         :param data: Data to be sent to the server
         :param send_cmd: The http request method (post, put)
-        :type send_cmd: ModemHttpSendCmd
+        :type send_cmd: WalterModemHttpSendCmd
         :param post_param: content type
-        :type post_param: ModemHttpPostParam
+        :type post_param: WalterModemHttpPostParam
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure

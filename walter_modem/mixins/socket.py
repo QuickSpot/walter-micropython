@@ -139,9 +139,9 @@ class ModemSocket(ModemCore):
         :param local_port: The local port in case of an UDP socket.
         :param socket_id: The id of the socket to connect or -1 to re-use the last one.
         :param protocol: The protocol to use, UDP by default.
-        :type protocol: ModemSocketProto
+        :type protocol: WalterModemSocketProto
         :param accept_any_remote: How to accept remote UDP packets.
-        :type accept_any_remote: ModemSocketAcceptAnyRemote
+        :type accept_any_remote: WalterModemSocketAcceptAnyRemote
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
@@ -221,7 +221,7 @@ class ModemSocket(ModemCore):
         :param data: The data to send.
         :param socket_id: The id of the socket to close or -1 to re-use the last one.
         :param rai: The release assistance information.
-        :type rai: ModemRai
+        :type rai: WalterModemRai
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
