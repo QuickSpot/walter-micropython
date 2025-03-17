@@ -11,9 +11,6 @@ from ..structs import (
     ModemGNSSFix,
     ModemGnssFixWaiter
 )
-from ..utils import (
-    modem_string
-)
 
 class ModemGNSS(ModemCore):
     async def config_gnss(
