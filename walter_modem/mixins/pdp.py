@@ -34,7 +34,7 @@ class ModemPDP(ModemCore):
         request_type: int = WalterModemPDPRequestType.NEW_OR_HANDOVER,
         pcscf_method: int = WalterModemPDPPCSCFDiscoveryMethod.AUTO,
         for_IMCN: bool = False,
-        use_NSLPI: bool  = True,
+        use_NSLPI: bool  = False,
         use_secure_PCO: bool = False,
         use_NAS_ipv4_MTU_discovery: bool = False,
         use_local_addr_ind: bool = False,
