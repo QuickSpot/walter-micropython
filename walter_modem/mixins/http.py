@@ -102,7 +102,6 @@ class ModemHTTP(ModemCore):
         :param auth_pass: Password.
         :param tls_profile_id: If not 0, TLS is used with the given profile.
         :type tls_profile_id: ModemTlsValidation
-        :PARAM
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
