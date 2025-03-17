@@ -170,7 +170,7 @@ class ModemPDP(ModemCore):
     ) -> bool:
         """
         Activates or deactivates a given PDP context.
-        The context must be activated before it can be attached to.        
+        The context must be activated before it can be attached to.
 
         :param active: True to activate the PDP context, False to deactivate.
         :param context_id: The PDP context id or -1 to re-use the last one.
