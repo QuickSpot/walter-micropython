@@ -137,7 +137,8 @@ class ModemPDP(ModemCore):
         Authenticates a PDP context if its APN requires authentication.
         Has no effect if 'NONE' is selected as the authentication method.
 
-        :param rsp: Reference to a modem response instance
+        :param context_id: The PDP context id or -1 to re-use the last one.
+        :param rsp: Reference to a modem response instance.
 
         :return bool: True on success, False on failure
         """
@@ -172,6 +173,7 @@ class ModemPDP(ModemCore):
         The context must be activated before it can be attached to.        
 
         :param active: True to activate the PDP context, False to deactivate.
+        :param context_id: The PDP context id or -1 to re-use the last one.
         :param rsp: Reference to a modem response instance
 
         :return bool: True on success, False on failure
