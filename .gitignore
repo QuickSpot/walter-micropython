@@ -1,0 +1,31 @@
+# IDEs
+## VisualStudioCode
+.vscode/*
+.history/
+*.vsix
+.history
+.ionide
+
+## Intellij, PyCharm
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+
+*.iws
+out/
+
+.idea/replstate.xml
+.idea/sonarlint/
+.idea/**/sonarlint/
+.idea/**/sonarIssues.xml
+
+.idea/**/markdown-navigator.xml
+.idea/**/markdown-navigator-enh.xml
+.idea/**/markdown-navigator/
+
+.idea/$CACHE_FILE$
+
+# Ignore config.py files from examples
+examples/**/config.py
