@@ -7,7 +7,7 @@ from machine import (
     Pin,
     lightsleep,
     deepsleep,
-    reset_caue,
+    reset_cause,
     DEEPSLEEP,
     RTC
 )
@@ -1043,7 +1043,7 @@ class ModemCore:
         self._uart_reader_task = asyncio.create_task(self._uart_reader())
         self._queue_worker_task = asyncio.create_task(self._queue_worker())
 
-        if reset_caue == DEEPSLEEP:
+        if reset_cause == DEEPSLEEP:
             self._sleep_wakeup()
         else:
             await self.reset()
