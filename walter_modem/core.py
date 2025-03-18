@@ -1,7 +1,17 @@
 import asyncio
+import struct
 import time
 
-from machine import UART
+from machine import (
+    UART,
+    Pin,
+    lightsleep,
+    deepsleep,
+    reset_caue,
+    DEEPSLEEP,
+    RTC
+)
+
 from .queue import Queue
 
 from .enums import (
@@ -1024,13 +1034,28 @@ class ModemCore:
             rxbuf=2048
         )
 
+        self._reset_pin = Pin(ModemCore.WALTER_MODEM_PIN_RESET, Pin.OUT, hold=True)
+
         self._task_queue = Queue()
         self._command_queue = Queue()
         self._parser_data = ModemATParserData()
 
-        asyncio.create_task(self._uart_reader())
-        asyncio.create_task(self._queue_worker())
+        self._uart_reader_task = asyncio.create_task(self._uart_reader())
+        self._queue_worker_task = asyncio.create_task(self._queue_worker())
 
-        await self.reset()
+        if reset_caue == DEEPSLEEP:
+            self._sleep_wakeup()
+        else:
+            await self.reset()
+
         await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC)
         await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED)
+
+    def _sleep_wakeup(self):
+        pass
+
+    def _sleep_prepare(self):
+        pass
+
+    def sleep(self, sleep_time: int, light_sleep: bool = False):
+        pass

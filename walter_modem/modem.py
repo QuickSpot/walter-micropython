@@ -49,10 +49,11 @@ class Modem(
 
         :return bool: true on success, false on failure
         """
-        reset_pin = Pin(ModemCore.WALTER_MODEM_PIN_RESET, Pin.OUT)
-        reset_pin.off()
+        self._reset_pin.init(hold=False)
+        self._reset_pin.off()
         time.sleep(0.1)
-        reset_pin.on()
+        self._reset_pin.on()
+        self._reset_pin.init(hold=True)
 
         # Also reset internal "modem mirror" state
         super().__init__()
