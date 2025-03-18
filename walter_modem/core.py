@@ -1058,4 +1058,15 @@ class ModemCore:
         pass
 
     def sleep(self, sleep_time: int, light_sleep: bool = False):
-        pass
+        if light_sleep:
+            self._uart.init(flow=0)
+            rts_pin = Pin(ModemCore.WALTER_MODEM_PIN_RTS, hold=True)
+            lightsleep(sleep_time)
+            rts_pin.init(hold=False)
+        else:
+            self._uart_reader_task.cancel()
+            self._queue_worker_task.cancel()
+            self._uart.deinit()
+
+            self._sleep_prepare()
+            deepsleep(sleep_time)
