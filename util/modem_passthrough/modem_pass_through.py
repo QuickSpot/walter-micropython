@@ -27,7 +27,7 @@ async def uart_reader():
     while True:
         line = uart.readline()
         if line:
-            line = line.strip()
+            line = line.replace(b'\x00', b'').strip()
             print(line.decode())
         await asyncio.sleep(0.5)
 
