@@ -43,8 +43,12 @@ async def cmd_sender():
             with open('/remote/cmd_passthrough', 'r+') as f:
                 content = f.read().strip()
                 
-                if content is not None and content is not 'READ':
-                    print("New data:", content)
+                if content is 'INTERRUPT':
+                    with open('/remote/cmd_passthrough', 'w') as cf:
+                        cf.write('READ')
+                    break
+                elif content is not None and content is not 'READ':
+                    uart.write(content + '\r\n')
 
                     with open('/remote/cmd_passthrough', 'w') as cf:
                         cf.write('READ')
