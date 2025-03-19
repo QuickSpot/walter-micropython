@@ -23,12 +23,12 @@ uart = UART(2,
         )
 
 async def uart_reader():
-    print('Started Uart Reader')
+    print('Started UART Reader')
     while True:
         line = uart.readline()
         if line:
             line = line.strip()
-            print('RX: ', line)
+            print(line.decode())
         await asyncio.sleep(0.5)
 
 async def reset():
