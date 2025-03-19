@@ -1,46 +1,67 @@
+import asyncio
 from machine import UART, Pin
-import time
+import sys
+import select
 
-WALTER_MODEM_PIN_RX = 14
-WALTER_MODEM_PIN_TX = 48
-WALTER_MODEM_PIN_RTS = 21
-WALTER_MODEM_PIN_CTS = 47
-WALTER_MODEM_PIN_RESET = 45
+task: asyncio.Task
 
-ModemSerial = UART(2, 115200, rx=WALTER_MODEM_PIN_RX, tx=WALTER_MODEM_PIN_TX, rts=WALTER_MODEM_PIN_RTS, cts=WALTER_MODEM_PIN_CTS)
+# Initialize UART2
+uart = UART(2,
+            baudrate=115200,
+            bits=8,
+            parity=None,
+            stop=1,
+            flow=UART.RTS | UART.CTS,
+            tx=48,
+            rx=14,
+            cts=47,
+            rts=21,
+            timeout=0,
+            timeout_char=0,
+            txbuf=2048,
+            rxbuf=2048
+        )
 
-def _modem_reset():
-    reset_pin = Pin(WALTER_MODEM_PIN_RESET, Pin.OUT)
-    reset_pin.value(0)
-    time.sleep(1)
-    reset_pin.value(1)
+async def uart_reader():
+    print('Started Uart Reader')
+    while True:
+        line = uart.readline()
+        if line:
+            line = line.strip()
+            print('RX: ', line)
+        await asyncio.sleep(0.5)
 
-uart = UART(0, 115200)
-def setup():
-    while not uart.any():
-        pass
+async def reset():
+    reset_pin = Pin(45, Pin.OUT)
+    reset_pin.off()
+    await asyncio.sleep(0.1)
+    reset_pin.on()
 
-    Pin(WALTER_MODEM_PIN_RX, Pin.IN)
-    Pin(WALTER_MODEM_PIN_TX, Pin.IN)
-    Pin(WALTER_MODEM_PIN_CTS, Pin.IN)
-    Pin(WALTER_MODEM_PIN_RTS, Pin.OUT)
-    Pin(WALTER_MODEM_PIN_RESET, Pin.OUT)
+async def cmd_sender():
+    while True:
+        try:
+            with open('/remote/cmd_passthrough', 'r+') as f:
+                content = f.read().strip()
+                
+                if content is not None and content is not 'READ':
+                    print("New data:", content)
 
-    ModemSerial.init(
-        115200,
-        bits=8,
-        parity=None,
-        stop=1,
-        rx=WALTER_MODEM_PIN_RX,
-        tx=WALTER_MODEM_PIN_TX,
-        rts=WALTER_MODEM_PIN_RTS,
-        cts=WALTER_MODEM_PIN_CTS)
+                    with open('/remote/cmd_passthrough', 'w') as cf:
+                        cf.write('READ')
 
-    _modem_reset()
+        except OSError as e:
+            print("Error reading or writing to file:", e)
 
-def loop():
-    if uart.any():
-        ModemSerial.write(uart.read(1))
+        await asyncio.sleep(0.5)
 
-    if ModemSerial.any():
-        uart.write(ModemSerial.read(1))
+async def main():
+    global task
+    task = asyncio.create_task(uart_reader())
+    await reset()
+    await cmd_sender()
+
+try:
+    asyncio.run(main())
+except KeyboardInterrupt:
+    task.cancel()
+    pass
