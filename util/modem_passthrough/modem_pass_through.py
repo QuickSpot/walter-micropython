@@ -1,7 +1,7 @@
 import asyncio
 from machine import UART, Pin
-import sys
-import select
+
+FILEPATH = '/remote/cmd'
 
 task: asyncio.Task
 
@@ -37,21 +37,22 @@ async def reset():
     await asyncio.sleep(0.1)
     reset_pin.on()
 
+def ack_read():
+    with open(FILEPATH, 'w') as f:
+        f.write('READ')
+
 async def cmd_sender():
     while True:
         try:
-            with open('/remote/cmd_passthrough', 'r+') as f:
+            with open(FILEPATH, 'r+') as f:
                 content = f.read().strip()
                 
                 if content is 'INTERRUPT':
-                    with open('/remote/cmd_passthrough', 'w') as cf:
-                        cf.write('READ')
+                    ack_read()
                     break
                 elif content is not None and content is not 'READ':
                     uart.write(content + '\r\n')
-
-                    with open('/remote/cmd_passthrough', 'w') as cf:
-                        cf.write('READ')
+                    ack_read()
 
         except OSError as e:
             print("Error reading or writing to file:", e)
