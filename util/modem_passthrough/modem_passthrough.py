@@ -7,11 +7,15 @@ import queue
 import signal
 import sys
 
+from datetime import datetime
+
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CMD_FILE = os.path.join(SCRIPT_DIR, 'cmd')
+LOG_FILE = os.path.join(SCRIPT_DIR, 'passthrough.log')
 
 class ModemUI:
     def __init__(self, stdscr):
+        self.logging = '--log' in sys.argv
         self.stdscr = stdscr
         self.output_queue = queue.Queue()
         self.output_lines = []
@@ -86,6 +90,15 @@ class ModemUI:
             time.sleep(1)
         
         self.running = False
+
+    def log(self, line: str, meta: str = None, raw=False):
+        with open(LOG_FILE, 'a+') as f:
+            if raw:
+                f.write(line)
+            else:
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                log_entry = f"[{timestamp}] {meta:>7}: {line.strip()}\n"
+                f.write(log_entry)
     
     def start_modem_process(self):
         try:
@@ -102,6 +115,8 @@ class ModemUI:
             for line in proc.stdout:
                 if not self.running:
                     break
+                if self.logging:
+                    self.log(line=line, meta='output')
                 if line.strip() == '+SYSSTART':
                     self.passthrough_state = 'READY'
                 if 'mpremote:' in line:
@@ -128,6 +143,9 @@ class ModemUI:
             if self.write_cmd_file(self.command):
                 self.command_result = f'Sent: {self.command}'
                 self.passthrough_state = f'WAITING ({self.command})'
+
+                if self.logging:
+                    self.log(line=self.command, meta='command')
             else:
                 self.command_result = 'Failed to write command!'
                 self.passthrough_state = f'ERROR ({self.command})'
@@ -144,7 +162,7 @@ class ModemUI:
         height, width = self.stdscr.getmaxyx()
 
         status = f' Status: {self.passthrough_state}'
-        top_header_info = f' | Press Ctrl+C to exit'.ljust(width - len(status))
+        top_header_info = f' |{' Logging Enabled |' if self.logging else ''} Press Ctrl+C to exit'.ljust(width - len(status))
 
         self.stdscr.addstr(
             0, 0,
@@ -200,6 +218,9 @@ class ModemUI:
     def run(self):
         self.update_passthrough_state()
 
+        if self.logging:
+            self.log(line='===== PROGRAM STARTED =====\r\n', raw=True)
+
         while self.running:
             try:
                 while not self.output_queue.empty():
@@ -240,6 +261,7 @@ def signal_handler(sig, frame):
 
 def main():
     signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
     
     try:
         curses.wrapper(lambda stdscr: ModemUI(stdscr).run())
