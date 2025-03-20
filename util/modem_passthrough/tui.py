@@ -15,15 +15,33 @@ class ModemUI:
         self.stdscr = stdscr
         self.output_queue = queue.Queue()
         self.output_lines = []
-        self.command = ""
-        self.command_status = ""
+        self.command = ''
+        self.command_result = ''
         self.running = True
+        self.passthrough_state = 'STARTING'
         
         curses.start_color()
         curses.use_default_colors()
-        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_CYAN)  # Status bar
-        curses.init_pair(2, curses.COLOR_GREEN, -1)  # Commands
-        curses.init_pair(3, curses.COLOR_RED, -1)    # Errors
+
+        curses.init_pair(1, curses.COLOR_BLACK, curses.COLOR_GREEN)
+        curses.init_pair(2, curses.COLOR_BLACK, curses.COLOR_YELLOW)
+        curses.init_pair(3, curses.COLOR_BLACK, curses.COLOR_RED)
+        curses.init_pair(4, curses.COLOR_GREEN, -1)
+        curses.init_pair(5, curses.COLOR_RED, -1)
+
+        self.colors = {
+            'top_header': {
+                'STARTING': 2,
+                'READY': 1,
+                'WAITING': 2,
+                'ERROR': 3,
+                'NO': 3
+            },
+            'out_lines': {
+                'OK': 4,
+                'ERROR': 5
+            }
+        }
         
         curses.curs_set(1)  # Show cursor
         self.stdscr.nodelay(True)  # Non-blocking input
@@ -39,7 +57,7 @@ class ModemUI:
             with open(CMD_FILE, 'r') as f:
                 return f.read().strip()
         except Exception:
-            return "ERROR"
+            return "TUI-ERROR"
 
     def write_cmd_file(self, command):
         try:
@@ -59,11 +77,11 @@ class ModemUI:
         try:
             with open(CMD_FILE, 'w') as f:
                 f.write('INTERRUPT')
-            self.command_status = "Sent INTERRUPT signal. Exiting..."
+            self.command_result = "Sent INTERRUPT signal. Exiting..."
             self.refresh_screen()
             time.sleep(1)  # Give time to see the message
         except Exception as e:
-            self.command_status = f"Error sending INTERRUPT: {str(e)}"
+            self.command_result = f"Error sending INTERRUPT: {str(e)}"
             self.refresh_screen()
             time.sleep(1)
         
@@ -71,7 +89,7 @@ class ModemUI:
     
     def start_modem_process(self):
         try:
-            self.output_queue.put("Starting modem process...")
+            self.output_queue.put("[i] >> Starting modem process...")
             
             proc = subprocess.Popen(
                 ['mpremote', 'mount', '.', '+', 'run', 'modem_pass_through.py'],
@@ -84,62 +102,104 @@ class ModemUI:
             for line in proc.stdout:
                 if not self.running:
                     break
+                if line.strip() == '+SYSSTART':
+                    self.passthrough_state = 'READY'
+                if 'mpremote:' in line:
+                    line = f'[i] >> {line}'
                 self.output_queue.put(line.strip())
             
             proc.stdout.close()
             proc.wait()
             
-            self.output_queue.put("Modem process terminated.")
+            self.output_queue.put("[i] >> Modem process terminated.")
+            self.passthrough_state = 'NO COMM'
         except Exception as e:
-            self.output_queue.put(f"Error in modem process: {str(e)}")
+            self.output_queue.put(f"[i] >> Error in modem process: {str(e)}")
+            self.passthrough_state = 'NO COMM'
     
     def process_command(self):
         if not self.command:
             return
-            
-        current_flag = self.read_cmd_file()
-        if current_flag == "READ":
+        elif self.command in ['INTERRUPT', 'READ', 'PROGFAIL', 'TUI-ERROR']:
+            self.command_result = f'Command not allowed; INTERRUPT, READ, PROGFAIL & TUI-ERROR are reserved'
+            return
+    
+        if self.passthrough_state == 'READY' and self.read_cmd_file() == "READ":
             if self.write_cmd_file(self.command):
-                self.command_status = f"Command sent: {self.command}"
+                self.command_result = f'Sent: {self.command}'
+                self.passthrough_state = f'WAITING ({self.command})'
             else:
-                self.command_status = "Failed to write command!"
+                self.command_result = 'Failed to write command!'
+                self.passthrough_state = f'ERROR ({self.command})'
         else:
-            self.command_status = f"Waiting: CMD file not in READ state (current: {current_flag})"
+            self.command_result = f'Passthrough not ready! Command not sent.'
         
-        self.command = ""
+        self.command = ''
     
     def refresh_screen(self):
+        if self.passthrough_state != 'READY':
+            self.update_passthrough_state()
+
         self.stdscr.clear()
         height, width = self.stdscr.getmaxyx()
+
+        status = f' Status: {self.passthrough_state}'
+        top_header_info = f' | Press Ctrl+C to exit'.ljust(width - len(status))
+
+        self.stdscr.addstr(
+            0, 0,
+            status,
+            curses.color_pair(self.colors['top_header'][self.passthrough_state.split(maxsplit=1)[0]]) | curses.A_BOLD
+        )
         
-        # Status bar at the top
-        current_flag = self.read_cmd_file()
-        status = "READY" if current_flag == "READ" else f"WAITING ({current_flag})"
-        status_line = f" Status: {status} | Press Ctrl+C or ESC to exit "
-        self.stdscr.addstr(0, 0, status_line.ljust(width), curses.color_pair(1))
+        # Add the "Press Ctrl+C to exit" part without bold
+        self.stdscr.addstr(
+            0, + len(status),
+            top_header_info,
+            curses.color_pair(self.colors['top_header'][self.passthrough_state.split(maxsplit=1)[0]])
+        )
         
         # Output area: reserve space for the status line, output area, command status, and input prompt.
-        output_height = height - 4  # (line 0: top status, line height-2: command status, line height-1: input)
+        output_height = height - 5  # (line 0: top status, line height-2: command status, line height-1: input)
         visible_lines = self.output_lines[-output_height:] if self.output_lines else []
         
         for i, line in enumerate(visible_lines):
             if i < output_height:
-                if "Error" in line or "Failed" in line:
-                    self.stdscr.addstr(i + 1, 0, line[:width-1], curses.color_pair(3))
+                if 'ERROR' in line:
+                    self.stdscr.addstr(i + 1, 0, line[:width-1],
+                                       curses.color_pair(self.colors['out_lines']['ERROR']))
+                elif 'OK' in line:
+                    self.stdscr.addstr(i + 1, 0, line[:width-1],
+                                       curses.color_pair(self.colors['out_lines']['OK']))
+                elif '[i] >> ' in line:
+                    self.stdscr.addstr(i + 1, 0, line[:width-1],
+                                       curses.A_DIM)
                 else:
                     self.stdscr.addstr(i + 1, 0, line[:width-1])
         
-        self.stdscr.addstr(height - 2, 0, self.command_status.ljust(width), curses.color_pair(2) if 'sent' in self.command_status else curses.color_pair(3))
+        self.stdscr.addstr(height - 2, 0, self.command_result.ljust(width), curses.A_DIM)
         
-        prompt = "Command: "
-        self.stdscr.addstr(height - 1, 0, prompt)
+        prompt = 'Command: '
+        self.stdscr.addstr(height - 1, 0, prompt, curses.A_BOLD)
         self.stdscr.addstr(height - 1, len(prompt), self.command[:width-len(prompt)-1])
         
         self.stdscr.move(height - 1, len(prompt) + len(self.command))
         
         self.stdscr.refresh()
-    
+
+    def update_passthrough_state(self):
+        cmd_file_content = self.read_cmd_file()
+        if cmd_file_content == 'PROGFAIL':
+            self.passthrough_state == 'NO COMM'
+        if self.passthrough_state != 'NO COMM' and self.passthrough_state != 'STARTING':
+            if cmd_file_content == 'READ':
+                self.passthrough_state = 'READY'
+            elif cmd_file_content == 'TUI-ERROR':
+                self.passthrough_state = 'ERROR'
+
     def run(self):
+        self.update_passthrough_state()
+
         while self.running:
             try:
                 while not self.output_queue.empty():
@@ -184,7 +244,7 @@ def main():
     try:
         curses.wrapper(lambda stdscr: ModemUI(stdscr).run())
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error: ", e)
         try:
             with open(CMD_FILE, 'w') as f:
                 f.write('INTERRUPT')

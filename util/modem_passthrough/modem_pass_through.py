@@ -25,7 +25,7 @@ uart = UART(2,
         )
 
 async def uart_reader():
-    print('Started UART Reader')
+    print('[i] >> Started UART Reader')
     while True:
         line = uart.readline()
         if line:
@@ -60,7 +60,7 @@ async def cmd_sender():
         await asyncio.sleep(1)
 
         if attempts >= 10:
-            print('Remote was never mounted, exiting...')
+            print('[i] >> Remote was never mounted, exiting...')
             notif_fail()
             return
 
@@ -77,7 +77,7 @@ async def cmd_sender():
                     ack_read()
 
         except OSError as e:
-            print("Error reading or writing to file:", e)
+            print("[i] >> Error reading or writing to file:", e)
             notif_fail()
 
         await asyncio.sleep(0.5)
