@@ -92,7 +92,7 @@ class ModemUI:
             self.output_queue.put("[i] >> Starting modem process...")
             
             proc = subprocess.Popen(
-                ['mpremote', 'mount', '.', '+', 'run', 'modem_pass_through.py'],
+                ['mpremote', 'mount', '.', '+', 'run', 'esp-script.py'],
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
