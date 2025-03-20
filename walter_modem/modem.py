@@ -373,11 +373,11 @@ class Modem(
 
         cmd += ','
         if client_certificate_id is not None:
-            cmd += f',{client_certificate_id}'
+            cmd += f'{client_certificate_id}'
         
         cmd += ','
         if client_private_key is not None:
-            cmd += f',{client_private_key}'
+            cmd += f'{client_private_key}'
 
         cmd += ',"","",0'
         
