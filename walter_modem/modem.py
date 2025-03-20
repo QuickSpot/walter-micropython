@@ -379,7 +379,7 @@ class Modem(
         if client_private_key is not None:
             cmd += f'{client_private_key}'
 
-        cmd += ',"","",0'
+        cmd += ',"","",0,0,0'
         
         return await self._run_cmd(
             rsp=rsp,
