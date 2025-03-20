@@ -1,4 +1,6 @@
 import asyncio
+import os
+import sys
 from machine import UART, Pin
 
 FILEPATH = '/remote/cmd'
@@ -41,7 +43,27 @@ def ack_read():
     with open(FILEPATH, 'w') as f:
         f.write('READ')
 
+def notif_fail():
+    with open(FILEPATH, 'w') as f:
+        f.write('PROGFAIL')
+
+def ensure_no_interrupt():
+    with open(FILEPATH, 'r+') as f:
+        content = f.read().strip()
+
+        if content is 'INTERRUPT':
+            ack_read()
+
 async def cmd_sender():
+    attempts = 0
+    while not 'remote' in os.listdir('/'):
+        await asyncio.sleep(1)
+
+        if attempts >= 10:
+            print('Remote was never mounted, exiting...')
+            notif_fail()
+            return
+
     while True:
         try:
             with open(FILEPATH, 'r+') as f:
@@ -56,6 +78,7 @@ async def cmd_sender():
 
         except OSError as e:
             print("Error reading or writing to file:", e)
+            notif_fail()
 
         await asyncio.sleep(0.5)
 
@@ -63,10 +86,13 @@ async def main():
     global task
     task = asyncio.create_task(uart_reader())
     await reset()
+    ensure_no_interrupt()
     await cmd_sender()
 
 try:
     asyncio.run(main())
 except KeyboardInterrupt:
     task.cancel()
-    pass
+except Exception as err:
+    sys.print_exception(err)
+    notif_fail()
