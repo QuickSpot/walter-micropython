@@ -190,13 +190,13 @@ class WalterModemPDPContextState(Enum):
 
 class WalterModemPDPType(Enum):
     """Supported packet data protocol types."""
-    X25 = 0
-    IP = 1
-    IPV6 = 2
-    IPV4V6 = 3
-    OSPIH = 4
-    PPP = 5
-    NON_IP = 6
+    X25 = '"X.25"'
+    IP = '"IP"'
+    IPV6 = '"IPV6"'
+    IPV4V6 = '"IPV4V6"'
+    OSPIH = '"OPSIH"'
+    PPP = '"PPP"'
+    NON_IP = '"Non-IP"'
 
 class WalterModemPDPHeaderCompression(Enum):
     """Supported packet data protocol header compression mechanisms."""
