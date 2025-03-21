@@ -10,15 +10,6 @@ from .enums import (
 def get_mac() -> str:
     return ubinascii.hexlify(network.WLAN().config('mac'),':').decode()
 
-def bytes_to_str(byte_data):
-    """Convert byte data to a string."""
-    if isinstance(byte_data, bytearray):
-        try:
-            return byte_data.decode('utf-8', 'replace')
-        except Exception:
-            return byte_data
-    return byte_data
-
 def parse_cclk_time(time_str: str) -> float | None:
     """
     :param time_str: format: yy/mm/dd,hh:nn:ss+qq where qq = tz offset in quarters of an hour
