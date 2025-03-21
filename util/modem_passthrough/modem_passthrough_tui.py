@@ -6,6 +6,7 @@ import threading
 import queue
 import signal
 import sys
+import shutil
 
 from datetime import datetime
 
@@ -61,7 +62,7 @@ class ModemUI:
             with open(CMD_FILE, 'r') as f:
                 return f.read().strip()
         except Exception:
-            return "TUI-ERROR"
+            return 'TUI-ERROR'
 
     def write_cmd_file(self, command):
         try:
@@ -81,13 +82,12 @@ class ModemUI:
         try:
             with open(CMD_FILE, 'w') as f:
                 f.write('INTERRUPT')
-            self.command_result = "Sent INTERRUPT signal. Exiting..."
-            self.refresh_screen()
-            time.sleep(1)  # Give time to see the message
+            self.command_result = 'Sent INTERRUPT signal. Exiting...'
         except Exception as e:
-            self.command_result = f"Error sending INTERRUPT: {str(e)}"
+            self.command_result = f'Error sending INTERRUPT: {str(e)}'
+            self.passthrough_state = 'ERROR'
             self.refresh_screen()
-            time.sleep(1)
+            time.sleep(3)
         
         self.running = False
 
@@ -97,16 +97,31 @@ class ModemUI:
                 f.write(line)
             else:
                 timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-                log_entry = f"[{timestamp}] {meta:>7}: {line.strip()}\n"
+                log_entry = f'[{timestamp}] {meta:>7}: {line.strip()}\n'
                 f.write(log_entry)
     
     def start_modem_process(self):
         try:
-            self.output_queue.put("[i] >> Starting modem process...")
+            self.output_queue.put('[i] >> Starting modem process...')
+            cmd_variants = [
+                ['mpremote'],
+                ['python', '-m', 'mpremote'],
+                ['python3', '-m', 'mpremote']
+            ]
+            cmd = None
+            for variant in cmd_variants:
+                if shutil.which(variant[0]):
+                    cmd = variant
+                    break
+            if cmd is None:
+                raise FileNotFoundError(
+                    'mpremote command not found. Ensure it is installed and accessible.'
+                )
             
             proc = subprocess.Popen(
-                ['mpremote', 'mount', '.', '+', 'run', 'esp-script.py'],
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                cmd + ['mount', '.', '+', 'run', 'esp-script.py'],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
                 cwd=SCRIPT_DIR
@@ -120,16 +135,18 @@ class ModemUI:
                 if line.strip() == '+SYSSTART':
                     self.passthrough_state = 'READY'
                 if 'mpremote:' in line:
-                    line = f'[i] >> {line}'
+                    line = '[i] >> ' + line
                 self.output_queue.put(line.strip())
             
             proc.stdout.close()
             proc.wait()
-            
-            self.output_queue.put("[i] >> Modem process terminated.")
+            self.output_queue.put('[i] >> Modem process terminated.')
             self.passthrough_state = 'NO COMM'
+        except FileNotFoundError as e:
+            self.output_queue.put(f'[i] >> Error: {str(e)}')
+            self.passthrough_state = 'ERROR'
         except Exception as e:
-            self.output_queue.put(f"[i] >> Error in modem process: {str(e)}")
+            self.output_queue.put(f'[i] >> Error in modem process: {str(e)}')
             self.passthrough_state = 'NO COMM'
     
     def process_command(self):
@@ -139,7 +156,7 @@ class ModemUI:
             self.command_result = f'Command not allowed; INTERRUPT, READ, PROGFAIL & TUI-ERROR are reserved'
             return
     
-        if self.passthrough_state == 'READY' and self.read_cmd_file() == "READ":
+        if self.passthrough_state == 'READY' and self.read_cmd_file() == 'READ':
             if self.write_cmd_file(self.command):
                 self.command_result = f'Sent: {self.command}'
                 self.passthrough_state = f'WAITING ({self.command})'
@@ -167,18 +184,19 @@ class ModemUI:
         self.stdscr.addstr(
             0, 0,
             status,
-            curses.color_pair(self.colors['top_header'][self.passthrough_state.split(maxsplit=1)[0]]) | curses.A_BOLD
+            curses.color_pair(
+                self.colors['top_header'][self.passthrough_state.split(maxsplit=1)[0]]
+            ) | curses.A_BOLD
         )
         
-        # Add the "Press Ctrl+C to exit" part without bold
         self.stdscr.addstr(
             0, + len(status),
             top_header_info,
             curses.color_pair(self.colors['top_header'][self.passthrough_state.split(maxsplit=1)[0]])
         )
         
-        # Output area: reserve space for the status line, output area, command status, and input prompt.
-        output_height = height - 5  # (line 0: top status, line height-2: command status, line height-1: input)
+
+        output_height = height - 5
         visible_lines = self.output_lines[-output_height:] if self.output_lines else []
         
         for i, line in enumerate(visible_lines):
@@ -253,7 +271,7 @@ def signal_handler(sig, frame):
     try:
         with open(CMD_FILE, 'w') as f:
             f.write('INTERRUPT')
-        print("Sent INTERRUPT signal before exiting.")
+        print('Sent INTERRUPT signal before exiting.')
     except:
         pass
     
@@ -266,13 +284,13 @@ def main():
     try:
         curses.wrapper(lambda stdscr: ModemUI(stdscr).run())
     except Exception as e:
-        print(f"Error: ", e)
+        print(f'Error: ', e)
         try:
             with open(CMD_FILE, 'w') as f:
                 f.write('INTERRUPT')
-            print("Sent INTERRUPT signal before exiting.")
+            print('Sent INTERRUPT signal before exiting.')
         except:
             pass
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
