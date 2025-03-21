@@ -43,7 +43,6 @@ from .structs import (
 )
 
 from .utils import (
-    bytes_to_str,
     parse_cclk_time,
     parse_gnss_time,
     modem_string,
@@ -212,7 +211,8 @@ class ModemCore:
         """
         qitem = ModemTaskQueueItem()
         qitem.rsp = self._parser_data.line
-
+        
+        if self.debug_log: log('DEBUG, RX', qitem.rsp.decode())
         await self._task_queue.put(qitem)
 
         self._parser_data.line = bytearray()
@@ -242,10 +242,6 @@ class ModemCore:
         while True:
             incoming_uart_data = bytearray(256)
             size = await rx_stream.readinto(incoming_uart_data)
-            if self.debug_log and size > 0:
-                for line in incoming_uart_data[:size].splitlines():
-                    if len(line) > 0:
-                        log('DEBUG, RX', bytes_to_str(line))
 
             for b in incoming_uart_data[:size]:
                 if self._parser_data.state == WalterModemRspParserState.START_CR:
@@ -352,7 +348,7 @@ class ModemCore:
     async def _process_queue_cmd(self, tx_stream, cmd):
         if cmd.type == WalterModemCmdType.TX:
             if self.debug_log:
-                log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+                log('DEBUG, TX', cmd.at_cmd)
 
             tx_stream.write(cmd.at_cmd)
             tx_stream.write(b'\r\n')
@@ -363,7 +359,7 @@ class ModemCore:
         or cmd.type == WalterModemCmdType.DATA_TX_WAIT:
             if cmd.state == WalterModemCmdState.NEW:
                 if self.debug_log:
-                    log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+                    log('DEBUG, TX', cmd.at_cmd)
                     
                 tx_stream.write(cmd.at_cmd)
                 if cmd.type == WalterModemCmdType.DATA_TX_WAIT:
@@ -386,7 +382,7 @@ class ModemCore:
                             await self._finish_queue_cmd(cmd, WalterModemState.ERROR)
                     else:
                         if self.debug_log:
-                            log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+                            log('DEBUG, TX', cmd.at_cmd)
 
                         tx_stream.write(cmd.at_cmd)
                         if cmd.type == WalterModemCmdType.DATA_TX_WAIT:
@@ -436,9 +432,6 @@ class ModemCore:
 
         elif at_rsp.startswith(b'>') or at_rsp.startswith(b'>>>'):
             if cmd and cmd.data and cmd.type == WalterModemCmdType.DATA_TX_WAIT:
-                if self.debug_log:
-                    log('DEBUG, TX', bytes_to_str(cmd.data))
-                    
                 tx_stream.write(cmd.data)
                 await tx_stream.drain()
 
