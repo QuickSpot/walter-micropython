@@ -15,7 +15,6 @@ from ..structs import (
     ModemRsp,
 )
 from ..utils import (
-    pdp_type_as_string,
     modem_string,
     modem_bool
 )
@@ -26,7 +25,7 @@ class ModemPDP(ModemCore):
         auth_proto: int = WalterModemPDPAuthProtocol.NONE,
         auth_user: str = None,
         auth_pass: str = None,
-        type: int = WalterModemPDPType.IP,
+        type: str = WalterModemPDPType.IP,
         pdp_address: str = None,
         header_comp: int = WalterModemPDPHeaderCompression.OFF,
         data_comp: int = WalterModemPDPDataCompression.OFF,
@@ -115,7 +114,7 @@ class ModemPDP(ModemCore):
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CGDCONT={},{},{},{},{},{},{},{},{},{},{},{},{},{},{}'.format(
-                ctx.id, pdp_type_as_string(ctx.type), modem_string(ctx.apn),
+                ctx.id, ctx.type, modem_string(ctx.apn),
                 modem_string(ctx.pdp_address), ctx.data_comp,
                 ctx.header_comp, ctx.ipv4_alloc_method, ctx.request_type,
                 ctx.pcscf_method, modem_bool(ctx.for_IMCN),
