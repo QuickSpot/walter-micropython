@@ -77,23 +77,6 @@ def parse_gnss_time(time_str: str) -> float | None:
 
     return time_val
 
-def pdp_type_as_string(pdp_type: int) -> str:
-    if pdp_type == WalterModemPDPType.X25:
-        return '"X.25"'
-    if pdp_type == WalterModemPDPType.IP:
-        return '"IP"'
-    if pdp_type == WalterModemPDPType.IPV6:
-        return '"IPV6"'
-    if pdp_type == WalterModemPDPType.IPV4V6:
-        return '"IPV4V6"'
-    if pdp_type == WalterModemPDPType.OSPIH:
-        return '"OPSIH"'
-    if pdp_type == WalterModemPDPType.PPP:
-        return '"PPP"'
-    if pdp_type == WalterModemPDPType.NON_IP:
-        return '"Non-IP"'
-    return ''
-
 def modem_string(string: str) -> str:
     if string:
         return '"' + string + '"'
