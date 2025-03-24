@@ -20,7 +20,7 @@ class TestMinimalUnitTest(unittest.TestCase):
         self.assert_true(isinstance('foo', int))
 
     def test_assert_false_fails(self):
-        self.assert_false('A' == 'A')
+        self.assert_false('FOO'.isupper())
 
 test_unittest = TestMinimalUnitTest()
 test_unittest.run()
