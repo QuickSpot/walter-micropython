@@ -26,18 +26,18 @@ class TestCase:
             self.passed += 1
             print('✔', end=' ')
 
-    def assert_true(self, condition):
+    def assert_true(self, a):
         self.tests_run += 1
-        if not condition:
+        if not a:
             self.failed += 1
             print(f'✘ FAIL: condition is not truthy', end=' ')
         else:
             self.passed += 1
             print('✔', end=' ')
 
-    def assert_false(self, condition):
+    def assert_false(self, a):
         self.tests_run += 1
-        if condition:
+        if a:
             self.failed += 1
             print(f'✘ FAIL: condition is not falsy', end=' ')
         else:
