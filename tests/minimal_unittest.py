@@ -191,18 +191,20 @@ class AsyncTestCase(TestCase):
             for name in dir(self):
                 if name.startswith('test_'):
                     test = getattr(self, name)
-                    start_time = time.time()
+                    start_time = time.ticks_ms()
                     try:
-                        if asyncio.iscoroutinefunction(test):
+                        print(f'{name:<{len(max(dir(self), key=len))}}', end=' : ')
+                        try:
                             await test()
-                        else:
+                        except TypeError:
                             test()
                     except Exception as e:
                         self.errors += 1
-                        print(f"ERROR in {name}: {e}")
+                        print(f'⚠ ERROR: {e}', end=' ')
                     finally:
-                        end_time = time.time()
-                        self.tests_times[name] = end_time - start_time
+                        end_time = time.ticks_ms()
+                        elapsed_ms = time.ticks_diff(end_time, start_time)
+                        print(f'({(elapsed_ms / 1000):.2f} s)')
         finally:
             await self.async_teardown()
         self._report_results()
