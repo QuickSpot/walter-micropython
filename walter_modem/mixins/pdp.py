@@ -83,8 +83,6 @@ class ModemPDP(ModemCore):
             if rsp: rsp.result = WalterModemState.NO_FREE_PDP_CONTEXT
             return False
         
-        self._pdp_ctx = ctx
-        
         ctx.type = type
         ctx.apn = apn
         ctx.pdp_address = pdp_address
@@ -146,8 +144,6 @@ class ModemPDP(ModemCore):
         except Exception:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-        
-        self._pdp_ctx = ctx
 
         if ctx.auth_proto == WalterModemPDPAuthProtocol.NONE:
             if rsp: rsp.result = WalterModemState.OK
@@ -164,7 +160,7 @@ class ModemPDP(ModemCore):
     
     async def set_PDP_context_active(self,
         active: bool = True,
-        context_id = -1,
+        context_id: int = None,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -177,15 +173,14 @@ class ModemPDP(ModemCore):
         :return bool: True on success, False on failure
         """
         try:
-            if context_id == -1:
-                ctx = self._pdp_ctx
+            if context_id is None:
+                ctx = self._pdp_ctx_list[ModemCore.DEFAULT_PDP_CTX_ID - 1]
             else:
                 ctx = self._pdp_ctx_list[context_id - 1]
         except Exception:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-        
-        self._pdp_ctx = ctx
+    
 
         async def complete_handler(result, rsp, complete_handler_arg):
             ctx = complete_handler_arg
@@ -226,7 +221,7 @@ class ModemPDP(ModemCore):
             complete_handler=complete_handler
         )
     
-    async def get_PDP_address(self, context_id: int = -1, rsp: ModemRsp = None) -> bool:
+    async def get_PDP_address(self, context_id: int = None, rsp: ModemRsp = None) -> bool:
         """
         Retrieves the list of PDP addresses for the specified PDP context ID.
 
@@ -236,15 +231,13 @@ class ModemPDP(ModemCore):
         :return bool: True on success, False on failure
         """
         try:
-            if context_id == -1:
-                ctx = self._pdp_ctx
+            if context_id == None:
+                ctx = self._pdp_ctx_list[ModemCore.DEFAULT_PDP_CTX_ID - 1]
             else:
                 ctx = self._pdp_ctx_list[context_id - 1]
         except Exception:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-        
-        self._pdp_ctx = ctx
 
         return await self._run_cmd(
             rsp=rsp,
