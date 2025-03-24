@@ -167,7 +167,8 @@ class TestCase:
         self._report_results()
 
     def _report_results(self):
-        print(f'\nRan {self.tests_run} tests, {((self.passed / self.tests_run) * 100):.2f}% passed')
+        passed_percentage = (self.passed / self.tests_run) * 100 if self.passed else 0
+        print(f'\nRan {self.tests_run} tests, {passed_percentage:.2f}% passed')
         if self.passed > 0: print(f'  {self.passed} passed')
         if self.failed > 0: print(f'  {self.failed} failed')
         if self.errors > 0: print(f'  {self.errors} errors')
