@@ -1,4 +1,4 @@
-import minimal_unittest as unittest 
+import minimal_unittest as unittest
 
 class TestMinimalUnitTest(unittest.TestCase):
     def test_assert_equal(self):
