@@ -146,6 +146,16 @@ class TestCase:
             self.passed += 1
             print('✔', end=' ')
 
+    def assert_does_not_throw(self, a: callable, b: Exception | tuple, *args):
+        self.tests_run += 1
+        try:
+            a(*args)
+            self.passed += 1
+            print('✔', end=' ')
+        except b as e:
+            self.failed += 1
+            print(f'✘ FAIL: {e!r} was thrown', end=' ')
+
     def run(self):
         print(self.__class__.__name__)
         print('-' * len(self.__class__.__name__))
@@ -181,6 +191,16 @@ class AsyncTestCase(TestCase):
     async def async_teardown(self):
         """Override for async cleanup"""
         pass
+
+    async def assert_does_not_throw(self, a: callable, b: Exception | tuple, *args):
+        self.tests_run += 1
+        try:
+            await a(*args)
+            self.passed += 1
+            print('✔', end=' ')
+        except b as e:
+            self.failed += 1
+            print(f'✘ FAIL: {e!r} was thrown', end=' ')
 
     def run(self):
         asyncio.run(self.async_run_tests())

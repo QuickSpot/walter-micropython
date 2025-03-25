@@ -42,6 +42,12 @@ class TestMinimalUnitTest(unittest.TestCase):
     def test_assert_not_is_instance(self):
         self.assert_not_is_instance('a', int)
 
+    def sum(self, a, b):
+        return a + b
+    
+    def test_assert_does_not_throw(self):
+        self.assert_does_not_throw(self.sum, Exception, 1, 2)
+
     # Makse sure the asserts fail as expected
 
     def test_assert_equal_fails(self):
@@ -89,6 +95,12 @@ class TestMinimalUnitTest(unittest.TestCase):
     
     def test_assert_not_is_instance_does_not_error(self):
         self.assert_not_is_instance(1, 1)
+
+    def broken_sum(self, a, b):
+        raise NotImplementedError
+    
+    def test_assert_does_not_throw_fails(self):
+        self.assert_does_not_throw(self.broken_sum, NotImplementedError, 1, 2)
 
 
 test_unittest = TestMinimalUnitTest()
