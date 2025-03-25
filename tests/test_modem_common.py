@@ -22,25 +22,25 @@ class TestModemCommon(unittest.AsyncTestCase):
         ))
 
     async def test_reset_runs(self):
-        self.assert_true(modem.reset())
+        self.assert_true(await modem.reset())
 
     async def test_check_comm_runs(self):
-        self.assert_true(modem.check_comm())
+        self.assert_true(await modem.check_comm())
 
     async def test_get_clock_runs(self):
-        self.assert_true(modem.get_clock())
+        self.assert_true(await modem.get_clock())
     
     async def test_config_cme_error_reports_runs(self):
-        self.assert_true(modem.config_cme_error_reports())
+        self.assert_true(await modem.config_cme_error_reports())
 
     async def test_config_cereg_reports_runs(self):
-        self.assert_true(modem.config_cereg_reports())
+        self.assert_true(await modem.config_cereg_reports())
     
     async def test_get_op_state_runs(self):
-        self.assert_true(modem.get_op_state())
+        self.assert_true(await modem.get_op_state())
     
     async def test_set_op_state_runs(self):
-        self.assert_true(modem.set_op_state(WalterModemOpState.MINIMUM))
+        self.assert_true(await modem.set_op_state(WalterModemOpState.MINIMUM))
     
     async def test_get_op_state_returns(self):
         await modem.get_op_state(rsp=modem_rsp)
