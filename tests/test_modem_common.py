@@ -41,6 +41,10 @@ class TestModemCommon(unittest.AsyncTestCase):
     
     async def test_set_op_state_runs(self):
         self.assert_true(await modem.set_op_state(WalterModemOpState.MINIMUM))
+
+    async def test_get_clock_returns(self):
+        await modem.get_clock(rsp=modem_rsp)
+        self.assert_is_none(modem_rsp.clock)
     
     async def test_get_op_state_returns(self):
         await modem.get_op_state(rsp=modem_rsp)
