@@ -215,10 +215,7 @@ class AsyncTestCase(TestCase):
                     start_time = time.ticks_ms()
                     try:
                         print(f'{name:<{len(max(dir(self), key=len))}}', end=' : ')
-                        try:
-                            await test()
-                        except TypeError:
-                            test()
+                        await test()
                     except Exception as e:
                         self.tests_run += 1
                         self.errors += 1
