@@ -167,6 +167,7 @@ class TestCase:
                     print(f'{name:<{len(max(dir(self), key=len))}}', end=' : ')
                     test()
                 except Exception as e:
+                    self.tests_run += 1
                     self.errors += 1
                     print(f'⚠ ERROR: {e}', end=' ')
                 finally:
@@ -219,6 +220,7 @@ class AsyncTestCase(TestCase):
                         except TypeError:
                             test()
                     except Exception as e:
+                        self.tests_run += 1
                         self.errors += 1
                         print(f'⚠ ERROR: {e}', end=' ')
                     finally:
