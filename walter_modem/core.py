@@ -1151,10 +1151,13 @@ class ModemCore:
         if reset_cause == DEEPSLEEP:
             self._sleep_wakeup()
         else:
-            await self.reset()
+            if not await self.reset():
+                raise RuntimeError('Failed to reset modem')
 
-        await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC)
-        await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED)
+        if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
+            raise RuntimeError('Failed to configure CME error reports')
+        if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED):
+            raise RuntimeError('Failed to configure cereg reports')
 
     def _sleep_wakeup(self):
         pass
