@@ -172,7 +172,7 @@ class TestCase:
                 finally:
                     end_time = time.ticks_ms()
                     elapsed_ms = time.ticks_diff(end_time, start_time)
-                    print(f'({(elapsed_ms / 1000):.2f} s)')
+                    print(f'({(elapsed_ms / 1000):.2f}s)')
 
         self._report_results()
 
@@ -224,7 +224,7 @@ class AsyncTestCase(TestCase):
                     finally:
                         end_time = time.ticks_ms()
                         elapsed_ms = time.ticks_diff(end_time, start_time)
-                        print(f'({(elapsed_ms / 1000):.2f} s)')
+                        print(f'({(elapsed_ms / 1000):.2f}s)')
         finally:
             await self.async_teardown()
         self._report_results()
