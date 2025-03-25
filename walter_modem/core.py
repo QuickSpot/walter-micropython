@@ -1031,6 +1031,9 @@ class ModemCore:
         asyncio.create_task(self._uart_reader())
         asyncio.create_task(self._queue_worker())
 
-        await self.reset()
-        await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC)
-        await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED)
+        if not await self.reset():
+            raise RuntimeError('Failed to reset modem')
+        if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
+            raise RuntimeError('Failed to configure CME error reports')
+        if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED):
+            raise RuntimeError('Failed to configure cereg reports')
