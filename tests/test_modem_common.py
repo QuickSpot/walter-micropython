@@ -25,6 +25,9 @@ class TestModemCommon(unittest.AsyncTestCase):
 
     async def test_modem_check_comm_runs(self):
         self.assert_true(modem.check_comm())
+
+    async def test_modem_get_clock_runs(self):
+        self.assert_true(modem.get_clock())
     
 
 test_modem_common = TestModemCommon()
