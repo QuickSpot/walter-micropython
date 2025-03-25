@@ -46,5 +46,15 @@ class TestModemCommon(unittest.AsyncTestCase):
         await modem.get_op_state(rsp=modem_rsp)
         self.assert_is_not_none(modem_rsp.op_state)
 
+    async def test_set_op_state_sets(self):
+        if modem_rsp.op_state != WalterModemOpState.NO_RF:
+            await modem.set_op_state(op_state=WalterModemOpState.NO_RF, rsp=modem_rsp)
+        else:
+            await modem.set_op_state(op_state=WalterModemOpState.MINIMUM, rsp=modem_rsp)
+
+        await modem.get_op_state(rsp=modem_rsp)
+
+        self.assert_equal(WalterModemOpState.NO_RF, modem_rsp.op_state)
+
 test_modem_common = TestModemCommon()
 test_modem_common.run()
