@@ -159,8 +159,9 @@ class TestCase:
             print(f'✘ FAIL: {e!r} was thrown', end=' ')
 
     def run(self):
+        print('---')
         print(self.__class__.__name__)
-        print('-' * len(self.__class__.__name__))
+        print('---')
         for name in dir(self):
             if name.startswith('test_'):
                 test = getattr(self, name)
@@ -185,6 +186,7 @@ class TestCase:
         if self.passed > 0: print(f'  {self.passed} passed')
         if self.failed > 0: print(f'  {self.failed} failed')
         if self.errors > 0: print(f'  {self.errors} errors')
+        print('')
 
 class AsyncTestCase(TestCase):
     async def async_setup(self):
@@ -211,7 +213,16 @@ class AsyncTestCase(TestCase):
         asyncio.run(self.async_run_tests())
 
     async def async_run_tests(self):
-        await self.async_setup()
+        print('---')
+        print(self.__class__.__name__)
+        print('---')
+        print('ⴵ Running setup...')
+        try:
+            await self.async_setup()
+        except Exception as e:
+            print(f'⚠ ERROR: {e}')
+            return
+        print('➜ Setup complete\n')
         try:
             for name in dir(self):
                 if name.startswith('test_'):
@@ -229,5 +240,7 @@ class AsyncTestCase(TestCase):
                         elapsed_ms = time.ticks_diff(end_time, start_time)
                         print(f'({(elapsed_ms / 1000):.2f}s)')
         finally:
+            print('\nⴵ Running teardown...')
             await self.async_teardown()
+            print('➜ Teardown complete')
         self._report_results()
