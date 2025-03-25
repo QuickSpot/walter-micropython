@@ -443,3 +443,6 @@ class Modem(
                 'CA certificate stored in NVRAM slot 6.')
 
         return True
+
+    def set_debug(self, debug_log: bool) -> None:
+        self.debug_log = debug_log
