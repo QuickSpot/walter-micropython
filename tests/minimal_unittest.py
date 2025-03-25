@@ -148,6 +148,8 @@ class TestCase:
 
     def assert_does_not_throw(self, a: callable, b: Exception | tuple, *args):
         self.tests_run += 1
+        if not callable(a):
+            raise TypeError(f'Expected callable, got {type(a)}')
         try:
             a(*args)
             self.passed += 1
@@ -195,6 +197,8 @@ class AsyncTestCase(TestCase):
 
     async def assert_does_not_throw(self, a: callable, b: Exception | tuple, *args):
         self.tests_run += 1
+        if not callable(a):
+            raise TypeError(f'Expected callable, got {type(a)}')
         try:
             await a(*args)
             self.passed += 1
