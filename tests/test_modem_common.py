@@ -10,7 +10,7 @@ modem = Modem()
 modem_rsp = ModemRsp()
 
 class TestModemCommon(unittest.AsyncTestCase):
-    async def test_modem_begin_runs(self):
+    async def test_begin_runs(self):
         await self.assert_does_not_throw(modem.begin, (
             ValueError,
             OSError,
@@ -21,25 +21,25 @@ class TestModemCommon(unittest.AsyncTestCase):
             asyncio.CancelledError
         ))
 
-    async def test_modem_reset_runs(self):
+    async def test_reset_runs(self):
         self.assert_true(modem.reset())
 
-    async def test_modem_check_comm_runs(self):
+    async def test_check_comm_runs(self):
         self.assert_true(modem.check_comm())
 
-    async def test_modem_get_clock_runs(self):
+    async def test_get_clock_runs(self):
         self.assert_true(modem.get_clock())
     
-    async def test_modem_config_cme_error_reports_runs(self):
+    async def test_config_cme_error_reports_runs(self):
         self.assert_true(modem.config_cme_error_reports())
 
-    async def test_modem_config_cereg_reports_runs(self):
+    async def test_config_cereg_reports_runs(self):
         self.assert_true(modem.config_cereg_reports())
     
-    async def test_modem_get_op_state_runs(self):
+    async def test_get_op_state_runs(self):
         self.assert_true(modem.get_op_state())
     
-    async def test_modem_set_op_state_runs(self):
+    async def test_set_op_state_runs(self):
         self.assert_true(modem.set_op_state(WalterModemOpState.MINIMUM))
     
 
