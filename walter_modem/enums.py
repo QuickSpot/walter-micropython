@@ -48,9 +48,8 @@ class WalterModemSimState(Enum):
 
 class WalterModemRat(Enum):
     """Types of 3GPP access technologies supported by Walter."""
-    LTEM = 0
-    NBIOT = 1
-    AUTO = 2
+    LTEM = 1
+    NBIOT = 2
 
 class WalterModemOpState(Enum):
     """Modem operational modes."""

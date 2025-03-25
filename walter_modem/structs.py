@@ -135,7 +135,7 @@ class ModemOperator:
 class ModemBandSelection:
     """Represents a band selection for a given radio access technology and operator."""
     def __init__(self):
-        self.rat = WalterModemRat.AUTO
+        self.rat = WalterModemRat.LTEM
         """The radio access technology for which the bands are configured"""
         
         self.net_operator = ModemOperator()
