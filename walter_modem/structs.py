@@ -165,10 +165,10 @@ class ModemMQTTResponse:
 class ModemSignalQuality:
     """Grouping the RSRQ and RSPR signal quality parameters."""
     def __init__(self):
-        self.rsrq = None
+        self.rsrq: int = None
         """The RSRQ in 10ths of dB"""
 
-        self.rsrp = None
+        self.rsrp: int = None
         """The RSPR in dBm"""
 
 
