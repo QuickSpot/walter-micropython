@@ -13,6 +13,13 @@ from walter_modem.structs import ModemRsp
 modem = Modem()
 modem_rsp = ModemRsp()
 
+class TestModemSimAndNetworkCFUN0(unittest.AsyncTestCase):
+    async def async_setup(self):
+        await modem.begin()
+
+    async def test_set_rat_runs(self):
+        self.assert_true(await modem.set_rat(WalterModemRat.LTEM))
+
 class TestModemEstablishLTEConnection(unittest.AsyncTestCase):
     async def await_connection(self):
         print('\nShowing modem debug logs:')
@@ -29,7 +36,6 @@ class TestModemEstablishLTEConnection(unittest.AsyncTestCase):
         raise OSError('Connection Timed-out')
     
     async def async_setup(self):
-        await modem.begin()
         await modem.set_op_state(WalterModemOpState.FULL)
     
     async def test_get_network_reg_state_returns(self):
@@ -42,7 +48,7 @@ class TestModemEstablishLTEConnection(unittest.AsyncTestCase):
     async def test_connection_is_made(self):
         await self.assert_does_not_throw(self.await_connection, OSError)
 
-class TestModemSimAndNetwork(unittest.AsyncTestCase):
+class TestModemSimAndNetworkOnConnected(unittest.AsyncTestCase):
     async def async_setup(self):
         if not modem.get_network_reg_state() in (
             WalterModemNetworkRegState.REGISTERED_HOME,
@@ -62,16 +68,17 @@ class TestModemSimAndNetwork(unittest.AsyncTestCase):
     async def test_get_rat_runs(self):
         self.assert_true(await modem.get_rat())
     
-    async def test_set_rat_runs(self):
-        self.assert_true(await modem.set_rat(WalterModemRat.AUTO))
-    
     async def test_get_radio_bands_runs(self):
         self.assert_true(await modem.get_radio_bands())
     
     async def test_get_sim_state_runs(self):
         self.assert_true(await modem.get_sim_state())
+        modem.set_debug(False)
 
+test_modem_sim_and_network_cfun0 = TestModemSimAndNetworkCFUN0()
 test_modem_essential_methods_for_connection = TestModemEstablishLTEConnection()
-test_modem_sim_and_network = TestModemSimAndNetwork()
+test_modem_sim_and_network_on_connected = TestModemSimAndNetworkOnConnected()
+
+test_modem_sim_and_network_cfun0.run()
 test_modem_essential_methods_for_connection.run()
-test_modem_sim_and_network.run()
+test_modem_sim_and_network_on_connected.run()
