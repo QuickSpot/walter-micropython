@@ -1,110 +1,125 @@
 import asyncio
 import time
 
+GREEN_FG = '\033[32m'
+RED_FG = '\033[31m'
+BLACK_FG = '\033[30m'
+YELLOW_BG = '\033[43m'
+RESET = '\033[0m'
+
 class TestCase:
     def __init__(self):
         self.tests_run = 0
         self.passed = 0
         self.failed = 0
         self.errors = 0
+    
+    def print_success(self):
+        print(f'{GREEN_FG}✔{RESET}', end=' ')
+    
+    def print_fail(self, msg):
+        print(f'{RED_FG}✘ FAIL:{RESET}', msg, end=' ')
+    
+    def print_error(self, msg):
+        print(f'{YELLOW_BG}{BLACK_FG}⚠ ERROR:{RESET}', msg, end=' ')
 
     def assert_equal(self, a, b):
         self.tests_run += 1
         if a != b:
             self.failed += 1
-            print(f'✘ FAIL: {a!r} != {b!r}', end=' ')
+            self.print_fail(f'{a!r} != {b!r}')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
 
     def assert_not_equal(self, a, b):
         self.tests_run += 1
         if a == b:
             self.failed += 1
-            print(f'✘ FAIL: {a!r} == {b!r}', end=' ')
+            self.print_fail(f'{a!r} == {b!r}')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
 
     def assert_true(self, a):
         self.tests_run += 1
         if not a:
             self.failed += 1
-            print(f'✘ FAIL: condition is not truthy', end=' ')
+            self.print_fail('condition is not truthy')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
 
     def assert_false(self, a):
         self.tests_run += 1
         if a:
             self.failed += 1
-            print(f'✘ FAIL: condition is not falsy', end=' ')
+            self.print_fail('condition is not falsy')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
 
     def assert_is(self, a, b):
         self.tests_run += 1
         if a is not b:
             self.failed += 1
-            print(f'✘ FAIL: {a!r} is not {b!r}', end=' ')
+            self.print_fail(f'{a!r} is not {b!r}')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
 
     def assert_is_not(self, a, b):
         self.tests_run += 1
         if a is b:
             self.failed += 1
-            print(f'✘ FAIL: {a!r} is {b!r}', end=' ')
+            self.print_fail(f'{a!r} is {b!r}')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
     
     def assert_is_none(self, a):
         self.tests_run +=1
         if a is not None:
             self.failed += 1
-            print(f'✘ FAIL: {a!r} is not None', end=' ')
+            self.print_fail(f'{a!r} is not None')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
     
     def assert_is_not_none(self, a):
         self.tests_run +=1
         if a is None:
             self.failed += 1
-            print(f'✘ FAIL: {a!r} is None', end=' ')
+            self.print_fail(f'{a!r} is None')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
 
     def assert_in(self, a, b):
         self.tests_run += 1
         try:
             if a not in b:
                 self.failed += 1
-                print(f'✘ FAIL: {a!r} is not in {b!r}', end=' ')
+                self.print_fail(f'{a!r} is not in {b!r}')
             else:
                 self.passed += 1
-                print('✔', end=' ')
+                self.print_success()
         except TypeError:
             self.failed += 1
-            print(f'✘ FAIL: {b!r}, of type {type(b)}, does not support membership checks', end=' ')
+            self.print_fail(f'{b!r}, of type {type(b)}, does not support membership checks')
 
     def assert_not_in(self, a, b):
         self.tests_run += 1
         try:
             if a in b:
                 self.failed += 1
-                print(f'✘ FAIL: {a!r} is in {b!r}', end=' ')
+                self.print_fail(f'{a!r} is in {b!r}')
             else:
                 self.passed += 1
-                print('✔', end=' ')
+                self.print_success()
         except TypeError:
             self.failed += 1
-            print(f'✘ FAIL: {b!r}, of type {type(b)}, does not support membership checks', end=' ')
+            self.print_fail(f'{b!r}, of type {type(b)}, does not support membership checks')
     
     def assert_is_instance(self, a, b):
         self.tests_run += 1
@@ -112,19 +127,19 @@ class TestCase:
             for t in b:
                 if not isinstance(t, type):
                     self.failed += 1
-                    print(f'✘ FAIL: {b!r}; {t!r} is not a valid type', end=' ')
+                    self.print_fail(f'{b!r}; {t!r} is not a valid type')
                     return
         elif not isinstance(b, type):
             self.failed += 1
-            print(f'✘ FAIL: {b!r} is not a valid type', end=' ')
+            self.print_fail(f'{b!r} is not a valid type')
             return
 
         if not isinstance(a, b):
             self.failed += 1
-            print(f'✘ FAIL: {a!r} is not of type {b!r}', end=' ')
+            self.print_fail(f'{a!r} is not of type {b!r}')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
 
     def assert_not_is_instance(self, a, b):
         self.tests_run += 1
@@ -132,19 +147,19 @@ class TestCase:
             for t in b:
                 if not isinstance(t, type):
                     self.failed += 1
-                    print(f'✘ FAIL: {b!r}; {t!r} is not a valid type', end=' ')
+                    self.print_fail(f'{b!r}; {t!r} is not a valid type')
                     return
         elif not isinstance(b, type):
             self.failed += 1
-            print(f'✘ FAIL: {b!r} is not a valid type', end=' ')
+            self.print_fail(f'{b!r} is not a valid type')
             return
 
         if isinstance(a, b):
             self.failed += 1
-            print(f'✘ FAIL: {a!r} is of type {b!r}', end=' ')
+            self.print_fail(f'{a!r} is of type {b!r}')
         else:
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
 
     def assert_does_not_throw(self, a: callable, b: Exception | tuple, *args):
         self.tests_run += 1
@@ -153,10 +168,10 @@ class TestCase:
         try:
             a(*args)
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
         except b as e:
             self.failed += 1
-            print(f'✘ FAIL: {e!r} was thrown', end=' ')
+            self.print_fail(f'{e!r} was thrown')
 
     def run(self):
         print('---')
@@ -167,12 +182,12 @@ class TestCase:
                 test = getattr(self, name)
                 start_time = time.ticks_ms()
                 try:
-                    print(f'{name:<{len(max(dir(self), key=len))}}', end=' : ')
+                    print(f'{name[5:]:<{len(max(dir(self), key=len)) - 5}}', end=' : ')
                     test()
                 except Exception as e:
                     self.tests_run += 1
                     self.errors += 1
-                    print(f'⚠ ERROR: {e}', end=' ')
+                    self.print_error(e)
                 finally:
                     end_time = time.ticks_ms()
                     elapsed_ms = time.ticks_diff(end_time, start_time)
@@ -204,10 +219,10 @@ class AsyncTestCase(TestCase):
         try:
             await a(*args)
             self.passed += 1
-            print('✔', end=' ')
+            self.print_success()
         except b as e:
             self.failed += 1
-            print(f'✘ FAIL: {e!r} was thrown', end=' ')
+            self.print_fail(f'{e!r} was thrown')
 
     def run(self):
         asyncio.run(self.async_run_tests())
@@ -220,7 +235,7 @@ class AsyncTestCase(TestCase):
         try:
             await self.async_setup()
         except Exception as e:
-            print(f'⚠ ERROR: {e}')
+            self.print_error(e)
             return
         print('➜ Setup complete\n')
         try:
@@ -229,12 +244,12 @@ class AsyncTestCase(TestCase):
                     test = getattr(self, name)
                     start_time = time.ticks_ms()
                     try:
-                        print(f'{name:<{len(max(dir(self), key=len))}}', end=' : ')
+                        print(f'{name[5:]:<{len(max(dir(self), key=len)) - 5}}', end=' : ')
                         await test()
                     except Exception as e:
                         self.tests_run += 1
                         self.errors += 1
-                        print(f'⚠ ERROR: {e}', end=' ')
+                        self.print_error(e)
                     finally:
                         end_time = time.ticks_ms()
                         elapsed_ms = time.ticks_diff(end_time, start_time)
