@@ -166,7 +166,14 @@ class ModemCore:
         self._proc_queue_rsp_cmd_handlers = None
         """The mapping of cmd patterns to handler methods for processing the rsp queue"""
 
+        self._application_queue_rsp_handlers: tuple = None
+        """The mapping of rsp patterns to handler methods defined by the application code"""
+
+        self._application_queue_rsp_handlers_set: bool = False
+        """Whether or not the application has defined/set queue rsp handlers"""
+
         self._begun = False
+        """Whetehr or not the begin method has already been run."""
 
     def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
         # According to modem documentation;
@@ -997,17 +1004,21 @@ class ModemCore:
 
         result = WalterModemState.OK
 
-        for mapping in self._proc_queue_rsp_rsp_handlers:
-            pattern, handler = mapping
+        for pattern, handler in self._proc_queue_rsp_rsp_handlers:
             if at_rsp.startswith(pattern):
                 result = await handler(tx_stream, cmd, at_rsp)
                 break
         
         if cmd and cmd.at_cmd:
-            for mapping in self._proc_queue_rsp_cmd_handlers:
-                pattern, handler = mapping
+            for pattern, handler in self._proc_queue_rsp_cmd_handlers:
                 if cmd.at_cmd.startswith(pattern):
                     result = await handler(tx_stream, cmd, at_rsp)
+                    break
+        
+        if self._application_queue_rsp_handlers_set:
+            for pattern, handler in self._application_queue_rsp_handlers:
+                if cmd.at_rsp.startswith(pattern):
+                    await handler(cmd, at_rsp)
                     break
 
         if (
@@ -1053,6 +1064,15 @@ class ModemCore:
 
                 if cur_cmd.state == WalterModemCmdState.COMPLETE:
                     cur_cmd = None
+
+    async def _register_application_queue_rsp_handler(self, start_pattern: bytes, handler: callable):
+        if isinstance(start_pattern, bytes) and callable(handler):
+            if self._application_queue_rsp_handlers is not None:
+                self._application_queue_rsp_handlers = [(start_pattern, handler)]
+            else:
+                self._application_queue_rsp_handlers.append((start_pattern, handler))
+
+        log('WARNING', 'Invalid parameters, not registering application queue rsp handler')
 
     async def _run_cmd(self,
         at_cmd: str,
