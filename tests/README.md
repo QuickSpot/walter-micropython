@@ -27,12 +27,6 @@ test_example = TestExample()
 test_example.run()
 ```
 
-> [!WARNING]
-> It is advised to run the test files using
-> [`mpremote run`](https://docs.micropython.org/en/latest/reference/mpremote.html#mpremote-command-run)\
-> flashing them onto the board as `boot.py` or `main.py` may cause the tests
-> to run indefinitly if not handled correctly.
-
 ## Asserts
 
 The supported assert methods are as follows:
