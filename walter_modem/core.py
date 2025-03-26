@@ -166,6 +166,8 @@ class ModemCore:
 
         self._mqtt_subscriptions: list[tuple[str, int]] = []
 
+        self._begun = False
+
     def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
         # According to modem documentation;
         # A message with <qos>=0 doesn't have a <mid>,
@@ -1007,33 +1009,36 @@ class ModemCore:
         )
 
     async def begin(self, debug_log: bool = False):
-        self.debug_log = debug_log
-        self._uart = UART(2,
-            baudrate=ModemCore.WALTER_MODEM_BAUD,
-            bits=8,
-            parity=None,
-            stop=1,
-            flow=UART.RTS|UART.CTS,
-            tx=ModemCore.WALTER_MODEM_PIN_TX,
-            rx=ModemCore.WALTER_MODEM_PIN_RX,
-            cts=ModemCore.WALTER_MODEM_PIN_CTS,
-            rts=ModemCore.WALTER_MODEM_PIN_RTS,
-            timeout=0,
-            timeout_char=0,
-            txbuf=2048,
-            rxbuf=2048
-        )
+        if not self._begun:
+            self.debug_log = debug_log
+            self._uart = UART(2,
+                baudrate=ModemCore.WALTER_MODEM_BAUD,
+                bits=8,
+                parity=None,
+                stop=1,
+                flow=UART.RTS|UART.CTS,
+                tx=ModemCore.WALTER_MODEM_PIN_TX,
+                rx=ModemCore.WALTER_MODEM_PIN_RX,
+                cts=ModemCore.WALTER_MODEM_PIN_CTS,
+                rts=ModemCore.WALTER_MODEM_PIN_RTS,
+                timeout=0,
+                timeout_char=0,
+                txbuf=2048,
+                rxbuf=2048
+            )
 
-        self._task_queue = Queue()
-        self._command_queue = Queue()
-        self._parser_data = ModemATParserData()
+            self._task_queue = Queue()
+            self._command_queue = Queue()
+            self._parser_data = ModemATParserData()
 
-        asyncio.create_task(self._uart_reader())
-        asyncio.create_task(self._queue_worker())
+            asyncio.create_task(self._uart_reader())
+            asyncio.create_task(self._queue_worker())
 
-        if not await self.reset():
-            raise RuntimeError('Failed to reset modem')
-        if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
-            raise RuntimeError('Failed to configure CME error reports')
-        if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED):
-            raise RuntimeError('Failed to configure cereg reports')
+            if not await self.reset():
+                raise RuntimeError('Failed to reset modem')
+            if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
+                raise RuntimeError('Failed to configure CME error reports')
+            if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED):
+                raise RuntimeError('Failed to configure cereg reports')
+            
+            self._begun = True
