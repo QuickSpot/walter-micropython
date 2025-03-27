@@ -155,6 +155,9 @@ class TestModemPDPContextManagementPostConnection(unittest.AsyncTestCase):
     
     async def test_get_PDP_address_sets_pdp_address_list(self):
         self.assert_is_instance(modem_rsp.pdp_address_list, list)
+    
+    async def test_attach_PDP_context_runs(self):
+        self.assert_true(await modem.attach_PDP_context(attach=True))
 
 
 test_modem_pdp_context_management_pre_connection = TestModemPDPContextManagementPreConnection()
