@@ -158,7 +158,7 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def set_PDP_context_active(self,
+    async def set_PDP_context_state(self,
         active: bool = True,
         context_id: int = None,
         rsp: ModemRsp = None
@@ -190,13 +190,13 @@ class ModemPDP(ModemCore):
                 for pdp_ctx in self._pdp_ctx_list:
                     pdp_ctx.state = WalterModemPDPContextState.INACTIVE
                 
-            return await self._run_cmd(
-                rsp=rsp,
-                at_cmd=f'AT+CGACT={ctx.id, modem_bool(active)}',
-                at_rsp=b'OK',
-                complete_handler=complete_handler,
-                complete_handler_arg=ctx
-            )
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+CGACT={modem_bool(active)},{ctx.id}',
+            at_rsp=b'OK',
+            complete_handler=complete_handler,
+            complete_handler_arg=ctx
+        )
         
     async def attach_PDP_context(self,
         attach: bool = True,
