@@ -17,15 +17,14 @@ class WalterModemState(Enum):
     ERROR = 1
     TIMEOUT = 2
     NO_MEMORY = 3
-    NO_FREE_PDP_CONTEXT = 4
-    NO_SUCH_PDP_CONTEXT = 5
-    NO_FREE_SOCKET = 6
-    NO_SUCH_SOCKET = 7
-    NO_SUCH_PROFILE = 8
-    NOT_EXPECTING_RING = 9
-    AWAITING_RING = 10
-    BUSY = 11
-    NO_DATA = 12
+    NO_SUCH_PDP_CONTEXT = 4
+    NO_FREE_SOCKET = 5
+    NO_SUCH_SOCKET = 6
+    NO_SUCH_PROFILE = 7
+    NOT_EXPECTING_RING = 8
+    AWAITING_RING = 9
+    BUSY = 10
+    NO_DATA = 11
 
 class WalterModemSimState(Enum):
     """SIM card states."""
@@ -179,15 +178,6 @@ class WalterModemCmdState(Enum):
     RETRY_AFTER_ERROR = 4
     COMPLETE = 6
 
-
-class WalterModemPDPContextState(Enum):
-    """PDP context states."""
-    FREE = 0
-    RESERVED = 1
-    INACTIVE = 2
-    ACTIVE = 3
-    ATTACHED = 4
-
 class WalterModemPDPType(Enum):
     """Supported packet data protocol types."""
     X25 = '"X.25"'
@@ -248,16 +238,15 @@ class WalterModemRspType(Enum):
     SIGNAL_QUALITY = 4
     SIM_STATE = 5
     CME_ERROR = 6
-    PDP_CTX_ID = 7
-    BANDSET_CFG_SET = 8
-    PDP_ADDR = 9
-    SOCKET_ID = 10
-    GNSS_ASSISTANCE_DATA = 11
-    CLOCK = 12
-    MQTT = 13
-    HTTP = 14
-    COAP = 15
-    CELL_INFO = 16
+    BANDSET_CFG_SET = 7
+    PDP_ADDR = 8
+    SOCKET_ID = 9
+    GNSS_ASSISTANCE_DATA = 10
+    CLOCK = 11
+    MQTT = 12
+    HTTP = 13
+    COAP = 14
+    CELL_INFO = 15
     REG_STATE = 50
 
 class WalterModemNetworkSelMode(Enum):

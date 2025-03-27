@@ -7,9 +7,7 @@ from ..enums import (
     WalterModemPDPIPv4AddrAllocMethod,
     WalterModemPDPRequestType,
     WalterModemPDPPCSCFDiscoveryMethod,
-    WalterModemPDPContextState,
-    WalterModemState,
-    WalterModemRspType
+    WalterModemState
 )
 from ..structs import (
     ModemRsp,
@@ -21,10 +19,8 @@ from ..utils import (
 
 class ModemPDP(ModemCore):
     async def create_PDP_context(self,
+        context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         apn: str = '',
-        auth_proto: int = WalterModemPDPAuthProtocol.NONE,
-        auth_user: str = None,
-        auth_pass: str = None,
         type: str = WalterModemPDPType.IP,
         pdp_address: str = None,
         header_comp: int = WalterModemPDPHeaderCompression.OFF,
@@ -41,13 +37,10 @@ class ModemPDP(ModemCore):
         rsp: ModemRsp | None = None
     ) -> bool:
         """
-        Creates a new packet data protocol (PDP) context with the lowest available context ID.
+        Creates a new packet data protocol (PDP).
 
+        :param context_id: The PDP context ID
         :param apn: The access point name.
-        :param auth_proto: The used authentication protocol.
-        :type auth_proto: WalterModemPDPAuthProtocol
-        :param auth_user: Optional user to use for authentication.
-        :param auth_pass: Optional password to use for authentication.
         :param type: The type of PDP context to create.
         :type type: WalterModemPDPType
         :param pdp_address: Optional PDP address.
@@ -72,15 +65,10 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        ctx = None
-        for pdp_ctx in self._pdp_ctx_list:
-            if pdp_ctx.state == WalterModemPDPContextState.FREE:
-                pdp_ctx.state = WalterModemPDPContextState.RESERVED
-                ctx = pdp_ctx
-                break
-
-        if ctx == None:
-            if rsp: rsp.result = WalterModemState.NO_FREE_PDP_CONTEXT
+        try:
+            ctx = self._pdp_ctxs[context_id - 1]
+        except IndexError:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
         
         ctx.type = type
@@ -97,17 +85,6 @@ class ModemPDP(ModemCore):
         ctx.use_NAS_ipv4_MTU_discovery = use_NAS_ipv4_MTU_discovery
         ctx.use_local_addr_ind = use_local_addr_ind
         ctx.use_NAS_non_IPMTU_discovery = use_NAS_on_IPMTU_discovery
-        ctx.auth_proto = auth_proto
-        ctx.auth_user = auth_user
-        ctx.auth_pass = auth_pass
-
-        async def complete_handler(result, rsp, complete_handler_arg):
-            ctx = complete_handler_arg
-            rsp.type = WalterModemRspType.PDP_CTX_ID
-            rsp.pdp_ctx_id = ctx.id
-
-            if result == WalterModemState.OK:
-                ctx.state = WalterModemPDPContextState.INACTIVE
 
         return await self._run_cmd(
             rsp=rsp,
@@ -121,38 +98,43 @@ class ModemPDP(ModemCore):
                 modem_bool(ctx.use_local_addr_ind),
                 modem_bool(ctx.use_NAS_non_IPMTU_discovery)
             ),
-            at_rsp=b'OK',
-            complete_handler=complete_handler,
-            complete_handler_arg=ctx
+            at_rsp=b'OK'
         )
     
-    async def authenticate_PDP_context(self,
+    async def set_PDP_context_auth_params(self,
         context_id: int = None,
+        protocol: int = WalterModemPDPAuthProtocol.NONE,
+        user_id: str = None,
+        password: str = None,
         rsp: ModemRsp = None
     ) -> bool:
         """
-        Authenticates a PDP context if its APN requires authentication.
-        Has no effect if 'NONE' is selected as the authentication method.
+        Specify authentication parameters for the PDP.
 
         :param context_id: The PDP context id or -1 to re-use the last one.
+        :protocol: The used authentication protocol.
+        :type protocol: WalterModemPDPAuthProtocol
+        :param username: Optional user to use for authentication.
+        :param password: Optional password to use for authentication.
         :param rsp: Reference to a modem response instance.
 
         :return bool: True on success, False on failure
         """
         try:
-            ctx = self._pdp_ctx_list[context_id - 1]
-        except Exception:
+            ctx = self._pdp_ctxs[context_id - 1]
+        except IndexError:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
 
-        if ctx.auth_proto == WalterModemPDPAuthProtocol.NONE:
-            if rsp: rsp.result = WalterModemState.OK
-            return True
+        ctx.auth_proto = protocol
+        ctx.auth_user = user_id
+        ctx.auth_pass = password
         
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CGAUTH={},{},{},{}'.format(
-                ctx.id, ctx.auth_proto, modem_string(ctx.auth_user),
+                ctx.id, ctx.auth_proto,
+                modem_string(ctx.auth_user),
                 modem_string(ctx.auth_pass)
             ),
             at_rsp=b'OK'
@@ -174,28 +156,17 @@ class ModemPDP(ModemCore):
         """
         try:
             if context_id is None:
-                ctx = self._pdp_ctx_list[ModemCore.DEFAULT_PDP_CTX_ID - 1]
+                ctx = self._pdp_ctxs[ModemCore.DEFAULT_PDP_CTX_ID - 1]
             else:
-                ctx = self._pdp_ctx_list[context_id - 1]
+                ctx = self._pdp_ctxs[context_id - 1]
         except Exception:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-    
-
-        async def complete_handler(result, rsp, complete_handler_arg):
-            ctx = complete_handler_arg
-            if result == WalterModemState.OK:
-                ctx.state = WalterModemPDPContextState.ACTIVE
-
-                for pdp_ctx in self._pdp_ctx_list:
-                    pdp_ctx.state = WalterModemPDPContextState.INACTIVE
                 
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+CGACT={modem_bool(active)},{ctx.id}',
-            at_rsp=b'OK',
-            complete_handler=complete_handler,
-            complete_handler_arg=ctx
+            at_rsp=b'OK'
         )
         
     async def attach_PDP_context(self,
@@ -210,15 +181,10 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        async def complete_handler(result, rsp, complete_handler_arg):
-            if result == WalterModemState.OK and self._pdp_ctx:
-                self._pdp_ctx.state = WalterModemPDPContextState.ATTACHED
-
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+CGATT={modem_bool(attach)}',
-            at_rsp=b'OK',
-            complete_handler=complete_handler
+            at_rsp=b'OK'
         )
     
     async def get_PDP_address(self, context_id: int = None, rsp: ModemRsp = None) -> bool:
@@ -232,9 +198,9 @@ class ModemPDP(ModemCore):
         """
         try:
             if context_id == None:
-                ctx = self._pdp_ctx_list[ModemCore.DEFAULT_PDP_CTX_ID - 1]
+                ctx = self._pdp_ctxs[ModemCore.DEFAULT_PDP_CTX_ID - 1]
             else:
-                ctx = self._pdp_ctx_list[context_id - 1]
+                ctx = self._pdp_ctxs[context_id - 1]
         except Exception:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
