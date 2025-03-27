@@ -1017,8 +1017,8 @@ class ModemCore:
         
         if self._application_queue_rsp_handlers_set:
             for pattern, handler in self._application_queue_rsp_handlers:
-                if cmd.at_rsp.startswith(pattern):
-                    await handler(cmd, at_rsp)
+                if at_rsp.startswith(pattern):
+                    handler(cmd, at_rsp)
                     break
 
         if (
@@ -1065,14 +1065,15 @@ class ModemCore:
                 if cur_cmd.state == WalterModemCmdState.COMPLETE:
                     cur_cmd = None
 
-    async def _register_application_queue_rsp_handler(self, start_pattern: bytes, handler: callable):
+    def _register_application_queue_rsp_handler(self, start_pattern: bytes, handler: callable):
         if isinstance(start_pattern, bytes) and callable(handler):
-            if self._application_queue_rsp_handlers is not None:
+            if not self._application_queue_rsp_handlers_set:
+                self._application_queue_rsp_handlers_set = True
                 self._application_queue_rsp_handlers = [(start_pattern, handler)]
             else:
                 self._application_queue_rsp_handlers.append((start_pattern, handler))
-
-        log('WARNING', 'Invalid parameters, not registering application queue rsp handler')
+        else:
+            log('WARNING', 'Invalid parameters, not registering application queue rsp handler')
 
     async def _run_cmd(self,
         at_cmd: str,
