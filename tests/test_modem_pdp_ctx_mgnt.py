@@ -8,7 +8,8 @@ from walter_modem.enums import (
     WalterModemPDPIPv4AddrAllocMethod,
     WalterModemPDPRequestType,
     WalterModemPDPPCSCFDiscoveryMethod,
-    WalterModemNetworkRegState
+    WalterModemNetworkRegState,
+    WalterModemRspType
 )
 from walter_modem.structs import (
     ModemRsp,
@@ -152,6 +153,15 @@ class TestModemPDPContextManagementPostConnection(unittest.AsyncTestCase):
             await asyncio.sleep(0.1)
         
         self.assert_equal(b'1', pdp_state_from_modem)
+    
+    async def test_get_PDP_address_runs(self):
+        self.assert_true(await modem.get_PDP_address(context_id=testing_pdp_ctx_id, rsp=modem_rsp))
+    
+    async def test_get_PDP_address_sets_correct_response_type(self):
+        self.assert_equal(WalterModemRspType.PDP_ADDR, modem_rsp.type)
+    
+    async def test_get_PDP_address_sets_pdp_address_list(self):
+        self.assert_is_instance(modem_rsp.pdp_address_list, list)
 
 
 test_modem_pdp_context_management_pre_connection = TestModemPDPContextManagementPreConnection()
