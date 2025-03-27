@@ -10,7 +10,6 @@ from .enums import (
     WalterModemOpState,
     WalterModemOperatorFormat,
     WalterModemPDPAuthProtocol,
-    WalterModemPDPContextState,
     WalterModemPDPDataCompression,
     WalterModemPDPHeaderCompression,
     WalterModemPDPIPv4AddrAllocMethod,
@@ -176,7 +175,7 @@ class ModemRsp:
     """Represents a response """
     def __init__(self):
         self.result: WalterModemState | None = WalterModemState.OK
-        """The result of the executed command."""
+        """The modem state after running the last command"""
 
         self.type: WalterModemRspType | None = WalterModemRspType.NO_DATA
         """The data type of the response"""
@@ -188,13 +187,9 @@ class ModemRsp:
         """The operational state of the modem."""
         
         self.sim_state: WalterModemSimState | None = None
-        """The state of the SIM card"""
         
         self.cme_error: WalterModemCMEError | None = None
-        """The CME error received from the modem."""
-        
-        self.pdp_ctx_id: int | None = None
-        """The ID of a PDP context."""
+        """The CME error last received from the modem."""
         
         self.rat: int | None = None
         """The radio access technology"""
@@ -203,29 +198,23 @@ class ModemRsp:
         """The RSSI of the signal in dBm"""
 
         self.signal_quality: ModemSignalQuality | None = None
-        """Signal quality"""
 
         self.band_sel_cfg_list: list[ModemBandSelection] | None = None
-        """The band selection configuration set."""
+        """The band selection configuration list."""
         
         self.pdp_address_list: list | None = None
-        """The list of addresses of a cert"""
         
         self.socket_id: int | None = None
-        """The ID of the socket."""
         
         self.gnss_assistance: ModemGNSSAssistance | None = None
-        """The band selection configuration set."""
+        """The band selection configuration list."""
         
         self.clock: float | None = None
         """Unix timestamp of the current time and date in the modem."""
 
         self.http_response: ModemHttpResponse | None = None
-        """HTTP response"""
 
         self.mqtt_response: ModemMQTTResponse | None = None
-
-        #TODO: coap_response
 
         self.cell_information: ModemCellInformation | None = None
 
@@ -319,9 +308,6 @@ class ModemTaskQueueItem:
 class ModemPDPContext:
     """Represents a PDP context."""
     def __init__(self, id):
-        self.state = WalterModemPDPContextState.FREE
-        """The state of the PDP context."""
-        
         self.id = id
         """The ID of this PDP data context."""
         

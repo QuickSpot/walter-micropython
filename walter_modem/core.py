@@ -133,7 +133,7 @@ class ModemCore:
         self._operator = ModemOperator()
         """An operator to use, this is ignored when automatic operator selectionis used."""
         
-        self._pdp_ctx_list = [ModemPDPContext(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_PDP_CTXTS)]
+        self._pdp_ctxs = tuple(ModemPDPContext(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_PDP_CTXTS))
         """The list of PDP contexts."""
 
         self._socket_list = [ModemSocket(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_SOCKETS) ]
