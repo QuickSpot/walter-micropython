@@ -12,7 +12,8 @@ from walter_modem.enums import (
 )
 from walter_modem.structs import (
     ModemRsp,
-    WalterModemOpState
+    WalterModemOpState,
+    ModemGNSSAssistance
 )
 
 modem = Modem()
@@ -54,6 +55,16 @@ class TestModemGNSS(unittest.AsyncTestCase):
             await asyncio.sleep(0.1)
         
         self.assert_equal(b'+LPGNSSCFG: 0,2,2,,1,0,0', gnss_config_str_from_modem)
+    
+    async def test_get_gnss_assistance_status_runs(self):
+        self.assert_true(await modem.get_gnss_assistance_status())
+    
+    async def test_get_gnss_assistance_status_sets_gnss_assistance_in_response(self):
+        await modem.get_gnss_assistance_status(rsp=modem_rsp)
+        self.assert_is_instance(modem_rsp.gnss_assistance, ModemGNSSAssistance)
+    
+    async def test_get_gnss_assistance_status_sets_correct_response_type(self):
+        self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA ,modem_rsp.type)
 
 test_modem_gnss = TestModemGNSS()
 test_modem_gnss.run()
