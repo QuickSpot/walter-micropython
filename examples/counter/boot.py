@@ -158,33 +158,29 @@ async def setup():
         print('Modem communication error')
         return False
 
-    if await modem.get_op_state(rsp=modem_rsp) and modem_rsp.op_state is not None:
-        print(f'Modem operatonal state: {WalterModemOpState.get_value_name(modem_rsp.op_state)}')
-    else:
-        print('Failed to retrieve modem operational state')
-        return False
-
     if config.SIM_PIN != None and not await unlock_sim():
         return False
     
     if not await modem.create_PDP_context(
         apn=config.CELL_APN,
-        auth_user=config.APN_USERNAME,
-        auth_pass=config.APN_PASSWORD,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.authenticate_PDP_context():
-        print('Failed to authenticate PDP context')
+    if config.APN_USERNAME and not await modem.set_PDP_context_auth_params(
+        protocol=config.AUTHENTICATION_PROTOCOL,
+        user_id=config.APN_USERNAME,
+        password=config.APN_PASSWORD
+    ):
+        print('Failed to set PDP context authentication parameters')
 
     print('Connecting to LTE Network')
     if not await lte_connect():
         return False
    
     print('Creating socket')
-    if await modem.create_socket(pdp_context_id=modem_rsp.pdp_ctx_id, rsp=modem_rsp):
+    if await modem.create_socket(rsp=modem_rsp):
         socket_id = modem_rsp.socket_id
     else:
         print('Failed to create socket')
