@@ -1,3 +1,5 @@
+from walter_modem.enums import WalterModemPDPAuthProtocol
+
 CELL_APN = ''
 """
 The cellular Access Point Name (APN).
@@ -17,6 +19,12 @@ APN_PASSWORD = ''
 The password for APN authentication.
 This is generally unnecessary and should remain blank.
 Set a password only if it is specifically required by your network provider.
+"""
+
+AUTHENTICATION_PROTOCOL = WalterModemPDPAuthProtocol.NONE
+"""
+The authentication protocol to use if requiren.
+Leave as none when no username/password is set.
 """
 
 SIM_PIN = None
