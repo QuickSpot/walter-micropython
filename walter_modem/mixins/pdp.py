@@ -102,7 +102,7 @@ class ModemPDP(ModemCore):
         )
     
     async def set_PDP_context_auth_params(self,
-        context_id: int = None,
+        context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         protocol: int = WalterModemPDPAuthProtocol.NONE,
         user_id: str = None,
         password: str = None,
