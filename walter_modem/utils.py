@@ -78,16 +78,10 @@ def parse_gnss_time(time_str: str) -> float | None:
     return time_val
 
 def modem_string(string: str) -> str:
-    if string:
-        return '"' + string + '"'
-    else:
-        return ''
+    return '' if string is None else f'"{string}"'
 
-def modem_bool(a_bool):
-    if a_bool:
-        return 1
-    else:
-        return 0
+def modem_bool(b: bool) -> int:
+    return 1 if b else 0
 
 def log(level, msg):
     print(f'WalterModem [{level:<9}]: {msg}')
