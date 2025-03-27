@@ -17,9 +17,23 @@ from walter_modem.structs import (
 )
 
 modem = Modem()
-modem_rsp = ModemRsp()
 
-class TestModemGNSS(unittest.AsyncTestCase):
+async def await_connection():
+        print('\nShowing modem debug logs:')
+        modem.debug_log = True
+
+        for _ in range(600):
+            if modem.get_network_reg_state() in (
+                WalterModemNetworkRegState.REGISTERED_HOME,
+                WalterModemNetworkRegState.REGISTERED_ROAMING
+            ):
+                modem.debug_log = False
+                return
+            await asyncio.sleep(1)
+        modem.debug_log = False
+        raise OSError('Connection Timed-out')
+
+class TestModemGNSSPreConnection(unittest.AsyncTestCase):
     async def async_setup(self):
         await modem.begin()
 
@@ -31,10 +45,13 @@ class TestModemGNSS(unittest.AsyncTestCase):
         self.assert_true(await modem.config_gnss())
     
     async def test_config_gnss_correctly_sets_configuration_in_modem(self):
+        modem_rsp = ModemRsp()
+
         if not await modem.config_gnss(
             sens_mode=WalterModemGNSSSensMode.MEDIUM,
             acq_mode=WalterModemGNSSAcqMode.COLD_WARM_START,
-            loc_mode=WalterModemGNSSLocMode.ON_DEVICE_LOCATION
+            loc_mode=WalterModemGNSSLocMode.ON_DEVICE_LOCATION,
+            rsp=modem_rsp
         ):
             raise RuntimeError(
                 'Failed to config GNSS',
@@ -60,11 +77,47 @@ class TestModemGNSS(unittest.AsyncTestCase):
         self.assert_true(await modem.get_gnss_assistance_status())
     
     async def test_get_gnss_assistance_status_sets_gnss_assistance_in_response(self):
+        modem_rsp = ModemRsp()
         await modem.get_gnss_assistance_status(rsp=modem_rsp)
+        
         self.assert_is_instance(modem_rsp.gnss_assistance, ModemGNSSAssistance)
     
     async def test_get_gnss_assistance_status_sets_correct_response_type(self):
-        self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA ,modem_rsp.type)
+        modem_rsp = ModemRsp()
+        await modem.get_gnss_assistance_status(rsp=modem_rsp)
 
-test_modem_gnss = TestModemGNSS()
-test_modem_gnss.run()
+        self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
+
+class TestModemGNSSPostConnection(unittest.AsyncTestCase):
+    async def async_setup(self):
+        modem_rsp = ModemRsp()
+
+        await modem.begin()
+        await modem.create_PDP_context()
+
+        await modem.get_op_state(rsp=modem_rsp)
+        if modem_rsp.op_state is not WalterModemOpState.FULL:
+            await modem.set_op_state(WalterModemOpState.FULL)
+
+        await await_connection()
+    
+    async def test_update_gnss_assistance_runs(self):
+        self.assert_true(await modem.update_gnss_assistance())
+    
+    async def test_update_gnss_assistance_sets_gnss_assistance_in_response(self):
+        modem_rsp = ModemRsp()
+        await modem.update_gnss_assistance(rsp=modem_rsp)
+
+        self.assert_is_instance(modem_rsp.gnss_assistance, ModemGNSSAssistance)
+    
+    async def test_update_gnss_assistance_sets_correct_response_type(self):
+        modem_rsp = ModemRsp()
+        await modem.update_gnss_assistance(rsp=modem_rsp)
+
+        self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
+
+test_modem_gnss_pre_connection = TestModemGNSSPreConnection()
+test_modem_gnss_post_connection = TestModemGNSSPostConnection()
+
+test_modem_gnss_pre_connection.run()
+test_modem_gnss_post_connection.run()
