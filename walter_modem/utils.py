@@ -78,7 +78,7 @@ def parse_gnss_time(time_str: str) -> float | None:
     return time_val
 
 def modem_string(string: str) -> str:
-    return '' if string is None else f'"{string}"'
+    return '""' if string is None else f'"{string}"'
 
 def modem_bool(b: bool) -> int:
     return 1 if b else 0
