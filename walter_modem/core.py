@@ -426,7 +426,6 @@ class ModemCore:
                     await self._finish_queue_cmd(cmd, WalterModemState.TIMEOUT)
                 else:
                     return
-                
 
     async def _handle_data_tx_wait(self, tx_stream, cmd, at_rsp):
         if cmd and cmd.data and cmd.type == WalterModemCmdType.DATA_TX_WAIT:
@@ -485,7 +484,6 @@ class ModemCore:
             # the complete handler will reset the state,
             # even if we never received <<< but got an error instead
             return WalterModemState.OK
-
 
     async def _handle_sqn_http_ring(self, tx_stream, cmd, at_rsp):
         profile_id_str, http_status_str, content_type, content_length_str = at_rsp[len("+SQNHTTPRING: "):].decode().split(',')
@@ -767,7 +765,6 @@ class ModemCore:
         cmd.rsp.type = WalterModemRspType.OP_STATE
         cmd.rsp.op_state = self._op_state
         return WalterModemState.OK
-
 
     async def _handle_csq(self, tx_stream, cmd, at_rsp):
         if not cmd:
