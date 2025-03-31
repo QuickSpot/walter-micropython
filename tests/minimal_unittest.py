@@ -45,7 +45,7 @@ class TestCase:
         self.tests_run += 1
         if not a:
             self.failed += 1
-            self.print_fail('condition is not truthy')
+            self.print_fail(f'condition: "{a}" is not truthy')
         else:
             self.passed += 1
             self.print_success()
@@ -54,7 +54,7 @@ class TestCase:
         self.tests_run += 1
         if a:
             self.failed += 1
-            self.print_fail('condition is not falsy')
+            self.print_fail(f'condition: "{a}" is not falsy')
         else:
             self.passed += 1
             self.print_success()
