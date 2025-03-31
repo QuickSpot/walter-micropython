@@ -3,6 +3,19 @@
 This is a minimal unit-test implimentation tailored for micropython.
 It includes all the standard asserts and measures how long each assert took.
 
+## Setup
+
+Copy `minimal_unittest.py` to `/lib/minimal_unittest/__init__.py` on the
+Micropython device.
+
+Example using [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
+
+```sh
+mpremote cp tests/minimal_unittest.py :lib/minimal_unittest/__init__.py
+```
+
+Then run the tests on the device.
+
 ## Usage
 
 This uses the principle of test-cases; a class in which several tests are grouped.
