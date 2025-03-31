@@ -164,7 +164,7 @@ async def setup():
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.set_PDP_context_auth_params(
+    if config.APN_USERNAME and not await modem.set_PDP_auth_params(
         protocol=config.AUTHENTICATION_PROTOCOL,
         user_id=config.APN_USERNAME,
         password=config.APN_PASSWORD

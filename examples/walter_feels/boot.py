@@ -253,7 +253,7 @@ async def modem_setup():
     
     wdt.feed()
    
-    if config.APN_USERNAME and not await modem.set_PDP_context_auth_params(
+    if config.APN_USERNAME and not await modem.set_PDP_auth_params(
         protocol=config.AUTHENTICATION_PROTOCOL,
         user_id=config.APN_USERNAME,
         password=config.APN_PASSWORD
