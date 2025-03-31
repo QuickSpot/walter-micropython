@@ -38,9 +38,7 @@ class ModemSocket(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        try:
-            ctx = self._pdp_ctxs[pdp_context_id - 1]
-        except IndexError:
+        if pdp_context_id < ModemCore.MIN_PDP_CTX_ID or pdp_context_id > ModemCore.MAX_PDP_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
 
@@ -57,7 +55,7 @@ class ModemSocket(ModemCore):
 
         self._socket = socket
 
-        socket.pdp_context_id = ctx.id
+        socket.pdp_context_id = pdp_context_id
         socket.mtu = mtu
         socket.exchange_timeout = exchange_timeout
         socket.conn_timeout = conn_timeout
@@ -74,7 +72,7 @@ class ModemSocket(ModemCore):
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSCFG={},{},{},{},{},{}'.format(
-                socket.id, ctx.id, socket.mtu, socket.exchange_timeout,
+                socket.id, socket.pdp_context_id, socket.mtu, socket.exchange_timeout,
                 socket.conn_timeout * 10, socket.send_delay_ms // 100
             ),
             at_rsp=b'OK',
