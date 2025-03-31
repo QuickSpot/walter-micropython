@@ -58,7 +58,7 @@ class TestModemPDPContextManagementPreConnection(unittest.AsyncTestCase):
         if not await modem.create_PDP_context(
             context_id=PDP_CTX_ID,
             apn=APN,
-            type=WalterModemPDPType.IP,
+            pdp_type=WalterModemPDPType.IP,
             ipv4_alloc_method=WalterModemPDPIPv4AddrAllocMethod.DHCP,
             request_type=WalterModemPDPRequestType.NEW_OR_HANDOVER,
             pcscf_method=WalterModemPDPPCSCFDiscoveryMethod.NAS,

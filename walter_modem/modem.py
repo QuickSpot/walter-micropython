@@ -285,8 +285,7 @@ class Modem(
 
         :return bool: True on success, False on failure
         """
-        self._sim_PIN = pin
-        if self._sim_PIN is None:
+        if pin is None:
             return await self.get_sim_state()
 
         return await self._run_cmd(
@@ -313,9 +312,6 @@ class Modem(
 
         :return bool: True on success, False on failure
         """
-        self._network_sel_mode = mode
-        self._operator.format = operator_format
-        self._operator.name = operator_name
 
         if mode == WalterModemNetworkSelMode.AUTOMATIC:
             return await self._run_cmd(
@@ -327,8 +323,8 @@ class Modem(
             return await self._run_cmd(
                 rsp=rsp,
                 at_cmd='AT+COPS={},{},{}'.format(
-                    self._network_sel_mode, self._operator.format,
-                    modem_string(self._operator.name)
+                    mode, operator_format,
+                    modem_string(operator_name)
                 ),
                 at_rsp=b'OK'
             )
