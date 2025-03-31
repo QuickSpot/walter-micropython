@@ -19,7 +19,7 @@ Then run the tests on the device.
 Example using [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
 
 ```sh
-mpremote run tests/modem_library/test_common.py
+mpremote run tests/test_unittest.py
 ```
 
 ## Usage
