@@ -8,12 +8,14 @@ from walter_modem.enums import (
     WalterModemCMEError,
     WalterModemGNSSSensMode,
     WalterModemGNSSAcqMode,
-    WalterModemGNSSLocMode
+    WalterModemGNSSLocMode,
+    WalterModemGNSSAction
 )
 from walter_modem.structs import (
     ModemRsp,
     WalterModemOpState,
-    ModemGNSSAssistance
+    ModemGNSSAssistance,
+    ModemGNSSFix
 )
 
 modem = Modem()
@@ -35,11 +37,43 @@ async def await_connection():
 
 class TestModemGNSSPreConnection(unittest.AsyncTestCase):
     async def async_setup(self):
+        modem_rsp = ModemRsp()
         await modem.begin()
+
+        # GNSS action requires available RTC (clock)
+        await modem.get_clock(rsp=modem_rsp)
+
+        if not modem_rsp.clock:
+            print('No RTC (clock time), briefly connecting to LTE to retrieve time')
+            print('Showing debug logs')
+            modem.debug_log = True
+            await modem.get_op_state(rsp=modem_rsp)
+            if modem_rsp.op_state is not WalterModemOpState.FULL:
+                await modem.create_PDP_context()
+                await modem.set_op_state(WalterModemOpState.FULL)
+
+            await await_connection()
+
+            for _ in range(5):
+                await modem.get_clock(rsp=modem_rsp)
+                if modem_rsp.clock:
+                    break
+                await asyncio.sleep(0.5)
+        
+        # Time synced with network, LTE connection not needed for these tests
+        # These tests should work without LTE
+        await modem.set_op_state(WalterModemOpState.MINIMUM)
+        modem.debug_log = False
 
     async def async_teardown(self):
         # Restore back to library defaults
         await modem.config_gnss()
+
+        # Ensure no gnns action is still running
+        await modem._run_cmd(
+            at_cmd='AT+LPGNSSFIXPROG="stop"',
+            at_rsp=b'OK'
+        )
 
     async def test_config_gnss_runs(self):
         self.assert_true(await modem.config_gnss())
@@ -88,15 +122,29 @@ class TestModemGNSSPreConnection(unittest.AsyncTestCase):
 
         self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
 
+    async def test_perform_gnss_action_single_fix_runs(self):
+        self.assert_true(await modem.perform_gnss_action(action=WalterModemGNSSAction.GET_SINGLE_FIX))
+    
+    async def test_perform_gnss_action_cancel_runs(self):
+        self.assert_true(await modem.perform_gnss_action(action=WalterModemGNSSAction.CANCEL))
+
+    async def test_wait_for_gnss_fix_returns(self):
+        await modem.perform_gnss_action(WalterModemGNSSAction.GET_SINGLE_FIX)
+        try:
+            result = await asyncio.wait_for(modem.wait_for_gnss_fix(), timeout=180)
+            self.assert_is_instance(result, ModemGNSSFix)
+        except asyncio.TimeoutError:
+            raise OSError('Runtime Error, timeout whilst waiting for "wait_for_gnss_fix"')
+
 class TestModemGNSSPostConnection(unittest.AsyncTestCase):
     async def async_setup(self):
         modem_rsp = ModemRsp()
 
         await modem.begin()
-        await modem.create_PDP_context()
 
         await modem.get_op_state(rsp=modem_rsp)
         if modem_rsp.op_state is not WalterModemOpState.FULL:
+            await modem.create_PDP_context()
             await modem.set_op_state(WalterModemOpState.FULL)
 
         await await_connection()
@@ -115,6 +163,8 @@ class TestModemGNSSPostConnection(unittest.AsyncTestCase):
         await modem.update_gnss_assistance(rsp=modem_rsp)
 
         self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
+
+
 
 test_modem_gnss_pre_connection = TestModemGNSSPreConnection()
 test_modem_gnss_post_connection = TestModemGNSSPostConnection()
