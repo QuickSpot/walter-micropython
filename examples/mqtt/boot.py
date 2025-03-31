@@ -32,13 +32,6 @@ The modem response object.
 We re-use this single one, for memory efficiency.
 """
 
-def match_auth_proto():
-    if config.AUTH_PROTOCOL == 'PAP': return WalterModemPDPAuthProtocol.PAP
-    if config.AUTH_PROTOCOL == 'CHAP': return WalterModemPDPAuthProtocol.CHAP
-    return WalterModemPDPAuthProtocol.NONE
-
-pdp_auth_proto = match_auth_proto()
-
 def get_unique_topic():
     mac = network.WLAN().config('mac')
     return f'walter/mqtt-example/{''.join('{:02X}'.format(byte) for byte in mac[-3:])}'
@@ -166,16 +159,17 @@ async def setup():
     
     if not await modem.create_PDP_context(
         apn=config.CELL_APN,
-        auth_proto=pdp_auth_proto,
-        auth_user=config.APN_USERNAME,
-        auth_pass=config.APN_PASSWORD,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.authenticate_PDP_context():
-        print('Failed to authenticate PDP context')
+    if config.APN_USERNAME and not await modem.set_PDP_auth_params(
+        protocol=config.AUTHENTICATION_PROTOCOL,
+        user_id=config.APN_USERNAME,
+        password=config.APN_PASSWORD
+    ):
+        print('Failed to set PDP context authentication protocol')
 
     print('Connecting to LTE Network')
     if not await lte_connect():

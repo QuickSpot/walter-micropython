@@ -17,7 +17,7 @@ from ..utils import (
 
 class ModemSocket(ModemCore):
     async def create_socket(self,
-        pdp_context_id: int = -1,
+        pdp_context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         mtu: int = 300,
         exchange_timeout: int = 90,
         conn_timeout: int = 60,
@@ -29,7 +29,7 @@ class ModemSocket(ModemCore):
         Additional socket settings can be applied.
         The socket can be used for communication.
 
-        :param pdp_context_id: The PDP context id or -1 to re-use the last one.
+        :param pdp_context_id: The PDP context id.
         :param: mtu: The Maximum Transmission Unit used by the socket.
         :param exchange_timeout: The maximum number of seconds this socket can be inactive.
         :param conn_timeout: The maximum number of seconds this socket is allowed to try to connect.
@@ -39,15 +39,10 @@ class ModemSocket(ModemCore):
         :return bool: True on success, False on failure
         """
         try:
-            if pdp_context_id == -1:
-                ctx = self._pdp_ctx
-            else:
-                ctx = self._pdp_ctx_list[pdp_context_id - 1]
-        except Exception:
+            ctx = self._pdp_ctxs[pdp_context_id - 1]
+        except IndexError:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-        
-        self._pdp_ctx = ctx
 
         socket = None
         for _socket in self._socket_list:

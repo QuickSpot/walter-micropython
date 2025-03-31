@@ -143,7 +143,7 @@ class ModemCore:
         self._operator = ModemOperator()
         """An operator to use, this is ignored when automatic operator selectionis used."""
         
-        self._pdp_ctx_list = [ModemPDPContext(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_PDP_CTXTS)]
+        self._pdp_ctxs = tuple(ModemPDPContext(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_PDP_CTXTS))
         """The list of PDP contexts."""
 
         self._socket_list = [ModemSocket(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_SOCKETS) ]
@@ -175,6 +175,15 @@ class ModemCore:
 
         self._proc_queue_rsp_cmd_handlers = None
         """The mapping of cmd patterns to handler methods for processing the rsp queue"""
+
+        self._application_queue_rsp_handlers: tuple = None
+        """The mapping of rsp patterns to handler methods defined by the application code"""
+
+        self._application_queue_rsp_handlers_set: bool = False
+        """Whether or not the application has defined/set queue rsp handlers"""
+
+        self._begun = False
+        """Whetehr or not the begin method has already been run."""
 
     def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
         # According to modem documentation;
@@ -1005,17 +1014,21 @@ class ModemCore:
 
         result = WalterModemState.OK
 
-        for mapping in self._proc_queue_rsp_rsp_handlers:
-            pattern, handler = mapping
+        for pattern, handler in self._proc_queue_rsp_rsp_handlers:
             if at_rsp.startswith(pattern):
                 result = await handler(tx_stream, cmd, at_rsp)
                 break
         
         if cmd and cmd.at_cmd:
-            for mapping in self._proc_queue_rsp_cmd_handlers:
-                pattern, handler = mapping
+            for pattern, handler in self._proc_queue_rsp_cmd_handlers:
                 if cmd.at_cmd.startswith(pattern):
                     result = await handler(tx_stream, cmd, at_rsp)
+                    break
+        
+        if self._application_queue_rsp_handlers_set:
+            for pattern, handler in self._application_queue_rsp_handlers:
+                if at_rsp.startswith(pattern):
+                    handler(cmd, at_rsp)
                     break
 
         if (
@@ -1061,6 +1074,16 @@ class ModemCore:
 
                 if cur_cmd.state == WalterModemCmdState.COMPLETE:
                     cur_cmd = None
+
+    def _register_application_queue_rsp_handler(self, start_pattern: bytes, handler: callable):
+        if isinstance(start_pattern, bytes) and callable(handler):
+            if not self._application_queue_rsp_handlers_set:
+                self._application_queue_rsp_handlers_set = True
+                self._application_queue_rsp_handlers = [(start_pattern, handler)]
+            else:
+                self._application_queue_rsp_handlers.append((start_pattern, handler))
+        else:
+            log('WARNING', 'Invalid parameters, not registering application queue rsp handler')
 
     async def _run_cmd(self,
         at_cmd: str,
@@ -1122,39 +1145,44 @@ class ModemCore:
         )
 
     async def begin(self, debug_log: bool = False):
-        self.debug_log = debug_log
-        self._uart = UART(2,
-            baudrate=ModemCore.WALTER_MODEM_BAUD,
-            bits=8,
-            parity=None,
-            stop=1,
-            flow=UART.RTS|UART.CTS,
-            tx=ModemCore.WALTER_MODEM_PIN_TX,
-            rx=ModemCore.WALTER_MODEM_PIN_RX,
-            cts=ModemCore.WALTER_MODEM_PIN_CTS,
-            rts=ModemCore.WALTER_MODEM_PIN_RTS,
-            timeout=0,
-            timeout_char=0,
-            txbuf=2048,
-            rxbuf=2048
-        )
+        if not self._begun:
+            self.debug_log = debug_log
+            self._uart = UART(2,
+                baudrate=ModemCore.WALTER_MODEM_BAUD,
+                bits=8,
+                parity=None,
+                stop=1,
+                flow=UART.RTS|UART.CTS,
+                tx=ModemCore.WALTER_MODEM_PIN_TX,
+                rx=ModemCore.WALTER_MODEM_PIN_RX,
+                cts=ModemCore.WALTER_MODEM_PIN_CTS,
+                rts=ModemCore.WALTER_MODEM_PIN_RTS,
+                timeout=0,
+                timeout_char=0,
+                txbuf=2048,
+                rxbuf=2048
+            )
 
-        self._reset_pin = Pin(ModemCore.WALTER_MODEM_PIN_RESET, Pin.OUT, hold=True)
+            self._reset_pin = Pin(ModemCore.WALTER_MODEM_PIN_RESET, Pin.OUT, hold=True)
 
-        self._task_queue = Queue()
-        self._command_queue = Queue()
-        self._parser_data = ModemATParserData()
+            self._task_queue = Queue()
+            self._command_queue = Queue()
+            self._parser_data = ModemATParserData()
 
-        self._uart_reader_task = asyncio.create_task(self._uart_reader())
-        self._queue_worker_task = asyncio.create_task(self._queue_worker())
+            self._uart_reader_task = asyncio.create_task(self._uart_reader())
+            self._queue_worker_task = asyncio.create_task(self._queue_worker())
 
-        if reset_cause == DEEPSLEEP:
-            self._sleep_wakeup()
-        else:
-            await self.reset()
-
-        await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC)
-        await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED)
+            if reset_cause == DEEPSLEEP:
+                self._sleep_wakeup()
+            else:
+                if not await self.reset():
+                    raise RuntimeError('Failed to reset modem')
+                if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
+                    raise RuntimeError('Failed to configure CME error reports')
+                if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED):
+                    raise RuntimeError('Failed to configure cereg reports')
+        
+        self._begun = True
 
     def _sleep_wakeup(self):
         pass

@@ -243,7 +243,7 @@ class Modem(
         """
         return await self._run_cmd(
             rsp=rsp,
-            at_cmd=f'AT+SQNMODEACTIVE={rat + 1}',
+            at_cmd=f'AT+SQNMODEACTIVE={rat}',
             at_rsp=b'OK'
         )
 
