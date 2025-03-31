@@ -21,7 +21,7 @@ class ModemPDP(ModemCore):
     async def create_PDP_context(self,
         context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         apn: str = '',
-        type: str = WalterModemPDPType.IP,
+        pdp_type: str = WalterModemPDPType.IP,
         pdp_address: str = None,
         header_comp: int = WalterModemPDPHeaderCompression.OFF,
         data_comp: int = WalterModemPDPDataCompression.OFF,
@@ -65,38 +65,21 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        try:
-            ctx = self._pdp_ctxs[context_id - 1]
-        except IndexError:
+        if context_id < ModemCore.MIN_PDP_CTX_ID or context_id > ModemCore.MAX_PDP_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-        
-        ctx.type = type
-        ctx.apn = apn
-        ctx.pdp_address = pdp_address
-        ctx.header_comp = header_comp
-        ctx.data_comp = data_comp
-        ctx.ipv4_alloc_method = ipv4_alloc_method
-        ctx.request_type = request_type
-        ctx.pcscf_method = pcscf_method
-        ctx.for_IMCN = for_IMCN
-        ctx.use_NSLPI = use_NSLPI
-        ctx.use_secure_PCO  = use_secure_PCO
-        ctx.use_NAS_ipv4_MTU_discovery = use_NAS_ipv4_MTU_discovery
-        ctx.use_local_addr_ind = use_local_addr_ind
-        ctx.use_NAS_non_IPMTU_discovery = use_NAS_on_IPMTU_discovery
 
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CGDCONT={},{},{},{},{},{},{},{},{},{},{},{},{},{},{}'.format(
-                ctx.id, ctx.type, modem_string(ctx.apn),
-                modem_string(ctx.pdp_address), ctx.data_comp,
-                ctx.header_comp, ctx.ipv4_alloc_method, ctx.request_type,
-                ctx.pcscf_method, modem_bool(ctx.for_IMCN),
-                modem_bool(ctx.use_NSLPI), modem_bool(ctx.use_secure_PCO),
-                modem_bool(ctx.use_NAS_ipv4_MTU_discovery),
-                modem_bool(ctx.use_local_addr_ind),
-                modem_bool(ctx.use_NAS_non_IPMTU_discovery)
+                context_id, pdp_type, modem_string(apn),
+                modem_string(pdp_address), data_comp,
+                header_comp, ipv4_alloc_method, request_type,
+                pcscf_method, modem_bool(for_IMCN),
+                modem_bool(use_NSLPI), modem_bool(use_secure_PCO),
+                modem_bool(use_NAS_ipv4_MTU_discovery),
+                modem_bool(use_local_addr_ind),
+                modem_bool(use_NAS_on_IPMTU_discovery)
             ),
             at_rsp=b'OK'
         )
@@ -120,29 +103,23 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        try:
-            ctx = self._pdp_ctxs[context_id - 1]
-        except IndexError:
+        if context_id < ModemCore.MIN_PDP_CTX_ID or context_id > ModemCore.MAX_PDP_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-
-        ctx.auth_proto = protocol
-        ctx.auth_user = user_id
-        ctx.auth_pass = password
         
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CGAUTH={},{},{},{}'.format(
-                ctx.id, ctx.auth_proto,
-                modem_string(ctx.auth_user),
-                modem_string(ctx.auth_pass)
+                context_id, protocol,
+                modem_string(user_id),
+                modem_string(password)
             ),
             at_rsp=b'OK'
         )
     
     async def set_PDP_context_active(self,
         active: bool = True,
-        context_id: int = None,
+        context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -154,18 +131,13 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        try:
-            if context_id is None:
-                ctx = self._pdp_ctxs[ModemCore.DEFAULT_PDP_CTX_ID - 1]
-            else:
-                ctx = self._pdp_ctxs[context_id - 1]
-        except Exception:
+        if context_id < ModemCore.MIN_PDP_CTX_ID or context_id > ModemCore.MAX_PDP_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
                 
         return await self._run_cmd(
             rsp=rsp,
-            at_cmd=f'AT+CGACT={modem_bool(active)},{ctx.id}',
+            at_cmd=f'AT+CGACT={modem_bool(active)},{context_id}',
             at_rsp=b'OK'
         )
         
@@ -187,7 +159,10 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def get_PDP_address(self, context_id: int = None, rsp: ModemRsp = None) -> bool:
+    async def get_PDP_address(self,
+        context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
+        rsp: ModemRsp = None
+    ) -> bool:
         """
         Retrieves the list of PDP addresses for the specified PDP context ID.
 
@@ -196,17 +171,12 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        try:
-            if context_id == None:
-                ctx = self._pdp_ctxs[ModemCore.DEFAULT_PDP_CTX_ID - 1]
-            else:
-                ctx = self._pdp_ctxs[context_id - 1]
-        except Exception:
+        if context_id < ModemCore.MIN_PDP_CTX_ID or context_id > ModemCore.MAX_PDP_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
 
         return await self._run_cmd(
             rsp=rsp,
-            at_cmd=f'AT+CGPADDR={ctx.id}',
+            at_cmd=f'AT+CGPADDR={context_id}',
             at_rsp=b'OK'
         )

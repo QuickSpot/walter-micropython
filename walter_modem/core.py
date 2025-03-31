@@ -84,8 +84,11 @@ class ModemCore:
     WALTER_MODEM_MIN_VALID_TIMESTAMP = 1672531200
     """Any modem time below 1 Jan 2023 00:00:00 UTC is considered an invalid time."""
 
-    WALTER_MODEM_MAX_PDP_CTXTS = 8
-    """The maximum number of PDP contexts that the library can support."""
+    MIN_PDP_CTX_ID = 1
+    """The lowest possible pdp context ID"""
+
+    MAX_PDP_CTX_ID = 8
+    """The highest possible PDP context ID"""
 
     WALTER_MODEM_MAX_SOCKETS = 6
     """The maximum number of sockets that the library can support."""
@@ -123,18 +126,6 @@ class ModemCore:
 
         self._reg_state = WalterModemNetworkRegState.NOT_SEARCHING
         """The current network registration state of the modem."""
-
-        self._sim_PIN = None
-        """The PIN code when required for the installed SIM."""
-
-        self._network_sel_mode = WalterModemNetworkSelMode.AUTOMATIC
-        """The chosen network selection mode."""
-
-        self._operator = ModemOperator()
-        """An operator to use, this is ignored when automatic operator selectionis used."""
-        
-        self._pdp_ctxs = tuple(ModemPDPContext(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_PDP_CTXTS))
-        """The list of PDP contexts."""
 
         self._socket_list = [ModemSocket(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_SOCKETS) ]
         """The list of sockets"""
