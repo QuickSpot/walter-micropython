@@ -600,6 +600,17 @@ class ModemCore:
 
         return WalterModemState.OK
 
+    async def _handle_sqnscfg(self, tx_stream, cmd, at_rsp):
+        conn_id, cid, pkt_sz, max_to, conn_to, tx_to = map(int, at_rsp.split(': ', 1)[1].split(','))
+
+        socket = self._socket_list[conn_id + 1]
+        socket.id = conn_id
+        socket.pdp_context_id = cid
+        socket.mtu = pkt_sz
+        socket.exchange_timeout = max_to
+        socket.conn_timeout = conn_to / 10
+        socket.send_delay_ms = tx_to * 100
+
     async def _handle_lp_gnss_fix_ready(self, tx_stream, cmd, at_rsp):
         data = at_rsp[len(b'+LPGNSSFIXREADY: '):]
 
@@ -973,6 +984,7 @@ class ModemCore:
                 (b'+SQNSMQTTMEMORYFULL', self._handle_sqns_mqtt_memory_full),
                 # - Socket
                 (b'+SQNSH: ', self._handle_sqn_sh),
+                (b'+SQNSCFG: ', self._handle_sqnscfg),
 
                 # 10. Location Services
                 (b'+LPGNSSFIXREADY: ', self._handle_lp_gnss_fix_ready),
@@ -1161,7 +1173,7 @@ class ModemCore:
             self._queue_worker_task = asyncio.create_task(self._queue_worker())
 
             if reset_cause == DEEPSLEEP:
-                self._sleep_wakeup()
+                await self._sleep_wakeup()
             else:
                 if not await self.reset():
                     raise RuntimeError('Failed to reset modem')
@@ -1172,8 +1184,10 @@ class ModemCore:
         
         self._begun = True
 
-    def _sleep_wakeup(self):
-        pass
+    async def _sleep_wakeup(self):
+        await self._run_cmd(at_cmd='AT+CFUN?', at_rsp=b'OK')
+        await self._run_cmd(at_cmd='AT+CEREG?', at_rsp=b'OK')
+        await self._run_cmd(at_cmd='AT+SQNSCFG?', at_rsp=b'OK')
 
     def _sleep_prepare(self):
         pass
