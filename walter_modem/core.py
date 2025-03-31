@@ -173,7 +173,7 @@ class ModemCore:
         """Whether or not the application has defined/set queue rsp handlers"""
 
         self._begun = False
-        """Whetehr or not the begin method has already been run."""
+        """Whether or not the begin method has already been run."""
 
     def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
         # According to modem documentation;
