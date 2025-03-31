@@ -45,8 +45,6 @@ class TestModemGNSSPreConnection(unittest.AsyncTestCase):
 
         if not modem_rsp.clock:
             print('No RTC (clock time), briefly connecting to LTE to retrieve time')
-            print('Showing debug logs')
-            modem.debug_log = True
             await modem.get_op_state(rsp=modem_rsp)
             if modem_rsp.op_state is not WalterModemOpState.FULL:
                 await modem.create_PDP_context()
@@ -63,7 +61,6 @@ class TestModemGNSSPreConnection(unittest.AsyncTestCase):
         # Time synced with network, LTE connection not needed for these tests
         # These tests should work without LTE
         await modem.set_op_state(WalterModemOpState.MINIMUM)
-        modem.debug_log = False
 
     async def async_teardown(self):
         # Restore back to library defaults
