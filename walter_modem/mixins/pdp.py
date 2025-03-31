@@ -101,7 +101,7 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def set_PDP_context_auth_params(self,
+    async def set_PDP_auth_params(self,
         context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         protocol: int = WalterModemPDPAuthProtocol.NONE,
         user_id: str = None,
@@ -140,7 +140,7 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def set_PDP_context_state(self,
+    async def set_PDP_context_active(self,
         active: bool = True,
         context_id: int = None,
         rsp: ModemRsp = None
@@ -169,7 +169,7 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
         
-    async def attach_PDP_context(self,
+    async def set_network_attachment_state(self,
         attach: bool = True,
         rsp: ModemRsp = None
     ) -> bool:
