@@ -16,6 +16,12 @@ mpremote cp tests/minimal_unittest.py :lib/minimal_unittest/__init__.py
 
 Then run the tests on the device.
 
+Example using [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
+
+```sh
+mpremote run tests/modem_library/test_common.py
+```
+
 ## Usage
 
 This uses the principle of test-cases; a class in which several tests are grouped.
