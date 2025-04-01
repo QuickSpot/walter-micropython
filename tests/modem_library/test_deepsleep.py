@@ -43,7 +43,7 @@ class TestModemDeepSleep(unittest.AsyncTestCase):
         print(f'Started, reason: {machine.wake_reason()}')
         await asyncio.sleep(3)
         print('Second startup notice (3s after startup)')
-        await modem.begin(True)
+        await modem.begin()
         
         if machine.wake_reason() != machine.DEEPSLEEP_RESET:
             await modem.create_PDP_context()
