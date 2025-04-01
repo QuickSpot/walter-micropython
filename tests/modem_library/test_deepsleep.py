@@ -36,17 +36,16 @@ class TestModemDeepSleep(unittest.AsyncTestCase):
         print(f'Started, reason: {machine.wake_reason()}')
         await asyncio.sleep(3)
         print('Second startup notice (3s after startup)')
-        await modem.begin()
-
-        await modem.create_PDP_context()
-        await modem.get_op_state(rsp=modem_rsp)
-        if modem_rsp.op_state is not WalterModemOpState.FULL:
-            await modem.set_op_state(WalterModemOpState.FULL)
-
-        await await_connection()
-        print('Network Connection established')
+        await modem.begin(True)
         
         if machine.wake_reason() != machine.DEEPSLEEP_RESET:
+            await modem.create_PDP_context()
+            await modem.get_op_state(rsp=modem_rsp)
+            if modem_rsp.op_state is not WalterModemOpState.FULL:
+                await modem.set_op_state(WalterModemOpState.FULL)
+
+            await await_connection()
+            print('Network Connection established')
             await modem.mqtt_config()
             print('connecting to MQTT')
             await modem.mqtt_connect(server_name='test.mosquitto.org', port=1883)
@@ -54,12 +53,10 @@ class TestModemDeepSleep(unittest.AsyncTestCase):
             await modem.mqtt_subscribe(topic='short', qos=1)
             await modem.mqtt_subscribe(topic='long-topic-test', qos=0)
             print(modem._mqtt_subscriptions)
-            print('Waiting 10sec before entering deepsleep')
-            await asyncio.sleep(10)
+            print('Waiting 5sec before entering deepsleep')
+            await asyncio.sleep(5)
             print('Starting 10s deepsleep')
-            modem.sleep(sleep_time_ms=10000, persist_mqtt_subs=True)
-        
-        print(modem._socket_list)
+            modem.sleep(sleep_time_ms=10000, persist_mqtt_subs=False)
         
     async def test_mqtt_subscriptions_persist_after_deepsleep(self):
         self.assert_equal([('short', 1), ('long-topic-test', 0)], modem._mqtt_subscriptions)
