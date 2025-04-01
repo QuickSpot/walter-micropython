@@ -13,6 +13,8 @@ from machine import (
     RTC
 )
 
+from esp32 import gpio_deep_sleep_hold
+
 from .queue import Queue
 
 from .enums import (
@@ -130,6 +132,8 @@ class ModemCore:
     """The modem's default PDP CTX ID, if none is specified"""
 
     def __init__(self):
+        gpio_deep_sleep_hold(True)
+
         self._op_state = WalterModemOpState.MINIMUM
         """The current operational state of the modem."""
 
@@ -1162,26 +1166,26 @@ class ModemCore:
                 rxbuf=2048
             )
 
-        self._reset_pin = Pin(ModemCore.WALTER_MODEM_PIN_RESET, Pin.OUT, hold=True)
+            self._reset_pin = Pin(ModemCore.WALTER_MODEM_PIN_RESET, Pin.OUT, value=1, hold=True)
 
-        self._task_queue = Queue()
-        self._command_queue = Queue()
-        self._parser_data = ModemATParserData()
+            self._task_queue = Queue()
+            self._command_queue = Queue()
+            self._parser_data = ModemATParserData()
 
-        self._uart_reader_task = asyncio.create_task(self._uart_reader())
-        self._queue_worker_task = asyncio.create_task(self._queue_worker())
+            self._uart_reader_task = asyncio.create_task(self._uart_reader())
+            self._queue_worker_task = asyncio.create_task(self._queue_worker())
 
             
-        if wake_reason() == DEEPSLEEP_RESET:
-            await self._sleep_wakeup()
-        else:
-            if not await self.reset():
-                raise RuntimeError('Failed to reset modem')
-            
-        if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
-            raise RuntimeError('Failed to configure CME error reports')
-        if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED):
-            raise RuntimeError('Failed to configure cereg reports')
+            if wake_reason() == DEEPSLEEP_RESET:
+                await self._sleep_wakeup()
+            else:
+                if not await self.reset():
+                    raise RuntimeError('Failed to reset modem')
+                
+            if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
+                raise RuntimeError('Failed to configure CME error reports')
+            if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED_UE_PSM_WITH_LOCATION_EMM_CAUSE):
+                raise RuntimeError('Failed to configure cereg reports')
         
         self._begun = True
 
@@ -1196,21 +1200,15 @@ class ModemCore:
         mqtt_subs = packed_data[0]
         packed_data = packed_data[1:]
         if mqtt_subs == 1:
-            print('Hello')
             buffer = io.BytesIO(packed_data)
-            print('It\'s me')
             mqtt_subscriptions = self._mqtt_subscriptions
         
             while buffer.tell() < len(packed_data):
-                print('loopidy looping')
                 topic_length = struct.unpack('I', buffer.read(4))[0]
                 topic = struct.unpack(f'{topic_length}s', buffer.read(topic_length))[0].decode('utf-8')
                 qos = struct.unpack('B', buffer.read(1))[0]
 
-                print(f'appending: ({topic},{qos})')
                 mqtt_subscriptions.append((topic, qos))
-            
-            print('and done')
 
     def _sleep_prepare(self, persist_mqtt_subs: bool):
         if persist_mqtt_subs:
