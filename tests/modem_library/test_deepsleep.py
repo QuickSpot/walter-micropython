@@ -16,6 +16,13 @@ from walter_modem.structs import (
 modem = Modem()
 modem_rsp = ModemRsp()
 
+# NOTE: Minimal deepsleep testing
+# ===============================
+# Most of the deepsleep testing has to be done manually
+# Measuring power, expected modem behaviour, ...
+# That said, said this testfile aids in that testing,
+# as it only runs again after pressing the reset button.
+
 async def await_connection():
         print('\nShowing modem debug logs:')
         modem.debug_log = True
