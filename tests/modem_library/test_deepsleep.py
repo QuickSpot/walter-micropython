@@ -62,8 +62,8 @@ class TestModemDeepSleep(unittest.AsyncTestCase):
             print(modem._mqtt_subscriptions)
             print('Waiting 5sec before entering deepsleep')
             await asyncio.sleep(5)
-            print('Starting 10s deepsleep')
-            modem.sleep(sleep_time_ms=10000, persist_mqtt_subs=False)
+            print('Starting 20s deepsleep')
+            modem.sleep(sleep_time_ms=20000, persist_mqtt_subs=False)
         
     async def test_mqtt_subscriptions_persist_after_deepsleep(self):
         self.assert_equal([('short', 1), ('long-topic-test', 0)], modem._mqtt_subscriptions)
