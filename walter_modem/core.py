@@ -1,4 +1,5 @@
 import asyncio
+import io
 import struct
 import time
 
@@ -7,8 +8,8 @@ from machine import (
     Pin,
     lightsleep,
     deepsleep,
-    reset_cause,
-    DEEPSLEEP,
+    wake_reason,
+    DEEPSLEEP_RESET,
     RTC
 )
 
@@ -34,8 +35,6 @@ from .enums import (
 )
 
 from .structs import (
-    ModemOperator,
-    ModemPDPContext,
     ModemSocket,
     ModemHttpContext,
     ModemTaskQueueItem,
@@ -601,9 +600,9 @@ class ModemCore:
         return WalterModemState.OK
 
     async def _handle_sqnscfg(self, tx_stream, cmd, at_rsp):
-        conn_id, cid, pkt_sz, max_to, conn_to, tx_to = map(int, at_rsp.split(': ', 1)[1].split(','))
+        conn_id, cid, pkt_sz, max_to, conn_to, tx_to = map(int, at_rsp.split(b': ')[1].split(b','))
 
-        socket = self._socket_list[conn_id + 1]
+        socket = self._socket_list[conn_id - 1]
         socket.id = conn_id
         socket.pdp_context_id = cid
         socket.mtu = pkt_sz
@@ -1172,43 +1171,80 @@ class ModemCore:
         self._uart_reader_task = asyncio.create_task(self._uart_reader())
         self._queue_worker_task = asyncio.create_task(self._queue_worker())
 
-        if reset_cause == DEEPSLEEP:
+            
+        if wake_reason() == DEEPSLEEP_RESET:
             await self._sleep_wakeup()
         else:
             if not await self.reset():
                 raise RuntimeError('Failed to reset modem')
-
+            
         if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
             raise RuntimeError('Failed to configure CME error reports')
         if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED):
             raise RuntimeError('Failed to configure cereg reports')
+        
+        self._begun = True
 
     async def _sleep_wakeup(self):
         await self._run_cmd(at_cmd='AT+CFUN?', at_rsp=b'OK')
         await self._run_cmd(at_cmd='AT+CEREG?', at_rsp=b'OK')
         await self._run_cmd(at_cmd='AT+SQNSCFG?', at_rsp=b'OK')
 
-    def _sleep_prepare(self):
-        pass
+        rtc = RTC()
+        packed_data = rtc.memory()
 
-    def sleep(self, sleep_time: int, light_sleep: bool = False):
+        mqtt_subs = packed_data[0]
+        packed_data = packed_data[1:]
+        if mqtt_subs == 1:
+            print('Hello')
+            buffer = io.BytesIO(packed_data)
+            print('It\'s me')
+            mqtt_subscriptions = self._mqtt_subscriptions
+        
+            while buffer.tell() < len(packed_data):
+                print('loopidy looping')
+                topic_length = struct.unpack('I', buffer.read(4))[0]
+                topic = struct.unpack(f'{topic_length}s', buffer.read(topic_length))[0].decode('utf-8')
+                qos = struct.unpack('B', buffer.read(1))[0]
+
+                print(f'appending: ({topic},{qos})')
+                mqtt_subscriptions.append((topic, qos))
+            
+            print('and done')
+
+    def _sleep_prepare(self, persist_mqtt_subs: bool):
+        if persist_mqtt_subs:
+            buffer = io.BytesIO()
+            buffer.write(struct.pack('B', 1))
+
+            for topic, qos in self._mqtt_subscriptions:
+                encoded_topic = topic.encode('utf-8')
+                buffer.write(struct.pack('I', len(encoded_topic)))
+                buffer.write(struct.pack(f'{len(encoded_topic)}s', encoded_topic))
+                buffer.write(struct.pack('B', qos))
+
+            packed_data = buffer.getvalue()
+        else:
+            packed_data = struct.pack('B', 0)
+        
+        rtc = RTC()
+        rtc.memory(packed_data)
+
+    def sleep(self,
+        sleep_time_ms: int,
+        light_sleep: bool = False,
+        persist_mqtt_subs: bool = False
+    ):
         if light_sleep:
             self._uart.init(flow=0)
-            rts_pin = Pin(ModemCore.WALTER_MODEM_PIN_RTS, hold=True)
-            lightsleep(sleep_time)
+            rts_pin = Pin(ModemCore.WALTER_MODEM_PIN_RTS, value=1, hold=True)
+            lightsleep(sleep_time_ms)
             rts_pin.init(hold=False)
         else:
             self._uart_reader_task.cancel()
             self._queue_worker_task.cancel()
             self._uart.deinit()
 
-            self._sleep_prepare()
-            deepsleep(sleep_time)
-            self._task_queue = Queue()
-            self._command_queue = Queue()
-            self._parser_data = ModemATParserData()
-
-            asyncio.create_task(self._uart_reader())
-            asyncio.create_task(self._queue_worker())
-            
-            self._begun = True
+            self._sleep_prepare(persist_mqtt_subs)
+            time.sleep(1)
+            deepsleep(sleep_time_ms)
