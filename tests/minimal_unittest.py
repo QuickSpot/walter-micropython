@@ -4,6 +4,7 @@ import time
 GREEN_FG = '\033[32m'
 RED_FG = '\033[31m'
 BLACK_FG = '\033[30m'
+YELLOW_FG = '\033[33m'
 YELLOW_BG = '\033[43m'
 RESET = '\033[0m'
 
@@ -197,9 +198,12 @@ class TestCase:
 
     def _report_results(self):
         passed_percentage = (self.passed / self.tests_run) * 100 if self.passed else 0
+        percentage_color = GREEN_FG if passed_percentage >= 75 else (
+            YELLOW_FG if passed_percentage >= 60 else RED_FG 
+        )
         print(
             f'\nRan {self.tests_run} tests, '
-            f'{GREEN_FG if passed_percentage >= 60 else RED_FG}{passed_percentage:.2f}%{RESET} passed'
+            f'{percentage_color}{passed_percentage:.2f}%{RESET} passed'
         )
         if self.passed > 0: print(f'  {self.passed} passed')
         if self.failed > 0: print(f'  {self.failed} failed')
