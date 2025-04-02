@@ -522,9 +522,17 @@ class ModemCore:
 
         return WalterModemState.OK
 
-    async def _handle_sqns_mqtt_on_connect(self, tx_stream, cmd, at_rsp):
+    async def _handle_sqns_mqtt_on_connect(self, tx_stream, cmd: ModemCmd, at_rsp):
         _, result_code_str = at_rsp[len("+SQNSMQTTONCONNECT:"):].decode().split(',')
         result_code = int(result_code_str)
+
+        cmd.rsp.type = WalterModemRspType.MQTT
+        cmd.rsp.mqtt_rc = result_code
+
+        if result_code:
+            self._mqtt_status = WalterModemMqttState.DISCONNECTED
+        else:
+            self._mqtt_status = WalterModemMqttState.CONNECTED
 
         if self._mqtt_status == WalterModemMqttState.CONNECTED:
             for (topic, qos) in self._mqtt_subscriptions:
@@ -532,11 +540,6 @@ class ModemCore:
                     at_cmd=f'AT+SQNSMQTTSUBSCRIBE=0,{modem_string(topic)},{qos}',
                     at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic)),
                 ))
-
-        if result_code:
-            self._mqtt_status = WalterModemMqttState.DISCONNECTED
-        else:
-            self._mqtt_status = WalterModemMqttState.CONNECTED
 
         return WalterModemState.OK
 
