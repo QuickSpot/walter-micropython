@@ -262,3 +262,37 @@ class AsyncTestCase(TestCase):
             await self.async_teardown()
             print('➜ Teardown complete')
         self._report_results()
+
+class WalterModemAsserts:
+    async def assert_sends_at_command(self,
+        modem_instance,
+        expected_cmd: str,
+        method: callable,
+        at_rsp_pattern: bytes = b'OK',
+        timeout_s = 5
+    ):
+        self.tests_run += 1
+        if callable(method):
+            sent_cmd = None
+
+            def cmd_handler(cmd, at_rsp):
+                nonlocal sent_cmd
+                sent_cmd = cmd.at_cmd
+            modem_instance._register_application_queue_rsp_handler(at_rsp_pattern, cmd_handler)
+
+            await method()
+            
+            for _ in range(timeout_s):
+                if sent_cmd is not None: break
+                await asyncio.sleep(1)
+            modem_instance._unregister_application_queue_rsp_handler(cmd_handler)
+
+            if expected_cmd == sent_cmd:
+                self.passed += 1
+                self.print_success()
+            else:
+                self.errors += 1
+                self.print_fail(f'Sent command: {sent_cmd} is not expected: {expected_cmd}')
+        else:
+            self.errors += 1
+            self.print_error('Provided method is not callable')

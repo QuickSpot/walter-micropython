@@ -184,7 +184,7 @@ Asserts the first argument is not an instance of second argument
 self.assert_is_instance(4, str)
 ```
 
-### Asser Does Not Throw
+### Assert Does Not Throw
 
 Asserts the callable *(first argument)*does not throw set exception(s) *(second argument)*
 
@@ -195,3 +195,36 @@ Asserts the callable *(first argument)*does not throw set exception(s) *(second 
 ```py
 self.assert_does_not_throw(self.sum, Exception, 1, 2)
 ```
+
+## WalterModemAsserts
+
+These are asserts specific to the micropython waltermodem implimentation,
+made to reduce repetitive code and risk of errors whilst writing tests.
+
+> [!WARNING]
+> These can only be used inside of an [`AynscTestCase`](#usage)
+> as these asserts mut be awaited.
+
+To use these, also inherit from WalterModemAsserts.
+
+```py
+import minimal_unittest as unittest
+
+class TestExample(unittest.TestCase, unittest.WalterModemAsserts):
+    # ...
+```
+
+### Assert Sends AT Command
+
+Asserts a given modem method sents the correct AT command to the modem.
+
+```py
+await self.assert_sends_at_command(
+    modem_instance=modem,
+    expected_cmd='AT+CEREG=1',
+    method=lambda: modem.config_cereg_reports(WalterModemCEREGReportsType.ENABLED)
+)
+```
+
+Optionally you can also provide: `at_rsp_pattern` should it differ from `b'OK'`
+and/or `timeout_s` should you want to wait longer than 5 seconds before timing out.
