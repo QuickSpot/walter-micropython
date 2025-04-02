@@ -13,7 +13,7 @@ from walter_modem.queue import QueueFull
 
 modem = Modem()
 
-class TestModemCommon(unittest.AsyncTestCase, unittest.WalterModemAsserts):
+class TestCommon(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def test_begin_runs(self):
         await self.assert_does_not_throw(modem.begin, (
             ValueError,
@@ -72,5 +72,5 @@ class TestModemCommon(unittest.AsyncTestCase, unittest.WalterModemAsserts):
             lambda: modem.set_op_state(WalterModemOpState.NO_RF)
         )
 
-test_modem_common = TestModemCommon()
-test_modem_common.run()
+test_common = TestCommon()
+test_common.run()

@@ -33,7 +33,7 @@ async def await_connection():
         modem.debug_log = False
         raise OSError('Connection Timed-out')
 
-class PreConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
+class TestSIMAndNetworkPreConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     """SIM & Network method tests for commands that require CFUN=0"""
     async def async_setup(self):
         await modem.begin()
@@ -70,7 +70,7 @@ class EstablishLTEConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts
     async def test_connection_is_made(self):
         await self.assert_does_not_throw(await_connection, OSError)
 
-class PostConnection(unittest.AsyncTestCase):
+class TestSIMAndNetworkPostConnection(unittest.AsyncTestCase):
     async def async_setup(self):
         modem_rsp = ModemRsp()
         await modem.begin()
@@ -193,10 +193,10 @@ class PostConnection(unittest.AsyncTestCase):
         self.assert_equal(WalterModemRspType.SIM_STATE, modem_rsp.type)
 
 
-pre_connection = PreConnection()
+test_sim_and_network_pre_connection = TestSIMAndNetworkPreConnection()
 establish_lte_connection = EstablishLTEConnection()
-post_connection = PostConnection()
+test_sim_and_network_post_connection = TestSIMAndNetworkPostConnection()
 
-pre_connection.run()
+test_sim_and_network_pre_connection.run()
 establish_lte_connection.run()
-post_connection.run()
+test_sim_and_network_post_connection.run()

@@ -40,7 +40,7 @@ async def await_connection():
         modem.debug_log = False
         raise OSError('Connection Timed-out')
 
-class PreConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
+class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
         await modem.begin()
     
@@ -115,7 +115,7 @@ class PreConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
             lambda: modem.set_PDP_auth_params(PDP_CTX_ID, AUTH_PROTO, AUTH_USER, AUTH_PASS)
         )
 
-class PostConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
+class TestPDPContextManagementPostConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
         modem_rsp = ModemRsp()
         await modem.begin()
@@ -183,8 +183,8 @@ class PostConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
         )
 
 
-pre_connection = PreConnection()
-post_connection = PostConnection()
+test_pdp_context_management_pre_connection = TestPDPContextManagementPreConnection()
+test_pdp_context_management_post_connection = TestPDPContextManagementPostConnection()
 
-pre_connection.run()
-post_connection.run()
+test_pdp_context_management_pre_connection.run()
+test_pdp_context_management_post_connection.run()
