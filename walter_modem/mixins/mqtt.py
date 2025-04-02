@@ -78,7 +78,7 @@ class ModemMQTT(ModemCore):
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+SQNSMQTTCONNECT=0,{modem_string(server_name)},{port},{keep_alive}',
-            at_rsp=b'+SQNSMQTTONCONNECT:0,0'
+            at_rsp=b'+SQNSMQTTONCONNECT:0,'
         )
     
     async def mqtt_disconnect(self, rsp: ModemRsp = None) -> bool:
@@ -92,7 +92,7 @@ class ModemMQTT(ModemCore):
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSMQTTDISCONNECT=0',
-            at_rsp=b'+SQNSMQTTONDISCONNECT:0,0'
+            at_rsp=b'+SQNSMQTTONDISCONNECT:0,'
         )
 
     async def mqtt_publish(self,
