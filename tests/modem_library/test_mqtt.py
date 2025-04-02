@@ -10,9 +10,6 @@ from walter_modem.structs import (
     ModemRsp,
     WalterModemOpState
 )
-from walter_modem.utils import (
-    get_mac
-)
 
 modem = Modem()
 
