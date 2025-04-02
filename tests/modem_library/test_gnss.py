@@ -35,7 +35,7 @@ async def await_connection():
         modem.debug_log = False
         raise OSError('Connection Timed-out')
 
-class TestModemGNSSPreConnection(unittest.AsyncTestCase):
+class PreConnection(unittest.AsyncTestCase):
     async def async_setup(self):
         modem_rsp = ModemRsp()
         await modem.begin()
@@ -133,7 +133,7 @@ class TestModemGNSSPreConnection(unittest.AsyncTestCase):
         except asyncio.TimeoutError:
             raise OSError('Runtime Error, timeout whilst waiting for "wait_for_gnss_fix"')
 
-class TestModemGNSSPostConnection(unittest.AsyncTestCase):
+class PostConnection(unittest.AsyncTestCase):
     async def async_setup(self):
         modem_rsp = ModemRsp()
 
@@ -162,9 +162,8 @@ class TestModemGNSSPostConnection(unittest.AsyncTestCase):
         self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
 
 
+pre_connection = PreConnection()
+post_connection = PostConnection()
 
-test_modem_gnss_pre_connection = TestModemGNSSPreConnection()
-test_modem_gnss_post_connection = TestModemGNSSPostConnection()
-
-test_modem_gnss_pre_connection.run()
-test_modem_gnss_post_connection.run()
+pre_connection.run()
+post_connection.run()
