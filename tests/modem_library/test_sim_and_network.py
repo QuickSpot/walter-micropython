@@ -193,10 +193,10 @@ class PostConnection(unittest.AsyncTestCase):
         self.assert_equal(WalterModemRspType.SIM_STATE, modem_rsp.type)
 
 
-test_modem_sim_and_network_pre_connection = PreConnection()
-test_modem_establish_lte_connection = EstablishLTEConnection()
-test_modem_sim_and_network_post_connection = PostConnection()
+pre_connection = PreConnection()
+establish_lte_connection = EstablishLTEConnection()
+post_connection = PostConnection()
 
-test_modem_sim_and_network_pre_connection.run()
-test_modem_establish_lte_connection.run()
-test_modem_sim_and_network_post_connection.run()
+pre_connection.run()
+establish_lte_connection.run()
+post_connection.run()
