@@ -393,7 +393,7 @@ class Modem(
         Coroutine to store a certificate or a key in the NVRAM of the modem
         """
         key_type = 'privatekey' if is_private_key else 'certificate'
-        return self._run_cmd(
+        return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+SQNSNVW={modem_string(key_type)},{slot_idx},{len(key)}',
             at_rsp=b'OK',
