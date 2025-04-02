@@ -24,8 +24,6 @@ from .enums import (
 )
 
 from .structs import (
-    ModemOperator,
-    ModemPDPContext,
     ModemSocket,
     ModemHttpContext,
     ModemTaskQueueItem,
@@ -1062,6 +1060,17 @@ class ModemCore:
                 self._application_queue_rsp_handlers.append((start_pattern, handler))
         else:
             log('WARNING', 'Invalid parameters, not registering application queue rsp handler')
+    
+    def _unregister_application_queue_rsp_handler(self, handler: callable):
+        if callable(handler):
+            if self._application_queue_rsp_handlers_set:
+                for i in range(len(self._application_queue_rsp_handlers) - 1, -1, -1):
+                    if self._application_queue_rsp_handlers[i][1] is handler:
+                        self._application_queue_rsp_handlers.pop(i)
+                if not self._application_queue_rsp_handlers:
+                    self._application_queue_rsp_handlers_set = False
+        else:
+            log('WARNING', f'Invalid paramater, cannot unregister: {type(handler)}, must be a callable')
 
     async def _run_cmd(self,
         at_cmd: str,
@@ -1152,7 +1161,7 @@ class ModemCore:
                 raise RuntimeError('Failed to reset modem')
             if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
                 raise RuntimeError('Failed to configure CME error reports')
-            if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED):
+            if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED_UE_PSM_WITH_LOCATION_EMM_CAUSE):
                 raise RuntimeError('Failed to configure cereg reports')
             
             self._begun = True
