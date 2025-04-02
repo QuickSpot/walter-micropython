@@ -282,6 +282,26 @@ class WalterModemMqttState(Enum):
     CONNECTED = 0
     DISCONNECTED = 0
 
+class WalterModemMqttResultCode(Enum):
+    SUCCESS = 0
+    ERR_NOMEM = -1
+    ERR_PROTOCOL = -2
+    ERR_INVAL = -3
+    ERR_NO_CONN = -4
+    ERR_CONN_REFUSED = -5
+    ERR_NOT_FOUND = -6
+    ERR_CONN_LOST = -7
+    ERR_TLS = -8
+    ERR_PAYLOAD_SIZE = -9
+    ERR_NOT_SUPPORTED = -10
+    ERR_AUTH = -11
+    ERR_ACL_DENIED = -12
+    ERR_UNKOWN = -13
+    ERR_ERRNO = -14
+    ERR_EAI = -15
+    ERR_PROXY = -16
+    ERR_UNAVAILABLE = -17
+
 class WalterModemSocketProto(Enum):
     """Protocol used by the socket."""
     TCP = 0
