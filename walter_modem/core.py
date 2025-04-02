@@ -1002,7 +1002,7 @@ class ModemCore:
                 (b'+SQNSMQTTONDISCONNECT:0,', self._handle_sqns_mqtt_on_disconnect),
                 (b'+SQNSMQTTONMESSAGE:0,', self._handle_sqns_mqtt_on_message),
                 (b'+SQNSMQTTMEMORYFULL', self._handle_sqns_mqtt_memory_full),
-                (b'+SQNSMQTTONSUBSCRIBE:0', self._handle_sqns),
+                (b'+SQNSMQTTONSUBSCRIBE:0', self._handle_sqns_mqtt_subscribe),
                 # - Socket
                 (b'+SQNSH: ', self._handle_sqn_sh),
 
