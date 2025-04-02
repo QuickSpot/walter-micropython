@@ -547,6 +547,9 @@ class ModemCore:
         _, result_code_str = at_rsp[len("+SQNSMQTTONDISCONNECT:"):].decode().split(',')
         result_code = int(result_code_str)
 
+        cmd.rsp.type = WalterModemRspType.MQTT
+        cmd.rsp.mqtt_rc = result_code
+
         if result_code != 0:
             return WalterModemState.ERROR
 
