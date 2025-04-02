@@ -5,22 +5,33 @@ It includes all the standard asserts and measures how long each assert took.
 
 ## Setup
 
+### Using `mpremote`
+
 Copy `minimal_unittest.py` to `/lib/minimal_unittest/__init__.py` on the
 Micropython device.
 
-Example using [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
-
 ```sh
+mpremote mkdir :lib # Make the lib dir on the MicroPython device if not already
+mpremote mkdir :lib/minimal_unittest
 mpremote cp tests/minimal_unittest.py :lib/minimal_unittest/__init__.py
 ```
 
 Then run the tests on the device.
 
-Example using [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
-
 ```sh
 mpremote run tests/test_unittest.py
 ```
+
+> [!NOTE]
+> When no device is specified mpremote takes the first available device, the above example leverage that.
+
+### Using `Thonny`
+
+Place `minimal_unittest.py` in `:lib/minimal_unittest` as `__init__.py` on the Micropython device.
+
+![thonny-minimal-unittest-dir](./.readme_img/thonny-minimal-unittest-dir.png)
+
+![thonny-minimal-unittest-install](./.readme_img/thonny-minimal-unittest-install.gif)
 
 ## Usage
 
@@ -32,7 +43,7 @@ Every test method should have 1 assert call.
 
 > [!NOTE]
 > `TestCase` only support synchronous methods,
-> to work with asynchronous methods; inherit from `AsyncTestCase` instead.
+> to work with asynchronous methods inherit from `AsyncTestCase` instead.
 
 ```py
 import minimal_unittest as unittest
