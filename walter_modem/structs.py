@@ -16,7 +16,8 @@ from .enums import (
     WalterModemSocketAcceptAnyRemote,
     WalterModemSocketProto,
     WalterModemSocketState,
-    WalterModemState
+    WalterModemState,
+    WalterModemMqttResultCode
 )
 
 
@@ -206,6 +207,9 @@ class ModemRsp:
         """Unix timestamp of the current time and date in the modem."""
 
         self.http_response: ModemHttpResponse | None = None
+
+        self.mqtt_rc: WalterModemMqttResultCode | None = None
+        """Result code of the MQTT command"""
 
         self.mqtt_response: ModemMQTTResponse | None = None
 
