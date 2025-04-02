@@ -14,5 +14,5 @@
         ["walter_modem/mixins/pdp.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/pdp.py"],
         ["walter_modem/mixins/socket.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/socket.py"]
     ],
-    "version": "1.1"
+    "version": "1.1.0"
 }
