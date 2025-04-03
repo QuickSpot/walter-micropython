@@ -340,10 +340,6 @@ async def setup():
         socket_id = modem_rsp.socket_id
     else:
         print('Failed to create socket')
-        return False   
-
-    if not await modem.config_socket(socket_id=socket_id):
-        print('Failed to config socket')
         return False
     
     if not await modem.config_gnss():
