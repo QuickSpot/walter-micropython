@@ -85,7 +85,7 @@ class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.Wal
             if int(chr(at_rsp[10])) == PDP_CTX_ID:
                 pdp_ctx_str_from_modem = at_rsp[12:]
 
-        modem._register_application_queue_rsp_handler(b'+CGDCONT: ', cgdcont_handler)
+        modem.register_application_queue_rsp_handler(b'+CGDCONT: ', cgdcont_handler)
         await modem._run_cmd(at_cmd='AT+CGDCONT?', at_rsp=b'OK')
 
         for _ in range(100):

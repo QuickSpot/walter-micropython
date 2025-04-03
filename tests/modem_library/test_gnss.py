@@ -95,7 +95,7 @@ class TestGNSSPreConnection(unittest.AsyncTestCase):
             nonlocal gnss_config_str_from_modem
             gnss_config_str_from_modem = at_rsp
         
-        modem._register_application_queue_rsp_handler(b'+LPGNSSCFG: ', lpgnsscfg_handler)
+        modem.register_application_queue_rsp_handler(b'+LPGNSSCFG: ', lpgnsscfg_handler)
         await modem._run_cmd(at_cmd='AT+LPGNSSCFG?', at_rsp=b'OK')
 
         for _ in range(100):
