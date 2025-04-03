@@ -9,14 +9,6 @@ from .enums import (
     WalterModemNetworkRegState,
     WalterModemOpState,
     WalterModemOperatorFormat,
-    WalterModemPDPAuthProtocol,
-    WalterModemPDPContextState,
-    WalterModemPDPDataCompression,
-    WalterModemPDPHeaderCompression,
-    WalterModemPDPIPv4AddrAllocMethod,
-    WalterModemPDPPCSCFDiscoveryMethod,
-    WalterModemPDPRequestType,
-    WalterModemPDPType,
     WalterModemRat,
     WalterModemRspParserState,
     WalterModemRspType,
@@ -24,7 +16,8 @@ from .enums import (
     WalterModemSocketAcceptAnyRemote,
     WalterModemSocketProto,
     WalterModemSocketState,
-    WalterModemState
+    WalterModemState,
+    WalterModemMqttResultCode
 )
 
 
@@ -135,7 +128,7 @@ class ModemOperator:
 class ModemBandSelection:
     """Represents a band selection for a given radio access technology and operator."""
     def __init__(self):
-        self.rat = WalterModemRat.AUTO
+        self.rat = WalterModemRat.LTEM
         """The radio access technology for which the bands are configured"""
         
         self.net_operator = ModemOperator()
@@ -165,10 +158,10 @@ class ModemMQTTResponse:
 class ModemSignalQuality:
     """Grouping the RSRQ and RSPR signal quality parameters."""
     def __init__(self):
-        self.rsrq = None
+        self.rsrq: int = None
         """The RSRQ in 10ths of dB"""
 
-        self.rsrp = None
+        self.rsrp: int = None
         """The RSPR in dBm"""
 
 
@@ -176,7 +169,7 @@ class ModemRsp:
     """Represents a response """
     def __init__(self):
         self.result: WalterModemState | None = WalterModemState.OK
-        """The result of the executed command."""
+        """The modem state after running the last command"""
 
         self.type: WalterModemRspType | None = WalterModemRspType.NO_DATA
         """The data type of the response"""
@@ -188,13 +181,9 @@ class ModemRsp:
         """The operational state of the modem."""
         
         self.sim_state: WalterModemSimState | None = None
-        """The state of the SIM card"""
         
         self.cme_error: WalterModemCMEError | None = None
-        """The CME error received from the modem."""
-        
-        self.pdp_ctx_id: int | None = None
-        """The ID of a PDP context."""
+        """The CME error last received from the modem."""
         
         self.rat: int | None = None
         """The radio access technology"""
@@ -203,29 +192,26 @@ class ModemRsp:
         """The RSSI of the signal in dBm"""
 
         self.signal_quality: ModemSignalQuality | None = None
-        """Signal quality"""
 
         self.band_sel_cfg_list: list[ModemBandSelection] | None = None
-        """The band selection configuration set."""
+        """The band selection configuration list."""
         
         self.pdp_address_list: list | None = None
-        """The list of addresses of a cert"""
         
         self.socket_id: int | None = None
-        """The ID of the socket."""
         
         self.gnss_assistance: ModemGNSSAssistance | None = None
-        """The band selection configuration set."""
+        """The band selection configuration list."""
         
         self.clock: float | None = None
         """Unix timestamp of the current time and date in the modem."""
 
         self.http_response: ModemHttpResponse | None = None
-        """HTTP response"""
+
+        self.mqtt_rc: WalterModemMqttResultCode | None = None
+        """Result code of the MQTT command"""
 
         self.mqtt_response: ModemMQTTResponse | None = None
-
-        #TODO: coap_response
 
         self.cell_information: ModemCellInformation | None = None
 
@@ -314,76 +300,6 @@ class ModemTaskQueueItem:
         
         self.cmd = None
         """The AT command pointer in case rsp is None"""
-
-
-class ModemPDPContext:
-    """Represents a PDP context."""
-    def __init__(self, id):
-        self.state = WalterModemPDPContextState.FREE
-        """The state of the PDP context."""
-        
-        self.id = id
-        """The ID of this PDP data context."""
-        
-        self.type = WalterModemPDPType.IP
-        """The type of packet data protocol."""
-        
-        self.apn = ""
-        """"The APN to use"""
-        
-        self.pdp_address = ""
-        """The FDP address od this context."""
-        
-        self.pdp_address2 = ""
-        """A secondary IPv6 PDPaddress when dual stack is enabled."""
-        
-        self.header_comp = WalterModemPDPHeaderCompression.UNSPEC
-        """The header compression used in the PDP context"""
-        
-        self.data_comp = WalterModemPDPDataCompression.UNSPEC
-        """The data compression method used in the PDP context"""
-        
-        self.ipv4_alloc_method = WalterModemPDPIPv4AddrAllocMethod.NAS
-        """The IPv4 address allocation method used in the PDP context"""
-        
-        self.request_type = WalterModemPDPRequestType.NEW_OR_HANDOVER
-        """The packet data protocol request type"""
-        
-        self.pcscf_method = WalterModemPDPPCSCFDiscoveryMethod.AUTO
-        """The method to use for p-CSCF discovery"""
-        
-        self.for_IMCN = False
-        """Flag indicating if the PDP context is used for IM CN 
-        subsystem-related signalling"""
-        
-        self.use_NSLPI = False
-        """Flag indicating if the PDP context should use Non-Access Stratum 
-        (NAS) Signalling Low Priority Indication (NSLPI)"""
-        
-        self.use_secure_PCO = False
-        """Flag indicating if the Protocol Configuration Options (PCO) should be protected"""
-        
-        self.use_NAS_ipv4_MTU_discovery = False
-        """Flag indicating if NAS signalling should be used to discover the 
-        IPv4 MTU"""
-        
-        self.use_local_addr_ind = False
-        """Flag indicating if the system supports local IP addresses in the 
-        Traffic Flow Template (TFT)"""
-        
-        self.use_NAS_non_IPMTU_discovery = False
-        """Flag indicating if NAS should be used to discover the MTU of non-IP
-        PDP contexts"""
-        
-        self.auth_proto = WalterModemPDPAuthProtocol.NONE
-        """"The authentication protocol used to activate the PDP"""
-        
-        self.auth_user = ""
-        """The user to authenticate."""
-        
-        self.auth_pass = ""
-        """The password to authenticate"""
-
 
 class ModemSocket:
     """Represents a socket."""

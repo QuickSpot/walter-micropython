@@ -17,7 +17,7 @@ from ..utils import (
 
 class ModemSocket(ModemCore):
     async def create_socket(self,
-        pdp_context_id: int = -1,
+        pdp_context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         mtu: int = 300,
         exchange_timeout: int = 90,
         conn_timeout: int = 60,
@@ -29,7 +29,7 @@ class ModemSocket(ModemCore):
         Additional socket settings can be applied.
         The socket can be used for communication.
 
-        :param pdp_context_id: The PDP context id or -1 to re-use the last one.
+        :param pdp_context_id: The PDP context id.
         :param: mtu: The Maximum Transmission Unit used by the socket.
         :param exchange_timeout: The maximum number of seconds this socket can be inactive.
         :param conn_timeout: The maximum number of seconds this socket is allowed to try to connect.
@@ -38,16 +38,9 @@ class ModemSocket(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        try:
-            if pdp_context_id == -1:
-                ctx = self._pdp_ctx
-            else:
-                ctx = self._pdp_ctx_list[pdp_context_id - 1]
-        except Exception:
+        if pdp_context_id < ModemCore.MIN_PDP_CTX_ID or pdp_context_id > ModemCore.MAX_PDP_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-        
-        self._pdp_ctx = ctx
 
         socket = None
         for _socket in self._socket_list:
@@ -62,7 +55,7 @@ class ModemSocket(ModemCore):
 
         self._socket = socket
 
-        socket.pdp_context_id = ctx.id
+        socket.pdp_context_id = pdp_context_id
         socket.mtu = mtu
         socket.exchange_timeout = exchange_timeout
         socket.conn_timeout = conn_timeout
@@ -79,43 +72,9 @@ class ModemSocket(ModemCore):
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSCFG={},{},{},{},{},{}'.format(
-                socket.id, ctx.id, socket.mtu, socket.exchange_timeout,
+                socket.id, socket.pdp_context_id, socket.mtu, socket.exchange_timeout,
                 socket.conn_timeout * 10, socket.send_delay_ms // 100
             ),
-            at_rsp=b'OK',
-            complete_handler=complete_handler,
-            complete_handler_arg=socket
-        )
-
-    async def config_socket(self, socket_id = -1, rsp: ModemRsp = None) -> bool:
-        """
-        Configures a newly created socket to ensure the modem is correctly set up to use it.
-
-        :param socket_id: The id of the socket to connect or -1 to re-use the last one.
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-        try:
-            if socket_id == -1:
-                socket = self._socket
-            else:
-                socket = self._socket_list[socket_id - 1]
-        except Exception:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
-            return False
-        
-        self._socket = socket
-
-        async def complete_handler(result, rsp, complete_handler_arg):
-            sock = complete_handler_arg
-
-            if result == WalterModemState.OK:
-                sock.state = WalterModemSocketState.CONFIGURED
-
-        return await self._run_cmd(
-            rsp=rsp,
-            at_cmd=f'AT+SQNSCFGEXT={socket_id},2,0,0,0,0,0',
             at_rsp=b'OK',
             complete_handler=complete_handler,
             complete_handler_arg=socket

@@ -31,7 +31,7 @@ class ModemHTTP(ModemCore):
             if rsp: rsp.result = WalterModemState.ERROR
             return False
 
-        if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -106,11 +106,11 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES or profile_id < 0:
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES or profile_id < 0:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
-        if tls_profile_id and tls_profile_id > ModemCore.WALTER_MODEM_MAX_TLS_PROFILES:
+        if tls_profile_id and tls_profile_id > ModemCore.MAX_TLS_PROFILES:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -140,7 +140,7 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -159,7 +159,7 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -179,7 +179,7 @@ class ModemHTTP(ModemCore):
 
         :return bool:
         """
-        if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -216,7 +216,7 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -265,7 +265,7 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 

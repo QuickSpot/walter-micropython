@@ -197,7 +197,7 @@ async def unlock_sim() -> bool:
         return False
 
     # Give the modem time to detect the SIM
-    asyncio.sleep(2)
+    await asyncio.sleep(2)
     if await modem.unlock_sim(pin=config.SIM_PIN):
         print('  - SIM unlocked')
     else:
@@ -319,29 +319,27 @@ async def setup():
     
     if not await modem.create_PDP_context(
         apn=config.CELL_APN,
-        auth_user=config.APN_USERNAME,
-        auth_pass=config.APN_PASSWORD,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.authenticate_PDP_context():
-        print('Failed to authenticate PDP context')
+    if config.APN_USERNAME and not await modem.set_PDP_auth_params(
+        protocol=config.AUTHENTICATION_PROTOCOL,
+        user_id=config.APN_USERNAME,
+        password=config.APN_PASSWORD
+    ):
+        print('Failed to set PDP context authentication paramaters')
 
     print('Connecting to LTE Network')
     if not await lte_connect():
         return False
    
     print('Creating socket')
-    if await modem.create_socket(pdp_context_id=modem_rsp.pdp_ctx_id, rsp=modem_rsp):
+    if await modem.create_socket(rsp=modem_rsp):
         socket_id = modem_rsp.socket_id
     else:
         print('Failed to create socket')
-        return False   
-
-    if not await modem.config_socket(socket_id=socket_id):
-        print('Failed to config socket')
         return False
     
     if not await modem.config_gnss():
@@ -479,6 +477,6 @@ async def main():
         print(f'Waiting {config.SLEEP_TIME} seconds before exiting')
         # Sleep a while to prevent getting stuck in an infite crash loop
         # And give time for the serial over usb to function
-        asyncio.sleep(config.SLEEP_TIME)
+        await asyncio.sleep(config.SLEEP_TIME)
 
 asyncio.run(main())

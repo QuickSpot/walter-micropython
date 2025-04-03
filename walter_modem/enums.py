@@ -17,15 +17,14 @@ class WalterModemState(Enum):
     ERROR = 1
     TIMEOUT = 2
     NO_MEMORY = 3
-    NO_FREE_PDP_CONTEXT = 4
-    NO_SUCH_PDP_CONTEXT = 5
-    NO_FREE_SOCKET = 6
-    NO_SUCH_SOCKET = 7
-    NO_SUCH_PROFILE = 8
-    NOT_EXPECTING_RING = 9
-    AWAITING_RING = 10
-    BUSY = 11
-    NO_DATA = 12
+    NO_SUCH_PDP_CONTEXT = 4
+    NO_FREE_SOCKET = 5
+    NO_SUCH_SOCKET = 6
+    NO_SUCH_PROFILE = 7
+    NOT_EXPECTING_RING = 8
+    AWAITING_RING = 9
+    BUSY = 10
+    NO_DATA = 11
 
 class WalterModemSimState(Enum):
     """SIM card states."""
@@ -48,9 +47,8 @@ class WalterModemSimState(Enum):
 
 class WalterModemRat(Enum):
     """Types of 3GPP access technologies supported by Walter."""
-    LTEM = 0
-    NBIOT = 1
-    AUTO = 2
+    LTEM = 1
+    NBIOT = 2
 
 class WalterModemOpState(Enum):
     """Modem operational modes."""
@@ -180,24 +178,15 @@ class WalterModemCmdState(Enum):
     RETRY_AFTER_ERROR = 4
     COMPLETE = 6
 
-
-class WalterModemPDPContextState(Enum):
-    """PDP context states."""
-    FREE = 0
-    RESERVED = 1
-    INACTIVE = 2
-    ACTIVE = 3
-    ATTACHED = 4
-
 class WalterModemPDPType(Enum):
     """Supported packet data protocol types."""
-    X25 = 0
-    IP = 1
-    IPV6 = 2
-    IPV4V6 = 3
-    OSPIH = 4
-    PPP = 5
-    NON_IP = 6
+    X25 = '"X.25"'
+    IP = '"IP"'
+    IPV6 = '"IPV6"'
+    IPV4V6 = '"IPV4V6"'
+    OSPIH = '"OPSIH"'
+    PPP = '"PPP"'
+    NON_IP = '"Non-IP"'
 
 class WalterModemPDPHeaderCompression(Enum):
     """Supported packet data protocol header compression mechanisms."""
@@ -249,16 +238,15 @@ class WalterModemRspType(Enum):
     SIGNAL_QUALITY = 4
     SIM_STATE = 5
     CME_ERROR = 6
-    PDP_CTX_ID = 7
-    BANDSET_CFG_SET = 8
-    PDP_ADDR = 9
-    SOCKET_ID = 10
-    GNSS_ASSISTANCE_DATA = 11
-    CLOCK = 12
-    MQTT = 13
-    HTTP = 14
-    COAP = 15
-    CELL_INFO = 16
+    BANDSET_CFG_SET = 7
+    PDP_ADDR = 8
+    SOCKET_ID = 9
+    GNSS_ASSISTANCE_DATA = 10
+    CLOCK = 11
+    MQTT = 12
+    HTTP = 13
+    COAP = 14
+    CELL_INFO = 15
     REG_STATE = 50
 
 class WalterModemNetworkSelMode(Enum):
@@ -293,6 +281,26 @@ class WalterModemHttpContextState(Enum):
 class WalterModemMqttState(Enum):
     CONNECTED = 0
     DISCONNECTED = 0
+
+class WalterModemMqttResultCode(Enum):
+    SUCCESS = 0
+    ERR_NOMEM = -1
+    ERR_PROTOCOL = -2
+    ERR_INVAL = -3
+    ERR_NO_CONN = -4
+    ERR_CONN_REFUSED = -5
+    ERR_NOT_FOUND = -6
+    ERR_CONN_LOST = -7
+    ERR_TLS = -8
+    ERR_PAYLOAD_SIZE = -9
+    ERR_NOT_SUPPORTED = -10
+    ERR_AUTH = -11
+    ERR_ACL_DENIED = -12
+    ERR_UNKOWN = -13
+    ERR_ERRNO = -14
+    ERR_EAI = -15
+    ERR_PROXY = -16
+    ERR_UNAVAILABLE = -17
 
 class WalterModemSocketProto(Enum):
     """Protocol used by the socket."""

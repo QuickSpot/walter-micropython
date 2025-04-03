@@ -246,8 +246,6 @@ async def modem_setup():
     
     if not await modem.create_PDP_context(
         apn=config.CELL_APN,
-        auth_user=config.APN_USERNAME,
-        auth_pass=config.APN_PASSWORD,
         rsp=modem_rsp
     ):
         print('Failed to create pdp context')
@@ -255,8 +253,12 @@ async def modem_setup():
     
     wdt.feed()
    
-    if config.APN_USERNAME and not await modem.authenticate_PDP_context(modem_rsp.pdp_ctx_id):
-        print('Failed to authenticate PDP context')
+    if config.APN_USERNAME and not await modem.set_PDP_auth_params(
+        protocol=config.AUTHENTICATION_PROTOCOL,
+        user_id=config.APN_USERNAME,
+        password=config.APN_PASSWORD
+    ):
+        print('Failed to set PDP context authentication paramaters')
         return False
     
     if not await modem.tls_config_profile(

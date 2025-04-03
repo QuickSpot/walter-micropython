@@ -1,13 +1,9 @@
 import asyncio
 import time
 
-from machine import UART
-from .queue import Queue
-
 from .enums import (
-    WalterModemNetworkRegState,
-    WalterModemNetworkSelMode,
     WalterModemOpState,
+    WalterModemNetworkRegState,
     WalterModemRspParserState,
     WalterModemCmdState,
     WalterModemState,
@@ -18,14 +14,11 @@ from .enums import (
     WalterModemSimState,
     WalterModemHttpContextState,
     WalterModemSocketState,
-    WalterModemCMEErrorReportsType,
-    WalterModemCEREGReportsType,
-    WalterModemMqttState
+    WalterModemMqttState,
+    WalterModemMqttResultCode
 )
 
 from .structs import (
-    ModemOperator,
-    ModemPDPContext,
     ModemSocket,
     ModemHttpContext,
     ModemTaskQueueItem,
@@ -38,12 +31,10 @@ from .structs import (
     ModemGNSSAssistance,
     ModemCmd,
     ModemRsp,
-    ModemATParserData,
     ModemMqttMessage
 )
 
 from .utils import (
-    bytes_to_str,
     parse_cclk_time,
     parse_gnss_time,
     modem_string,
@@ -58,61 +49,67 @@ class ModemCore:
     SMALLER_THAN = ord('<')
     SPACE = ord(' ')
 
-    WALTER_MODEM_DEFAULT_CMD_ATTEMPTS = 3
+    DEFAULT_CMD_ATTEMPTS = 3
     """The default number of attempts to execute a command."""
 
-    WALTER_MODEM_PIN_RX = 14
+    PIN_RX = 14
     """The RX pin on which modem data is received."""
 
-    WALTER_MODEM_PIN_TX = 48
+    PIN_TX = 48
     """The TX to which modem data must be transmitted."""
 
-    WALTER_MODEM_PIN_RTS = 21
+    PIN_RTS = 21
     """The RTS pin on the ESP32 side."""
 
-    WALTER_MODEM_PIN_CTS = 47
+    PIN_CTS = 47
     """The CTS pin on the ESP32 size."""
 
-    WALTER_MODEM_PIN_RESET = 45
+    PIN_RESET = 45
     """The active low modem reset pin."""
 
-    WALTER_MODEM_BAUD = 115200
+    BAUD = 115200
     """The baud rate used to talk to the modem."""
 
-    WALTER_MODEM_CMD_TIMEOUT = 5
+    CMD_TIMEOUT = 5
     """The maximum number of seconds to wait."""
 
-    WALTER_MODEM_MIN_VALID_TIMESTAMP = 1672531200
+    MIN_VALID_TIMESTAMP = 1672531200
     """Any modem time below 1 Jan 2023 00:00:00 UTC is considered an invalid time."""
 
-    WALTER_MODEM_MAX_PDP_CTXTS = 8
-    """The maximum number of PDP contexts that the library can support."""
+    MIN_PDP_CTX_ID = 1
+    """The lowest possible pdp context ID"""
 
-    WALTER_MODEM_MAX_SOCKETS = 6
+    MAX_PDP_CTX_ID = 8
+    """The highest possible PDP context ID"""
+
+    DEFAULT_PDP_CTX_ID = 1
+    """The modem's default PDP CTX ID, if none is specified"""
+
+    MAX_SOCKETS = 6
     """The maximum number of sockets that the library can support."""
 
-    WALTER_MODEM_MAX_HTTP_PROFILES = 3
+    MAX_HTTP_PROFILES = 3
     """The max nr of http profiles"""
 
-    WALTER_MODEM_MAX_TLS_PROFILES = 6
+    MAX_TLS_PROFILES = 6
     """The maximum number of TLS profiles that the library can support"""
 
-    WALTER_MODEM_OPERATOR_MAX_SIZE = 16
+    OPERATOR_MAX_SIZE = 16
     """The maximum number of characters of an operator name"""
 
-    WALTER_MODEM_MQTT_TOPIC_MAX_SIZE = 127
+    MQTT_TOPIC_MAX_SIZE = 127
     """The recommended mamximum number of characters in an MQTT topic"""
 
-    WALTER_MODEM_MQTT_MAX_PENDING_RINGS = 8
+    MQTT_MAX_PENDING_RINGS = 8
     """The recommended maximum number of rings that can be pending for the MQTT protocol"""
 
-    WALTER_MODEM_MQTT_MAX_TOPICS = 4
+    MQTT_MAX_TOPICS = 4
     """The recommended maximum allowed MQTT topics to subscribe to"""
 
-    WALTER_MODEM_MQTT_MIN_KEEP_ALIVE = 20
+    MQTT_MIN_KEEP_ALIVE = 20
     """The recommended minimum for the MQTT keep alive time"""
 
-    WALTER_MODEM_MQTT_MAX_MESSAGE_LEN = 4096
+    MQTT_MAX_MESSAGE_LEN = 4096
     """The maximum MQTT payload length"""
 
     def __init__(self):
@@ -122,33 +119,13 @@ class ModemCore:
         self._reg_state = WalterModemNetworkRegState.NOT_SEARCHING
         """The current network registration state of the modem."""
 
-        self._sim_PIN = None
-        """The PIN code when required for the installed SIM."""
-
-        self._network_sel_mode = WalterModemNetworkSelMode.AUTOMATIC
-        """The chosen network selection mode."""
-
-        self._operator = ModemOperator()
-        """An operator to use, this is ignored when automatic operator selectionis used."""
-
-        self._pdp_ctx = None
-        """
-        The PDP context which is currently in use by the library or None when
-        no PDP context is in use. In use doesn't mean that the 
-        context is activated yet it is just a pointer to the PDP context
-        which was last used by any of the functions that work with a PDPcontext.
-        """
-        
-        self._pdp_ctx_list = [ModemPDPContext(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_PDP_CTXTS)]
-        """The list of PDP contexts."""
-
-        self._socket_list = [ModemSocket(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_SOCKETS) ]
+        self._socket_list = [ModemSocket(idx + 1) for idx in range(ModemCore.MAX_SOCKETS) ]
         """The list of sockets"""
 
         self._socket = None
         """The socket which is currently in use by the library or None when no socket is in use."""
 
-        self._http_context_list = [ModemHttpContext() for _ in range(ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES) ]
+        self._http_context_list = [ModemHttpContext() for _ in range(ModemCore.MAX_HTTP_PROFILES) ]
         """The list of http contexts in the modem"""
 
         self._http_current_profile = 0xff
@@ -165,6 +142,21 @@ class ModemCore:
         """Inbox for MQTT messages"""
 
         self._mqtt_subscriptions: list[tuple[str, int]] = []
+
+        self._proc_queue_rsp_rsp_handlers = None
+        """The mapping of rsp patterns to handler methods for processing the rsp queue"""
+
+        self._proc_queue_rsp_cmd_handlers = None
+        """The mapping of cmd patterns to handler methods for processing the rsp queue"""
+
+        self._application_queue_rsp_handlers: tuple = None
+        """The mapping of rsp patterns to handler methods defined by the application code"""
+
+        self._application_queue_rsp_handlers_set: bool = False
+        """Whether or not the application has defined/set queue rsp handlers"""
+
+        self._begun = False
+        """Whether or not the begin method has already been run."""
 
     def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
         # According to modem documentation;
@@ -210,7 +202,8 @@ class ModemCore:
         """
         qitem = ModemTaskQueueItem()
         qitem.rsp = self._parser_data.line
-
+        
+        if self.debug_log: log('DEBUG, RX', qitem.rsp.decode())
         await self._task_queue.put(qitem)
 
         self._parser_data.line = bytearray()
@@ -240,10 +233,6 @@ class ModemCore:
         while True:
             incoming_uart_data = bytearray(256)
             size = await rx_stream.readinto(incoming_uart_data)
-            if self.debug_log and size > 0:
-                for line in incoming_uart_data[:size].splitlines():
-                    if len(line) > 0:
-                        log('DEBUG, RX', bytes_to_str(line))
 
             for b in incoming_uart_data[:size]:
                 if self._parser_data.state == WalterModemRspParserState.START_CR:
@@ -297,7 +286,7 @@ class ModemCore:
                     self._add_at_byte_to_buffer(b, False)
 
                 elif self._parser_data.state == WalterModemRspParserState.DATA_HTTP_START2:
-                    if b == ModemCore.SMALLER_THAN and self._http_current_profile < ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+                    if b == ModemCore.SMALLER_THAN and self._http_current_profile < ModemCore.MAX_HTTP_PROFILES:
                         # FIXME: modem might block longer than cmd timeout,
                         # will lead to retry, error etc - fix properly
                         self._parser_data.raw_chunk_size = self._http_context_list[self._http_current_profile].content_length + len("\r\nOK\r\n")
@@ -350,7 +339,7 @@ class ModemCore:
     async def _process_queue_cmd(self, tx_stream, cmd):
         if cmd.type == WalterModemCmdType.TX:
             if self.debug_log:
-                log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+                log('DEBUG, TX', cmd.at_cmd)
 
             tx_stream.write(cmd.at_cmd)
             tx_stream.write(b'\r\n')
@@ -361,7 +350,7 @@ class ModemCore:
         or cmd.type == WalterModemCmdType.DATA_TX_WAIT:
             if cmd.state == WalterModemCmdState.NEW:
                 if self.debug_log:
-                    log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+                    log('DEBUG, TX', cmd.at_cmd)
                     
                 tx_stream.write(cmd.at_cmd)
                 if cmd.type == WalterModemCmdType.DATA_TX_WAIT:
@@ -375,7 +364,7 @@ class ModemCore:
 
             else:
                 tick_diff = time.time() - cmd.attempt_start
-                timed_out = tick_diff >= ModemCore.WALTER_MODEM_CMD_TIMEOUT
+                timed_out = tick_diff >= ModemCore.CMD_TIMEOUT
                 if timed_out or cmd.state == WalterModemCmdState.RETRY_AFTER_ERROR:
                     if cmd.attempt >= cmd.max_attempts:
                         if timed_out:
@@ -384,7 +373,7 @@ class ModemCore:
                             await self._finish_queue_cmd(cmd, WalterModemState.ERROR)
                     else:
                         if self.debug_log:
-                            log('DEBUG, TX', bytes_to_str(cmd.at_cmd))
+                            log('DEBUG, TX', cmd.at_cmd)
 
                         tx_stream.write(cmd.at_cmd)
                         if cmd.type == WalterModemCmdType.DATA_TX_WAIT:
@@ -406,11 +395,566 @@ class ModemCore:
 
             else:
                 tick_diff = time.time() - cmd.attempt_start
-                if tick_diff >= ModemCore.WALTER_MODEM_CMD_TIMEOUT:
+                if tick_diff >= ModemCore.CMD_TIMEOUT:
                     await self._finish_queue_cmd(cmd, WalterModemState.TIMEOUT)
                 else:
                     return
+
+    async def _handle_data_tx_wait(self, tx_stream, cmd, at_rsp):
+        if cmd and cmd.data and cmd.type == WalterModemCmdType.DATA_TX_WAIT:
+            tx_stream.write(cmd.data)
+            await tx_stream.drain()
+
+        return WalterModemState.OK
+
+    async def _handle_error(self, tx_stream, cmd, at_rsp):
+        if cmd is not None:
+            cmd.rsp.type = WalterModemRspType.NO_DATA
+            cmd.state = WalterModemCmdState.RETRY_AFTER_ERROR
+        return None
+    
+    async def _handle_cme_error(self, tx_stream, cmd, at_rsp):
+        if cmd is not None:
+            cme_error = int(at_rsp.decode().split(':')[1].split(',')[0])
+            cmd.rsp.type = WalterModemRspType.CME_ERROR
+            cmd.rsp.cme_error = cme_error
+            cmd.state = WalterModemCmdState.RETRY_AFTER_ERROR
+        return None
+
+    async def _handle_sqn_mode_active(self, tx_stream, cmd, at_rsp):
+        if cmd is None:
+            return None
+        
+        cmd.rsp.type = WalterModemRspType.RAT
+        cmd.rsp.rat = int(at_rsp.decode().split(':')[1]) - 1
+
+        return WalterModemState.OK
+
+    async def _handle_cclk(self, tx_stream, cmd, at_rsp):
+        if not cmd:
+            return None
+
+        cmd.rsp.type = WalterModemRspType.CLOCK
+        time_str = at_rsp[len('+CCLK: '):].decode()[1:-1] # strip double quotes
+        cmd.rsp.clock = parse_cclk_time(time_str)
+
+        return WalterModemState.OK
+
+    async def _handle_sqn_http_rcv_answer_start(self, tx_stream, cmd, at_rsp):
+        if self._http_current_profile >= ModemCore.MAX_HTTP_PROFILES or self._http_context_list[self._http_current_profile].state != WalterModemHttpContextState.GOT_RING:
+            return WalterModemState.ERROR
+        else:
+            if not cmd:
+                return
+
+            cmd.rsp.type = WalterModemRspType.HTTP
+            cmd.rsp.http_response = ModemHttpResponse()
+            cmd.rsp.http_response.http_status = self._http_context_list[self._http_current_profile].http_status
+            cmd.rsp.http_response.data = at_rsp[3:-len(b'\r\nOK\r\n')] # 3 skips: <<<
+            cmd.rsp.http_response.content_type = self._http_context_list[self._http_current_profile].content_type
+            cmd.rsp.http_response.content_length = self._http_context_list[self._http_current_profile].content_length
+
+            # the complete handler will reset the state,
+            # even if we never received <<< but got an error instead
+            return WalterModemState.OK
+
+    async def _handle_sqn_http_ring(self, tx_stream, cmd, at_rsp):
+        profile_id_str, http_status_str, content_type, content_length_str = at_rsp[len("+SQNHTTPRING: "):].decode().split(',')
+        profile_id = int(profile_id_str)
+        http_status = int(http_status_str)
+        content_length = int(content_length_str)
+
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
+            # TODO: return error if modem returns invalid profile id.
+            # problem: this message is an URC: the associated cmd
+            # may be any random command currently executing */
+            return
+
+        # TODO: if not expecting a ring, it may be a bug in the modem
+        # or at our side and we should report an error + read the
+        # content to free the modem buffer
+        # (knowing that this is a URC so there is no command
+        # to give feedback to)
+        if self._http_context_list[profile_id].state != WalterModemHttpContextState.EXPECT_RING:
+            return
+
+        # remember ring info
+        self._http_context_list[profile_id].state = WalterModemHttpContextState.GOT_RING
+        self._http_context_list[profile_id].http_status = http_status
+        self._http_context_list[profile_id].content_type = content_type
+        self._http_context_list[profile_id].content_length = content_length
+
+        return WalterModemState.OK
+
+    async def _handle_sqn_http_connect(self, tx_stream, cmd, at_rsp):
+        profile_id_str, result_code_str = at_rsp[len("+SQNHTTPCONNECT: "):].decode().split(',')
+        profile_id = int(profile_id_str)
+        result_code = int(result_code_str)
+
+        if profile_id < ModemCore.MAX_HTTP_PROFILES:
+            if result_code == 0:
+                self._http_context_list[profile_id].connected = True
+            else:
+                self._http_context_list[profile_id].connected = False
+        
+        return WalterModemState.OK
+
+    async def _handle_sqn_http_disconnect(self, tx_stream, cmd, at_rsp):
+        profile_id = int(at_rsp[len("+SQNHTTPDISCONNECT: "):].decode())
+
+        if profile_id < ModemCore.MAX_HTTP_PROFILES:
+            self._http_context_list[profile_id].connected = False
+        
+        return WalterModemState.OK
+
+    async def _handle_sqn_http_sh(self, tx_stream, cmd, at_rsp):
+        profile_id_str, _ = at_rsp[len('+SQNHTTPSH: '):].decode().split(',')
+        profile_id = int(profile_id_str)
+
+        if profile_id < ModemCore.MAX_HTTP_PROFILES:
+            self._http_context_list[profile_id].connected = False
+
+        return WalterModemState.OK
+
+    async def _handle_sqns_mqtt_on_connect(self, tx_stream, cmd, at_rsp):
+        _, result_code_str = at_rsp[len("+SQNSMQTTONCONNECT:"):].decode().split(',')
+        result_code = int(result_code_str)
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if result_code:
+            self._mqtt_status = WalterModemMqttState.DISCONNECTED
+        else:
+            self._mqtt_status = WalterModemMqttState.CONNECTED
+
+        if self._mqtt_status == WalterModemMqttState.CONNECTED:
+            for (topic, qos) in self._mqtt_subscriptions:
+                asyncio.create_task(self._run_cmd(
+                    at_cmd=f'AT+SQNSMQTTSUBSCRIBE=0,{modem_string(topic)},{qos}',
+                    at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic)),
+                ))
+        
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTCONNECT=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
+        return WalterModemState.OK
+    
+    async def _handle_sqns_mqtt_on_publish(self, tx_stream, cmd, at_rsp):
+        result_code = int(at_rsp[-2:].strip(b','))
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTPUBLISH=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
+        return WalterModemState.OK        
+
+    async def _handle_sqns_mqtt_on_disconnect(self, tx_stream, cmd, at_rsp):
+        _, result_code_str = at_rsp[len("+SQNSMQTTONDISCONNECT:"):].decode().split(',')
+        result_code = int(result_code_str)
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if result_code != 0:
+            return WalterModemState.ERROR
+
+        self._mqtt_status = WalterModemMqttState.DISCONNECTED
+        self._mqtt_subscriptions = []
+        for msg in self._mqtt_msg_buffer:
+            msg.free = True
+        
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTDISCONNECT=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+
+        return WalterModemState.OK
+
+    async def _handle_sqns_mqtt_on_message(self, tx_stream, cmd, at_rsp):
+        parts = at_rsp[len("+SQNSMQTTONMESSAGE:"):].decode().split(',')
+        topic = parts[1].replace('"', '')
+        length = int(parts[2])
+        qos = int(parts[3])
+        if qos != 0 and len(parts) > 4:
+            message_id = parts[4]
+        else:
+            message_id = None
+
+        self._add_msg_to_mqtt_buffer(message_id, topic, length, qos)
+        return WalterModemState.OK
+
+    async def _handle_sqns_mqtt_memory_full(self, tx_stream, cmd, at_rsp):
+        log('WARNING',
+            'Sequans Modem\'s MQTT Memory full')
+
+        for msg in self._mqtt_msg_buffer:
+            msg.free = True
+
+        return WalterModemState.OK
+    
+    async def _handle_sqns_mqtt_subscribe(self, tx_stream, cmd, at_rsp):
+        result_code = int(at_rsp[-2:].strip(b','))
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTSUBSCRIBE=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
+        return WalterModemState.OK    
+
+    async def _handle_sqn_sh(self, tx_stream, cmd, at_rsp):
+        socket_id = int(at_rsp[len('+SQNSH: '):].decode())
+        try:
+            _socket = self._socket_list[socket_id - 1]
+        except Exception:
+            return None
+
+        self._socket = _socket
+        _socket.state = WalterModemSocketState.FREE
+
+        return WalterModemState.OK
+
+    async def _handle_lp_gnss_fix_ready(self, tx_stream, cmd, at_rsp):
+        data = at_rsp[len(b'+LPGNSSFIXREADY: '):]
+
+        parenthesis_open = False
+        part_no = 0
+        start_pos = 0
+        part = ''
+        gnss_fix = ModemGNSSFix()
+
+        for character_pos in range(len(data)):
+            character = data[character_pos]
+            part_complete = False
+
+            if character == ord(',') and not parenthesis_open:
+                part = data[start_pos:character_pos]
+                part_complete = True
+            elif character == ord('('):
+                parenthesis_open = True
+            elif character == ord(')'):
+                parenthesis_open = False
+            elif character_pos + 1 == len(data):
+                part = data[start_pos:character_pos + 1]
+                part_complete = True
+
+            if part_complete:
+                if part_no == 0:
+                    gnss_fix.fix_id = int(part)
+                elif part_no == 1:
+                    part = part[1:-1]
+                    gnss_fix.timestamp = parse_gnss_time(part)
+                elif part_no == 2:
+                    gnss_fix.time_to_fix = int(part)
+                elif part_no == 3:
+                    part = part[1:-1]
+                    gnss_fix.estimated_confidence = float(part)
+                elif part_no == 4:
+                    part = part[1:-1]
+                    gnss_fix.latitude = float(part)
+                elif part_no == 5:
+                    part = part[1:-1]
+                    gnss_fix.longitude = float(part)
+                elif part_no == 6:
+                    part = part[1:-1]
+                    gnss_fix.height = float(part)
+                elif part_no == 7:
+                    part = part[1:-1]
+                    gnss_fix.north_speed = float(part)
+                elif part_no == 8:
+                    part = part[1:-1]
+                    gnss_fix.east_speed = float(part)
+                elif part_no == 9:
+                    part = part[1:-1]
+                    gnss_fix.down_speed = float(part)
+                elif part_no == 10:
+                     # Raw satellite signal sample is ignored
+                    pass
+                else:
+                    satellite_data = part.decode().split(',')
+
+                    # Iterate through the satellite_data list, taking every two elements as pairs
+                    for i in range(0, len(satellite_data), 2):
+                        sat_no_str = satellite_data[i]
+                        sat_sig_str = satellite_data[i + 1]
+
+                        gnss_fix.sats.append(ModemGNSSSat(int(sat_no_str[1:]), int(sat_sig_str[:-1])))
+
+                # +1 for the comma
+                part_no += 1
+                start_pos = character_pos + 1
+                part = ''
+
+        # notify every coroutine that is waiting for a fix
+        async with self._gnss_fix_lock:
+            for gnss_fix_waiter in self._gnss_fix_waiters:
+                gnss_fix_waiter.gnss_fix = gnss_fix
+                gnss_fix_waiter.event.set()
+
+            self._gnss_fix_waiters = []
+        
+        return WalterModemState.OK
+
+    async def _handle_lp_gnss_assistance(self, tx_stream, cmd, at_rsp):
+        if not cmd:
+            return
+
+        if cmd.rsp.type != WalterModemRspType.GNSS_ASSISTANCE_DATA:
+            cmd.rsp.type = WalterModemRspType.GNSS_ASSISTANCE_DATA
+            cmd.rsp.gnss_assistance = ModemGNSSAssistance()
+
+        data = at_rsp[len("+LPGNSSASSISTANCE: "):]
+        part_no = 0
+        start_pos = 0
+        part = ''
+        gnss_details = None
+
+        for character_pos in range(len(data)):
+            character = data[character_pos]
+            part_complete = False
+
+            if character == ord(','):
+                part = data[start_pos:character_pos]
+                part_complete = True
+            elif character_pos + 1 == len(data):
+                part = data[start_pos:character_pos + 1]
+                part_complete = True
+
+            if part_complete:
+                if part_no == 0:
+                    if part[0] == ord('0'):
+                        gnss_details = cmd.rsp.gnss_assistance.almanac
+                    elif part[0] == ord('1'):
+                        gnss_details = cmd.rsp.gnss_assistance.realtime_ephemeris
+                    elif part[0] == ord('2'):
+                        gnss_details = cmd.rsp.gnss_assistance.predicted_ephemeris
+                elif part_no == 1:
+                    if gnss_details:
+                        gnss_details.available = int(part) == 1
+                elif part_no == 2:
+                    if gnss_details:
+                        gnss_details.last_update = int(part)
+                elif part_no == 3:
+                    if gnss_details:
+                        gnss_details.time_to_update = int(part)
+                elif part_no == 4 and gnss_details:
+                        gnss_details.time_to_expire = int(part)
+
+                # +1 for the comma
+                part_no += 1
+                start_pos = character_pos + 1
+                part = ''
+
+        return WalterModemState.OK
+
+    async def _handle_cesq(self, tx_stream, cmd, at_rsp):
+        if not cmd:
+            return None
+
+        cmd.rsp.type = WalterModemRspType.SIGNAL_QUALITY
+
+        parts = at_rsp.decode().split(',')
+        cmd.rsp.signal_quality = ModemSignalQuality()
+        cmd.rsp.signal_quality.rsrq = -195 + (int(parts[4]) * 5)
+        cmd.rsp.signal_quality.rsrp = -140 + int(parts[5])
+
+        return WalterModemState.OK
+
+    async def _handle_cfun(self, tx_stream, cmd, at_rsp):
+        op_state = int(at_rsp.decode().split(':')[1].split(',')[0])
+        self._op_state = op_state
+
+        if cmd is None:
+            return None
+
+        cmd.rsp.type = WalterModemRspType.OP_STATE
+        cmd.rsp.op_state = self._op_state
+        return WalterModemState.OK
+
+    async def _handle_csq(self, tx_stream, cmd, at_rsp):
+        if not cmd:
+            return None
+
+        parts = at_rsp.decode().split(',')
+        raw_rssi = int(parts[0][len('+CSQ: '):])
+
+        cmd.rsp.type = WalterModemRspType.RSSI
+        cmd.rsp.rssi = -113 + (raw_rssi * 2)
+
+        return WalterModemState.OK
+
+    async def _handle_sqnmoni(self, tx_stream, cmd, at_rsp):
+        if cmd is None:
+            return
+
+        cmd.rsp.type = WalterModemRspType.CELL_INFO
+
+        data_str = at_rsp[len(b"+SQNMONI: "):].decode()
+
+        cmd.rsp.cell_information = ModemCellInformation()
+        first_key_parsed = False
+
+        for part in data_str.split(' '):
+            if ':' not in part:
+                continue
                 
+            pattern, value = part.split(':', 1)
+            pattern = pattern.strip()
+            value = value.strip()
+
+            if not first_key_parsed and len(pattern) > 2:
+                operator_name = pattern[:-2]
+                cmd.rsp.cell_information.net_name = operator_name[:ModemCore.OPERATOR_MAX_SIZE]
+                pattern = pattern[-2:]
+                first_key_parsed = True
+
+            if pattern == "Cc":
+                cmd.rsp.cell_information.cc = int(value, 10)
+            elif pattern == "Nc":
+                cmd.rsp.cell_information.nc = int(value, 10)
+            elif pattern == "RSRP":
+                cmd.rsp.cell_information.rsrp = float(value)
+            elif pattern == "CINR":
+                cmd.rsp.cell_information.cinr = float(value)
+            elif pattern == "RSRQ":
+                cmd.rsp.cell_information.rsrq = float(value)
+            elif pattern == "TAC":
+                cmd.rsp.cell_information.tac = int(value, 10)
+            elif pattern == "Id":
+                cmd.rsp.cell_information.pci = int(value, 10)
+            elif pattern == "EARFCN":
+                cmd.rsp.cell_information.earfcn = int(value, 10)
+            elif pattern == "PWR":
+                cmd.rsp.cell_information.rssi = float(value)
+            elif pattern == "PAGING":
+                cmd.rsp.cell_information.paging = int(value, 10)
+            elif pattern == "CID":
+                cmd.rsp.cell_information.cid = int(value, 16)
+            elif pattern == "BAND":
+                cmd.rsp.cell_information.band = int(value, 10)
+            elif pattern == "BW":
+                cmd.rsp.cell_information.bw = int(value, 10)
+            elif pattern == "CE":
+                cmd.rsp.cell_information.ce_level = int(value, 10)
+
+        return WalterModemState.OK
+
+    async def _handle_sqn_band_sel(self, tx_stream, cmd, at_rsp):
+        data = at_rsp[len(b'+SQNBANDSEL: '):]
+
+        # create the array and response type upon reception of the
+        # first band selection
+        if cmd.rsp.type != WalterModemRspType.BANDSET_CFG_SET:
+            cmd.rsp.type = WalterModemRspType.BANDSET_CFG_SET
+            cmd.rsp.band_sel_cfg_list = []
+
+        bsel = ModemBandSelection()
+
+        if data[0] == ord('0'):
+            bsel.rat = WalterModemRat.LTEM
+        else:
+            bsel.rat = WalterModemRat.NBIOT
+
+        # Parse operator name
+        bsel.net_operator.format = WalterModemOperatorFormat.LONG_ALPHANUMERIC
+        bsel_parts = data[2:].decode().split(',')
+        bsel.net_operator.name = bsel_parts[0]
+
+        # Parse configured bands
+        bands_list = bsel_parts[1:]
+        if len(bands_list) > 1:
+            bands_list[0] = bands_list[0][1:]
+            bands_list[-1] = bands_list[-1][:-1]
+            bsel.bands = [ int(x) for x in bands_list ]
+        elif bands_list[0] != '""':
+            bsel.bands = [ int(bands_list[0][1:-1]) ]
+        else:
+            bsel.bands = []
+
+        cmd.rsp.band_sel_cfg_list.append(bsel)
+        return WalterModemState.OK
+
+    async def _handle_cereg(self, tx_stream, cmd, at_rsp):
+        self._reg_state = int(at_rsp.decode().split(':')[1].split(',')[0])
+        return WalterModemState.OK
+    
+    async def _handle_cgpaddr(self, tx_stream, cmd, at_rsp):
+        if not cmd:
+            return None
+
+        cmd.rsp.type = WalterModemRspType.PDP_ADDR 
+        cmd.rsp.pdp_address_list = []
+
+        parts = at_rsp.decode().split(',')
+            
+        if len(parts) > 1 and parts[1]:
+            cmd.rsp.pdp_address_list.append(parts[1][1:-1])
+        if len(parts) > 2 and parts[2]:
+            cmd.rsp.pdp_address_list.append(parts[2][1:-1])
+        
+        return WalterModemState.OK
+
+    async def _handle_cpin(self, tx_stream, cmd, at_rsp):
+        if cmd is None:
+            return None
+
+        cmd.rsp.type = WalterModemRspType.SIM_STATE
+        if at_rsp[len('+CPIN: '):] == b'READY':
+            cmd.rsp.sim_state = WalterModemSimState.READY
+        elif at_rsp[len('+CPIN: '):] == b"SIM PIN":
+            cmd.rsp.sim_state = WalterModemSimState.PIN_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"SIM PUK":
+            cmd.rsp.sim_state = WalterModemSimState.PUK_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-SIM PIN":
+            cmd.rsp.sim_state = WalterModemSimState.PHONE_TO_SIM_PIN_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-FSIM PIN":
+            cmd.rsp.sim_state = WalterModemSimState.PHONE_TO_FIRST_SIM_PIN_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-FSIM PUK":
+            cmd.rsp.sim_state = WalterModemSimState.PHONE_TO_FIRST_SIM_PUK_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"SIM PIN2":
+            cmd.rsp.sim_state = WalterModemSimState.PIN2_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"SIM PUK2":
+            cmd.rsp.sim_state = WalterModemSimState.PUK2_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-NET PIN":
+            cmd.rsp.sim_state = WalterModemSimState.NETWORK_PIN_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-NET PUK":
+            cmd.rsp.sim_state = WalterModemSimState.NETWORK_PUK_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-NETSUB PIN":
+            cmd.rsp.sim_state = WalterModemSimState.NETWORK_SUBSET_PIN_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-NETSUB PUK":
+            cmd.rsp.sim_state = WalterModemSimState.NETWORK_SUBSET_PUK_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-SP PIN":
+            cmd.rsp.sim_state = WalterModemSimState.SERVICE_PROVIDER_PIN_REQUIRED
+        elif at_rsp[len('+CPIN: '):] == b"PH-SP PUK":
+            cmd.rsp.sim_state = WalterModemSimState.SERVICE_PROVIDER_PUK_REQUIRED 
+        elif at_rsp[len('+CPIN: '):] == b"PH-CORP PIN":
+            cmd.rsp.sim_state = WalterModemSimState.CORPORATE_SIM_REQUIRED 
+        elif at_rsp[len('+CPIN: '):] == b"PH-CORP PUK":
+            cmd.rsp.sim_state = WalterModemSimState.CORPORATE_PUK_REQUIRED 
+        else:
+            cmd.rsp.type = WalterModemRspType.NO_DATA
+
+        return WalterModemState.OK
+    
+    async def _handle_sqns_mqtt_rcv_message(self, tx_stream, cmd, at_rsp):
+        if cmd.rsp.type != WalterModemRspType.MQTT:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            
+        if isinstance(cmd.ring_return, list) and (at_rsp != b'OK' and at_rsp != b'ERROR'):
+            cmd.ring_return.append(at_rsp.decode())
+        
+        return WalterModemState.OK
+
     async def _process_queue_rsp(self, tx_stream, cmd, at_rsp: bytes):
         """
         Process an AT response from the queue.
@@ -424,492 +968,90 @@ class ModemCore:
 
         :return: None.
         """
-        
+        if self._proc_queue_rsp_rsp_handlers is None:
+            # Using tuples reduces the memory overhead significantly (they are immutable).
+            # Tuples are fixed in size and do not require hash tables like dictionaries do.
+            self._proc_queue_rsp_rsp_handlers = (
+                (b'>>>', self._handle_data_tx_wait),
+                (b'>', self._handle_data_tx_wait),
+                (b'ERROR', self._handle_error),
+                (b'+CME ERROR: ', self._handle_cme_error),
+                
+                # 4. Device Configuration
+                (b'+CCLK: ', self._handle_cclk),
+
+                # 6. Dual Mode
+                (b'+SQNMODEACTIVE: ', self._handle_sqn_mode_active),
+
+                # 8. IP Data Services
+                # - HTTP
+                (b'<<<', self._handle_sqn_http_rcv_answer_start),
+                (b'+SQNHTTPRING: ', self._handle_sqn_http_ring),
+                (b'+SQNHTTPCONNECT: ', self._handle_sqn_http_connect),
+                (b'+SQNHTTPDISCONNECT: ', self._handle_sqn_http_disconnect),
+                (b'+SQNHTTPSH: ', self._handle_sqn_http_sh),
+                # - MQTT
+                (b'+SQNSMQTTONCONNECT:0,', self._handle_sqns_mqtt_on_connect),
+                (b'+SQNSMQTTONPUBLISH:0', self._handle_sqns_mqtt_on_publish),
+                (b'+SQNSMQTTONDISCONNECT:0,', self._handle_sqns_mqtt_on_disconnect),
+                (b'+SQNSMQTTONMESSAGE:0,', self._handle_sqns_mqtt_on_message),
+                (b'+SQNSMQTTMEMORYFULL', self._handle_sqns_mqtt_memory_full),
+                (b'+SQNSMQTTONSUBSCRIBE:0', self._handle_sqns_mqtt_subscribe),
+                # - Socket
+                (b'+SQNSH: ', self._handle_sqn_sh),
+
+                # 10. Location Services
+                (b'+LPGNSSFIXREADY: ', self._handle_lp_gnss_fix_ready),
+                (b'+LPGNSSASSISTANCE: ', self._handle_lp_gnss_assistance),
+
+                # 12. Mobile Equipment Control and Status
+                (b'+CESQ: ', self._handle_cesq),
+                (b'+CFUN: ', self._handle_cfun),
+                (b'+CSQ: ', self._handle_csq),
+                (b'+SQNMONI', self._handle_sqnmoni),
+
+                # 13. Network Service
+                (b'+SQNBANDSEL: ', self._handle_sqn_band_sel),
+                (b'+CEREG: ', self._handle_cereg),
+
+                # 14. Packet Domain Related
+                (b'+CGPADDR: ', self._handle_cgpaddr),
+
+                # 15. SIM Management
+                (b'+CPIN: ', self._handle_cpin),
+            )
+
+        if self._proc_queue_rsp_cmd_handlers is None:
+            self._proc_queue_rsp_cmd_handlers = (
+                ('AT+SQNSMQTTRCVMESSAGE=0', self._handle_sqns_mqtt_rcv_message),
+            )
+
         result = WalterModemState.OK
 
-        if at_rsp.startswith(b'+CEREG: '):
-            ce_reg = int(at_rsp.decode().split(':')[1].split(',')[0])
-            self._reg_state = ce_reg
-            # TODO: call correct handlers (also still todo in arduino version)
-
-        elif at_rsp.startswith(b'>') or at_rsp.startswith(b'>>>'):
-            if cmd and cmd.data and cmd.type == WalterModemCmdType.DATA_TX_WAIT:
-                if self.debug_log:
-                    log('DEBUG, TX', bytes_to_str(cmd.data))
-                    
-                tx_stream.write(cmd.data)
-                await tx_stream.drain()
-
-        elif at_rsp.startswith(b'ERROR'):
-            if cmd is not None:
-                cmd.rsp.type = WalterModemRspType.NO_DATA
-                cmd.state = WalterModemCmdState.RETRY_AFTER_ERROR
-            return
-
-        elif at_rsp.startswith(b'+CME ERROR: '):
-            if cmd is not None:
-                cme_error = int(at_rsp.decode().split(':')[1].split(',')[0])
-                cmd.rsp.type = WalterModemRspType.CME_ERROR
-                cmd.rsp.cme_error = cme_error
-                cmd.state = WalterModemCmdState.RETRY_AFTER_ERROR
-            return
-
-        elif at_rsp.startswith(b'+CFUN: '):
-            op_state = int(at_rsp.decode().split(':')[1].split(',')[0])
-            self._op_state = op_state
-
-            if cmd is None:
-                return
-
-            cmd.rsp.type = WalterModemRspType.OP_STATE
-            cmd.rsp.op_state = self._op_state
-
-        elif at_rsp.startswith(b'+SQNMODEACTIVE: '):
-            if cmd is None:
-                return
-
-            cmd.rsp.type = WalterModemRspType.RAT
-            cmd.rsp.rat = int(at_rsp.decode().split(':')[1]) - 1
-
-        elif at_rsp.startswith(b'+SQNBANDSEL: '):
-            data = at_rsp[len(b'+SQNBANDSEL: '):]
-
-            # create the array and response type upon reception of the
-            # first band selection
-            if cmd.rsp.type != WalterModemRspType.BANDSET_CFG_SET:
-                cmd.rsp.type = WalterModemRspType.BANDSET_CFG_SET
-                cmd.rsp.band_sel_cfg_list = []
-
-            bsel = ModemBandSelection()
-
-            if data[0] == ord('0'):
-                bsel.rat = WalterModemRat.LTEM
-            else:
-                bsel.rat = WalterModemRat.NBIOT
-
-            # Parse operator name
-            bsel.net_operator.format = WalterModemOperatorFormat.LONG_ALPHANUMERIC
-            bsel_parts = data[2:].decode().split(',')
-            bsel.net_operator.name = bsel_parts[0]
-
-            # Parse configured bands
-            bands_list = bsel_parts[1:]
-            if len(bands_list) > 1:
-                bands_list[0] = bands_list[0][1:]
-                bands_list[-1] = bands_list[-1][:-1]
-                bsel.bands = [ int(x) for x in bands_list ]
-            elif bands_list[0] != '""':
-                bsel.bands = [ int(bands_list[0][1:-1]) ]
-            else:
-                bsel.bands = []
-
-            cmd.rsp.band_sel_cfg_list.append(bsel)
-
-        elif at_rsp.startswith(b'+CPIN: '):
-            if cmd is None:
-                return
-
-            cmd.rsp.type = WalterModemRspType.SIM_STATE
-            if at_rsp[len('+CPIN: '):] == b'READY':
-                cmd.rsp.sim_state = WalterModemSimState.READY
-            elif at_rsp[len('+CPIN: '):] == b"SIM PIN":
-                cmd.rsp.sim_state = WalterModemSimState.PIN_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"SIM PUK":
-                cmd.rsp.sim_state = WalterModemSimState.PUK_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-SIM PIN":
-                cmd.rsp.sim_state = WalterModemSimState.PHONE_TO_SIM_PIN_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-FSIM PIN":
-                cmd.rsp.sim_state = WalterModemSimState.PHONE_TO_FIRST_SIM_PIN_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-FSIM PUK":
-                cmd.rsp.sim_state = WalterModemSimState.PHONE_TO_FIRST_SIM_PUK_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"SIM PIN2":
-                cmd.rsp.sim_state = WalterModemSimState.PIN2_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"SIM PUK2":
-                cmd.rsp.sim_state = WalterModemSimState.PUK2_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-NET PIN":
-                cmd.rsp.sim_state = WalterModemSimState.NETWORK_PIN_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-NET PUK":
-                cmd.rsp.sim_state = WalterModemSimState.NETWORK_PUK_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-NETSUB PIN":
-                cmd.rsp.sim_state = WalterModemSimState.NETWORK_SUBSET_PIN_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-NETSUB PUK":
-                cmd.rsp.sim_state = WalterModemSimState.NETWORK_SUBSET_PUK_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-SP PIN":
-                cmd.rsp.sim_state = WalterModemSimState.SERVICE_PROVIDER_PIN_REQUIRED
-            elif at_rsp[len('+CPIN: '):] == b"PH-SP PUK":
-                cmd.rsp.sim_state = WalterModemSimState.SERVICE_PROVIDER_PUK_REQUIRED 
-            elif at_rsp[len('+CPIN: '):] == b"PH-CORP PIN":
-                cmd.rsp.sim_state = WalterModemSimState.CORPORATE_SIM_REQUIRED 
-            elif at_rsp[len('+CPIN: '):] == b"PH-CORP PUK":
-                cmd.rsp.sim_state = WalterModemSimState.CORPORATE_PUK_REQUIRED 
-            else:
-                cmd.rsp.type = WalterModemRspType.NO_DATA
-
-        elif at_rsp.startswith(b'+CGPADDR: '):
-            if not cmd:
-                return
-
-            cmd.rsp.type = WalterModemRspType.PDP_ADDR 
-            cmd.rsp.pdp_address_list = []
-
-            parts = at_rsp.decode().split(',')
-            
-            if len(parts) > 1 and parts[1]:
-                cmd.rsp.pdp_address_list.append(parts[1][1:-1])
-            if len(parts) > 2 and parts[2]:
-                cmd.rsp.pdp_address_list.append(parts[2][1:-1])
-
-        elif at_rsp.startswith(b'+CSQ: '):
-            if not cmd:
-                return
-
-            parts = at_rsp.decode().split(',')
-            raw_rssi = int(parts[0][len('+CSQ: '):])
-
-            cmd.rsp.type = WalterModemRspType.RSSI
-            cmd.rsp.rssi = -113 + (raw_rssi * 2)
-
-        elif at_rsp.startswith(b'+CESQ: '):
-            if not cmd:
-                return
-
-            cmd.rsp.type = WalterModemRspType.SIGNAL_QUALITY
-
-            parts = at_rsp.decode().split(',')
-            cmd.rsp.signal_quality = ModemSignalQuality()
-            cmd.rsp.signal_quality.rsrq = -195 + (int(parts[4]) * 5)
-            cmd.rsp.signal_quality.rsrp = -140 + int(parts[5])
-
-        elif at_rsp.startswith(b'+CCLK: '):
-            if not cmd:
-                return
-
-            cmd.rsp.type = WalterModemRspType.CLOCK
-            time_str = at_rsp[len('+CCLK: '):].decode()[1:-1]   # strip double quotes
-            cmd.rsp.clock = parse_cclk_time(time_str)
-
-        elif at_rsp.startswith(b'<<<'):      # <<< is start of SQNHTTPRCV answer
-            if self._http_current_profile >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES or self._http_context_list[self._http_current_profile].state != WalterModemHttpContextState.GOT_RING:
-                result = WalterModemState.ERROR
-            else:
-                if not cmd:
-                    return
-
-                cmd.rsp.type = WalterModemRspType.HTTP
-                cmd.rsp.http_response = ModemHttpResponse()
-                cmd.rsp.http_response.http_status = self._http_context_list[self._http_current_profile].http_status
-                cmd.rsp.http_response.data = at_rsp[3:-len(b'\r\nOK\r\n')] # 3 skips: <<<
-                cmd.rsp.http_response.content_type = self._http_context_list[self._http_current_profile].content_type
-                cmd.rsp.http_response.content_length = self._http_context_list[self._http_current_profile].content_length
-
-                # the complete handler will reset the state,
-                # even if we never received <<< but got an error instead
-
-        elif at_rsp.startswith(b'+SQNHTTPRING: '):
-            profile_id_str, http_status_str, content_type, content_length_str = at_rsp[len("+SQNHTTPRING: "):].decode().split(',')
-            profile_id = int(profile_id_str)
-            http_status = int(http_status_str)
-            content_length = int(content_length_str)
-
-            if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-                # TODO: return error if modem returns invalid profile id.
-                # problem: this message is an URC: the associated cmd
-                # may be any random command currently executing */
-                return
-
-            # TODO: if not expecting a ring, it may be a bug in the modem
-            # or at our side and we should report an error + read the
-            # content to free the modem buffer
-            # (knowing that this is a URC so there is no command
-            # to give feedback to)
-            if self._http_context_list[profile_id].state != WalterModemHttpContextState.EXPECT_RING:
-                return
-
-            # remember ring info
-            self._http_context_list[profile_id].state = WalterModemHttpContextState.GOT_RING
-            self._http_context_list[profile_id].http_status = http_status
-            self._http_context_list[profile_id].content_type = content_type
-            self._http_context_list[profile_id].content_length = content_length
-
-        elif at_rsp.startswith(b'+SQNHTTPCONNECT: '):
-            profile_id_str, result_code_str = at_rsp[len("+SQNHTTPCONNECT: "):].decode().split(',')
-            profile_id = int(profile_id_str)
-            result_code = int(result_code_str)
-
-            if profile_id < ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-                if result_code == 0:
-                    self._http_context_list[profile_id].connected = True
-                else:
-                    self._http_context_list[profile_id].connected = False
-
-        elif at_rsp.startswith(b'+SQNHTTPDISCONNECT: '):
-            profile_id = int(at_rsp[len("+SQNHTTPDISCONNECT: "):].decode())
-
-            if profile_id < ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-                self._http_context_list[profile_id].connected = False
-
-        elif at_rsp.startswith(b'+SQNHTTPSH: '):
-            profile_id_str, _ = at_rsp[len('+SQNHTTPSH: '):].decode().split(',')
-            profile_id = int(profile_id_str)
-
-            if profile_id < ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
-                self._http_context_list[profile_id].connected = False
-
-        elif at_rsp.startswith(b'+SQNSH: '):
-            socket_id = int(at_rsp[len('+SQNSH: '):].decode())
-            try:
-                _socket = self._socket_list[socket_id - 1]
-            except Exception:
-                return
-
-            self._socket = _socket
-            _socket.state = WalterModemSocketState.FREE
-
-        elif at_rsp.startswith(b'+LPGNSSFIXREADY: '):
-            data = at_rsp[len(b'+LPGNSSFIXREADY: '):]
-
-            parenthesis_open = False
-            part_no = 0
-            start_pos = 0
-            part = ''
-            gnss_fix = ModemGNSSFix()
-
-            for character_pos in range(len(data)):
-                character = data[character_pos]
-                part_complete = False
-
-                if character == ord(',') and not parenthesis_open:
-                    part = data[start_pos:character_pos]
-                    part_complete = True
-                elif character == ord('('):
-                    parenthesis_open = True
-                elif character == ord(')'):
-                    parenthesis_open = False
-                elif character_pos + 1 == len(data):
-                    part = data[start_pos:character_pos + 1]
-                    part_complete = True
-
-                if part_complete:
-                    if part_no == 0:
-                        gnss_fix.fix_id = int(part)
-                    elif part_no == 1:
-                        part = part[1:-1]
-                        gnss_fix.timestamp = parse_gnss_time(part)
-                    elif part_no == 2:
-                        gnss_fix.time_to_fix = int(part)
-                    elif part_no == 3:
-                        part = part[1:-1]
-                        gnss_fix.estimated_confidence = float(part)
-                    elif part_no == 4:
-                        part = part[1:-1]
-                        gnss_fix.latitude = float(part)
-                    elif part_no == 5:
-                        part = part[1:-1]
-                        gnss_fix.longitude = float(part)
-                    elif part_no == 6:
-                        part = part[1:-1]
-                        gnss_fix.height = float(part)
-                    elif part_no == 7:
-                        part = part[1:-1]
-                        gnss_fix.north_speed = float(part)
-                    elif part_no == 8:
-                        part = part[1:-1]
-                        gnss_fix.east_speed = float(part)
-                    elif part_no == 9:
-                        part = part[1:-1]
-                        gnss_fix.down_speed = float(part)
-                    elif part_no == 10:
-                         # Raw satellite signal sample is ignored
-                        pass
-                    else:
-                        satellite_data = part.decode().split(',')
-
-                        # Iterate through the satellite_data list, taking every two elements as pairs
-                        for i in range(0, len(satellite_data), 2):
-                            sat_no_str = satellite_data[i]
-                            sat_sig_str = satellite_data[i + 1]
-
-                            gnss_fix.sats.append(ModemGNSSSat(int(sat_no_str[1:]), int(sat_sig_str[:-1])))
-
-                    # +1 for the comma
-                    part_no += 1
-                    start_pos = character_pos + 1
-                    part = ''
-
-            # notify every coroutine that is waiting for a fix
-            async with self._gnss_fix_lock:
-                for gnss_fix_waiter in self._gnss_fix_waiters:
-                    gnss_fix_waiter.gnss_fix = gnss_fix
-                    gnss_fix_waiter.event.set()
-
-                self._gnss_fix_waiters = []
-
-        elif at_rsp.startswith(b'+LPGNSSASSISTANCE: '):
-            if not cmd:
-                return
-
-            if cmd.rsp.type != WalterModemRspType.GNSS_ASSISTANCE_DATA:
-                cmd.rsp.type = WalterModemRspType.GNSS_ASSISTANCE_DATA
-                cmd.rsp.gnss_assistance = ModemGNSSAssistance()
-
-            data = at_rsp[len("+LPGNSSASSISTANCE: "):]
-            part_no = 0
-            start_pos = 0
-            part = ''
-            gnss_details = None
-
-            for character_pos in range(len(data)):
-                character = data[character_pos]
-                part_complete = False
-
-                if character == ord(','):
-                    part = data[start_pos:character_pos]
-                    part_complete = True
-                elif character_pos + 1 == len(data):
-                    part = data[start_pos:character_pos + 1]
-                    part_complete = True
-
-                if part_complete:
-                    if part_no == 0:
-                        if part[0] == ord('0'):
-                            gnss_details = cmd.rsp.gnss_assistance.almanac
-                        elif part[0] == ord('1'):
-                            gnss_details = cmd.rsp.gnss_assistance.realtime_ephemeris
-                        elif part[0] == ord('2'):
-                            gnss_details = cmd.rsp.gnss_assistance.predicted_ephemeris
-                    elif part_no == 1:
-                        if gnss_details:
-                            gnss_details.available = int(part) == 1
-                    elif part_no == 2:
-                        if gnss_details:
-                            gnss_details.last_update = int(part)
-                    elif part_no == 3:
-                        if gnss_details:
-                            gnss_details.time_to_update = int(part)
-                    elif part_no == 4 and gnss_details:
-                            gnss_details.time_to_expire = int(part)
-
-                    # +1 for the comma
-                    part_no += 1
-                    start_pos = character_pos + 1
-                    part = ''
-
-        elif at_rsp.startswith("+SQNSMQTTONCONNECT:0,"):
-            _, result_code_str = at_rsp[len("+SQNSMQTTONCONNECT:"):].decode().split(',')
-            result_code = int(result_code_str)
-
-            if self._mqtt_status == WalterModemMqttState.CONNECTED:
-                for (topic, qos) in self._mqtt_subscriptions:
-                    asyncio.create_task(self._run_cmd(
-                        at_cmd=f'AT+SQNSMQTTSUBSCRIBE=0,{modem_string(topic)},{qos}',
-                        at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic)),
-                    ))
-
-            if result_code:
-                self._mqtt_status = WalterModemMqttState.DISCONNECTED
-            else:
-                self._mqtt_status = WalterModemMqttState.CONNECTED
+        for pattern, handler in self._proc_queue_rsp_rsp_handlers:
+            if at_rsp.startswith(pattern):
+                result = await handler(tx_stream, cmd, at_rsp)
+                break
         
-        elif at_rsp.startswith("+SQNSMQTTONDISCONNECT:0,"):
-            _, result_code_str = at_rsp[len("+SQNSMQTTONDISCONNECT:"):].decode().split(',')
-            result_code = int(result_code_str)
+        if cmd and cmd.at_cmd:
+            for pattern, handler in self._proc_queue_rsp_cmd_handlers:
+                if cmd.at_cmd.startswith(pattern):
+                    result = await handler(tx_stream, cmd, at_rsp)
+                    break
+        
+        if self._application_queue_rsp_handlers_set:
+            for pattern, handler in self._application_queue_rsp_handlers:
+                if at_rsp.startswith(pattern):
+                    handler(cmd, at_rsp)
+                    break
 
-            if result_code != 0:
-                result = WalterModemState.ERROR
-
-            self._mqtt_status = WalterModemMqttState.DISCONNECTED
-            self._mqtt_subscriptions = []
-            for msg in self._mqtt_msg_buffer:
-                msg.free = True
-
-        elif at_rsp.startswith("+SQNSMQTTONMESSAGE:0,"):
-            parts = at_rsp[len("+SQNSMQTTONMESSAGE:"):].decode().split(',')
-            topic = parts[1].replace('"', '')
-            length = int(parts[2])
-            qos = int(parts[3])
-            if qos != 0 and len(parts) > 4:
-                message_id = parts[4]
-            else:
-                message_id = None
-
-            self._add_msg_to_mqtt_buffer(message_id, topic, length, qos)
-
-        elif at_rsp.startswith("+SQNSMQTTMEMORYFULL"):
-            log('WARNING',
-                'Sequans Modem\'s MQTT Memory full')
-
-            for msg in self._mqtt_msg_buffer:
-                msg.free = True
-
-        elif cmd and cmd.at_cmd and cmd.at_cmd.startswith("AT+SQNSMQTTRCVMESSAGE=0"):
-            if cmd.rsp.type != WalterModemRspType.MQTT:
-                cmd.rsp.type = WalterModemRspType.MQTT
-            
-            if isinstance(cmd.ring_return, list) and (at_rsp != b'OK' and at_rsp != b'ERROR'):
-                cmd.ring_return.append(at_rsp.decode())
-
-        elif at_rsp.startswith(b"+SQNMONI"):
-            if cmd is None:
-                return
-
-            cmd.rsp.type = WalterModemRspType.CELL_INFO
-
-            data_str = at_rsp[len(b"+SQNMONI: "):].decode()
-
-            cmd.rsp.cell_information = ModemCellInformation()
-            first_key_parsed = False
-
-            for part in data_str.split(' '):
-                if ':' not in part:
-                    continue
-                
-                key, value = part.split(':', 1)
-                key = key.strip()
-                value = value.strip()
-
-                if not first_key_parsed and len(key) > 2:
-                    operator_name = key[:-2]
-                    cmd.rsp.cell_information.net_name = operator_name[:ModemCore.WALTER_MODEM_OPERATOR_MAX_SIZE]
-                    key = key[-2:]
-                    first_key_parsed = True
-
-                if key == "Cc":
-                    cmd.rsp.cell_information.cc = int(value, 10)
-                elif key == "Nc":
-                    cmd.rsp.cell_information.nc = int(value, 10)
-                elif key == "RSRP":
-                    cmd.rsp.cell_information.rsrp = float(value)
-                elif key == "CINR":
-                    cmd.rsp.cell_information.cinr = float(value)
-                elif key == "RSRQ":
-                    cmd.rsp.cell_information.rsrq = float(value)
-                elif key == "TAC":
-                    cmd.rsp.cell_information.tac = int(value, 10)
-                elif key == "Id":
-                    cmd.rsp.cell_information.pci = int(value, 10)
-                elif key == "EARFCN":
-                    cmd.rsp.cell_information.earfcn = int(value, 10)
-                elif key == "PWR":
-                    cmd.rsp.cell_information.rssi = float(value)
-                elif key == "PAGING":
-                    cmd.rsp.cell_information.paging = int(value, 10)
-                elif key == "CID":
-                    cmd.rsp.cell_information.cid = int(value, 16)
-                elif key == "BAND":
-                    cmd.rsp.cell_information.band = int(value, 10)
-                elif key == "BW":
-                    cmd.rsp.cell_information.bw = int(value, 10)
-                elif key == "CE":
-                    cmd.rsp.cell_information.ce_level = int(value, 10)
-
-
-
-#        if cmd:
-#            print('process rsp to cmd:' + str(cmd) + ' ' + str(cmd.at_cmd) + ' ' + str(at_rsp) + ' expecting ' + str(cmd.at_rsp))
-#        else:
-#            print('process rsp without preceding cmd: ' + str(at_rsp))
-
-        if not cmd or not cmd.at_rsp or cmd.type == WalterModemCmdType.TX or cmd.at_rsp != at_rsp[:len(cmd.at_rsp)]:
+        if (
+            result is None or
+            cmd is None or
+            cmd.at_rsp is None or
+            cmd.type == WalterModemCmdType.TX or
+            cmd.at_rsp != at_rsp[:len(cmd.at_rsp)]
+        ):
             return
 
         await self._finish_queue_cmd(cmd, result)
@@ -956,7 +1098,7 @@ class ModemCore:
         data = None,
         complete_handler = None,
         complete_handler_arg = None,
-        max_attempts = WALTER_MODEM_DEFAULT_CMD_ATTEMPTS
+        max_attempts = DEFAULT_CMD_ATTEMPTS
     ) -> bool:
         """
         Add a command to the command queue and await execution.
@@ -1005,32 +1147,3 @@ class ModemCore:
             cmd.rsp.result == WalterModemState.OK or
             (cmd.rsp.type == WalterModemRspType.HTTP and cmd.rsp.result == WalterModemState.NO_DATA)
         )
-
-    async def begin(self, debug_log: bool = False):
-        self.debug_log = debug_log
-        self._uart = UART(2,
-            baudrate=ModemCore.WALTER_MODEM_BAUD,
-            bits=8,
-            parity=None,
-            stop=1,
-            flow=UART.RTS|UART.CTS,
-            tx=ModemCore.WALTER_MODEM_PIN_TX,
-            rx=ModemCore.WALTER_MODEM_PIN_RX,
-            cts=ModemCore.WALTER_MODEM_PIN_CTS,
-            rts=ModemCore.WALTER_MODEM_PIN_RTS,
-            timeout=0,
-            timeout_char=0,
-            txbuf=2048,
-            rxbuf=2048
-        )
-
-        self._task_queue = Queue()
-        self._command_queue = Queue()
-        self._parser_data = ModemATParserData()
-
-        asyncio.create_task(self._uart_reader())
-        asyncio.create_task(self._queue_worker())
-
-        await self.reset()
-        await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC)
-        await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED)
