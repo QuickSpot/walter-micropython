@@ -19,7 +19,7 @@ from .utils import (
 class Modem(
     mixins.ModemCommon,
     mixins.ModemSimNetwork,
-    mixins.ModemSimNetwork,
+    mixins.ModemTLSCerts,
     mixins.ModemPDP,
     mixins.ModemGNSS,
     mixins.ModemSocket,
