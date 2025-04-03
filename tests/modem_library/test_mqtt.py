@@ -10,6 +10,9 @@ from walter_modem.structs import (
     ModemRsp,
     WalterModemOpState
 )
+from walter_modem.utils import (
+    get_mac
+)
 
 modem = Modem()
 
@@ -77,6 +80,26 @@ class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     
     async def test_mqtt_connect_to_valid_server_runs(self):
         self.assert_true(await modem.mqtt_connect(server_name='test.mosquitto.org', port=1883))
+    
+    # ---
+    # mqtt_subscribe()
+
+    async def test_mqtt_subscribe_runs(self):
+        self.assert_true(await modem.mqtt_subscribe(topic=f'/walter/mqtt-test/{get_mac()}'))
+    
+    async def test_mqtt_subscribe_sends_correct_at_cmd(self):
+        await self.assert_sends_at_command(
+            modem,
+            f'AT+SQNSMQTTSUBSCRIBE=0,"/walter/mqtt-test/{get_mac()}",2',
+            lambda: modem.mqtt_subscribe(
+                topic=f'/walter/mqtt-test/{get_mac()}',
+                qos=2
+            )
+        )
+    
+    async def test_mqtt_subscribe_adds_new_subscription_to_mirror_state(self):
+        await modem.mqtt_subscribe(topic=f'/walter/mqtt-test/{get_mac()}', qos=1)
+        self.assert_in((f'/walter/mqtt-test/{get_mac()}',1), modem._mqtt_subscriptions)
 
     # ---
     # mqtt_publish()
