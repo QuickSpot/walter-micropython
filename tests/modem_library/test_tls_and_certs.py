@@ -1,12 +1,9 @@
-import asyncio
 import minimal_unittest as unittest
 from walter_modem import Modem
 from walter_modem.enums import (
     WalterModemTlsValidation,
-    WalterModemTlsVersion,
-    WalterModemCMEError
+    WalterModemTlsVersion
 )
-from walter_modem.structs import ModemRsp
 
 CERT = """-----BEGIN CERTIFICATE-----
 MIIBNTCB3AICEAEwCgYIKoZIzj0EAwMwJDELMAkGA1UEBhMCQkUxFTATBgNVBAMM
@@ -40,12 +37,10 @@ class TestTLSAndCertificates(unittest.AsyncTestCase, unittest.WalterModemAsserts
     # tls_write_credential()
 
     async def test_tls_write_credential_runs_write(self):
-        modem_rsp = ModemRsp()
         self.assert_true(await modem.tls_write_credential(
             is_private_key=False,
             slot_idx=SLOT_IDX,
-            credential=CERT,
-            rsp=modem_rsp
+            credential=CERT
         ))
     
     async def test_tls_write_credential_sends_correct_at_cmd(self):
