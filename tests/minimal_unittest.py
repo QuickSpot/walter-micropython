@@ -282,7 +282,7 @@ class WalterModemAsserts:
             def cmd_handler(cmd, at_rsp):
                 nonlocal sent_cmd
                 sent_cmd = cmd.at_cmd
-            modem_instance._register_application_queue_rsp_handler(at_rsp_pattern, cmd_handler)
+            modem_instance.register_application_queue_rsp_handler(at_rsp_pattern, cmd_handler)
 
             await method()
             
