@@ -295,7 +295,7 @@ class WalterModemAsserts:
                 self.passed += 1
                 self.print_success()
             else:
-                self.errors += 1
+                self.failed += 1
                 self.print_fail(f'Sent command: {sent_cmd} is not expected: {expected_cmd}')
         else:
             self.errors += 1
