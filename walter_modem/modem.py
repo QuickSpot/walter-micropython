@@ -383,25 +383,34 @@ class Modem(
             at_rsp=b'OK',
         )
     
-    async def _tls_upload_key(self,
+    async def tls_write_credential(self,
         is_private_key: bool,
         slot_idx: int,
-        key,
+        credential,
         rsp: ModemRsp = None
     ) -> bool:
         """
-        Coroutine to store a certificate or a key in the NVRAM of the modem
+        Upload key or certificate to modem NVRAM.
+
+        It is recommended to save credentials in index 10-19 to avoid overwriting preinstalled
+        certificates and (if applicable) BlueCherry cloud platform credentials.
+
+        :param is_private_key: True if it's a private key, False if it's a certificate
+        :param slot_idx: Slot index within the modem NVRAM keystore
+        :param credential: NULL-terminated string containing the PEM key/cert data
+        :param rsp: Reference to a modem response instance
+
+        :return bool: True on success, False on failure
         """
         key_type = 'privatekey' if is_private_key else 'certificate'
         return await self._run_cmd(
             rsp=rsp,
-            at_cmd=f'AT+SQNSNVW={modem_string(key_type)},{slot_idx},{len(key)}',
+            at_cmd=f'AT+SQNSNVW={modem_string(key_type)},{slot_idx},{len(credential)}',
             at_rsp=b'OK',
-            data=key,
+            data=credential,
             cmd_type=WalterModemCmdType.DATA_TX_WAIT
         )
 
-    # TODO: update docstring to match style of others
     async def tls_provision_keys(self,
         walter_certificate,
         walter_private_key,
@@ -409,13 +418,12 @@ class Modem(
         rsp: ModemRsp = None
         ) -> bool:
         """
-        Coroutine to store certificates and/or keys in the NVRAM of the modem.
-        This is a wrapper for _tls_upload_key, which does the actual uploading.
-        Basically a copy of the Arduino example, including the slot numbers of the
-        NVRAM, which seem arbitrary.
+        DEPRECATED: This method will be removed in future releases.
+        It is still present for backwards compatibility.
+        Use tls_write_credential() instead.
         """
         if walter_certificate:
-            if not await self._tls_upload_key(False, 5, walter_certificate, rsp):
+            if not await self.tls_write_credential(False, 5, walter_certificate, rsp):
                 if self.debug_log: log('DEBUG'
                     'Failed to upload client certificate.')
                 return False
@@ -423,7 +431,7 @@ class Modem(
                 'Certificate stored in NVRAM slot 5.')
 
         if walter_private_key:
-            if not await self._tls_upload_key(True, 0, walter_private_key, rsp):
+            if not await self.tls_write_credential(True, 0, walter_private_key, rsp):
                 if self.debug_log: log('DEBUG',
                     'Failed to upload private key.')
                 return False
@@ -431,7 +439,7 @@ class Modem(
                 'Private key stored in NVRAM slot 0.')
 
         if ca_certificate:
-            if not await self._tls_upload_key(False, 6, ca_certificate, rsp):
+            if not await self.tls_write_credential(False, 6, ca_certificate, rsp):
                 if self.debug_log: log('DEBUG',
                     'Failed to upload CA certificate.')
                 return False
