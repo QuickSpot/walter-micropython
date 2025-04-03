@@ -135,7 +135,8 @@ class ModemMQTT(ModemCore):
         """
         async def complete_handler(result, rsp, complete_handler_arg):
             if result == WalterModemState.OK:
-                self._mqtt_subscriptions.append(complete_handler_arg)
+                if complete_handler not in self._mqtt_subscriptions:
+                    self._mqtt_subscriptions.append(complete_handler_arg)
 
         return await self._run_cmd(
             rsp=rsp,
