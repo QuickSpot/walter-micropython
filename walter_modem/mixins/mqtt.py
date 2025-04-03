@@ -52,8 +52,8 @@ class ModemMQTT(ModemCore):
             rsp=rsp,
             at_cmd='AT+SQNSMQTTCFG=0,{},{},{}{}'.format(
                 modem_string(client_id),
-                modem_string(user_name) if user_name else '""',
-                modem_string(password) if user_name else '""',
+                modem_string(user_name),
+                modem_string(password),
                 f',{tls_profile_id}' if tls_profile_id else ''
             ),
             at_rsp=b'OK'
