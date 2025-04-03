@@ -106,20 +106,30 @@ class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
 
     async def test_mqtt_publish_runs(self):
         self.assert_true(await modem.mqtt_publish(
-                topic='/walter/mqtt-test',
-                data='Hello from the walter test',
-                qos=0
+                topic=f'/walter/mqtt-test/{get_mac()}',
+                data='test_mqtt_publish_runs',
+                qos=1
             )
         )
+    
+    # ---
+    # mqtt_did_ring()
+
+    async def test_mqtt_did_ring_retrieves_earlier_sent_message(self):
+        msg_list = []
+
+        for _ in range(10):
+            if await modem.mqtt_did_ring(msg_list=msg_list, topic=f'/walter/mqtt-test/{get_mac()}'):
+                break
+            await asyncio.sleep(1)
+        
+        self.assert_in('test_mqtt_publish_runs', msg_list)
     
     # ---
     # mqtt_disconnect()
 
     async def test_mqtt_disconnect_runs(self):
         self.assert_true(await modem.mqtt_disconnect())
-    
-    # TODO: See if there is a way to get an error rc wihtout just getting ERROR
-    # Whilst the modem library should be able to handle that, it remains untested.
 
 
 test_mqtt = TestMQTT()
