@@ -55,7 +55,7 @@ class Modem(
                 rxbuf=2048
             )
 
-            self._reset_pin = Pin(ModemCore.PIN_RESET, Pin.OUT, value=1, hold=True)
+            self._reset_pin = Pin(ModemCore.PIN_RESET, Pin.OUT, pull=None, value=1, hold=True)
 
             self._task_queue = Queue()
             self._command_queue = Queue()
