@@ -1124,7 +1124,7 @@ class ModemCore:
         
         This function add a command to the task queue. This function will 
         only fail when the command queue is full. The command which is put
-        onto the queue will automatically get the WALTER_MODEM_CMD_STATE_NEW
+        onto the queue will automatically get the CMD_STATE_NEW
         state. This function will never call any callbacks.
         
         :param rsp: the ModemRsp 

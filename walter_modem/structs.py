@@ -245,7 +245,7 @@ class ModemCmd:
         self.data = None
         """
         Pointer to the data buffer to transmit in case of a
-        WALTER_MODEM_CMD_TYPE_DATA_TX_WAIT command.
+        CMD_TYPE_DATA_TX_WAIT command.
         """
         
         self.at_rsp = None

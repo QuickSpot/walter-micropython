@@ -40,22 +40,22 @@ class Modem(
         if not self._begun:
             self.debug_log = debug_log
             self._uart = UART(2,
-                baudrate=ModemCore.WALTER_MODEM_BAUD,
+                baudrate=ModemCore.BAUD,
                 bits=8,
                 parity=None,
                 stop=1,
                 flow=UART.RTS|UART.CTS,
-                tx=ModemCore.WALTER_MODEM_PIN_TX,
-                rx=ModemCore.WALTER_MODEM_PIN_RX,
-                cts=ModemCore.WALTER_MODEM_PIN_CTS,
-                rts=ModemCore.WALTER_MODEM_PIN_RTS,
+                tx=ModemCore.PIN_TX,
+                rx=ModemCore.PIN_RX,
+                cts=ModemCore.PIN_CTS,
+                rts=ModemCore.PIN_RTS,
                 timeout=0,
                 timeout_char=0,
                 txbuf=2048,
                 rxbuf=2048
             )
 
-            self._reset_pin = Pin(ModemCore.WALTER_MODEM_PIN_RESET, Pin.OUT, value=1, hold=True)
+            self._reset_pin = Pin(ModemCore.PIN_RESET, Pin.OUT, value=1, hold=True)
 
             self._task_queue = Queue()
             self._command_queue = Queue()
@@ -85,7 +85,7 @@ class Modem(
     ):
         if light_sleep:
             self._uart.init(flow=0)
-            rts_pin = Pin(ModemCore.WALTER_MODEM_PIN_RTS, value=1, hold=True)
+            rts_pin = Pin(ModemCore.PIN_RTS, value=1, hold=True)
             lightsleep(sleep_time_ms)
             rts_pin.init(hold=False)
         else:
