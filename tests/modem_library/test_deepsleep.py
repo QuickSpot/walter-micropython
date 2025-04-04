@@ -38,7 +38,7 @@ async def await_connection():
         modem.debug_log = False
         raise OSError('Connection Timed-out')
 
-class TestModemDeepSleep(unittest.AsyncTestCase):
+class TestDeepSleep(unittest.AsyncTestCase):
     async def async_setup(self):
         print(f'Started, reason: {machine.wake_reason()}')
         await asyncio.sleep(3)
@@ -64,7 +64,7 @@ class TestModemDeepSleep(unittest.AsyncTestCase):
     async def test_modem_retained_connection_during_sleep(self):
         self.assert_equal(WalterModemOpState.FULL, modem._op_state)
 
-class TestModemDeepSleepMqttPersist(unittest.AsyncTestCase):
+class TestDeepSleepMqttPersist(unittest.AsyncTestCase):
     async def async_setup(self):
         print(f'Started, reason: {machine.wake_reason()}')
         await asyncio.sleep(3)
@@ -95,8 +95,8 @@ class TestModemDeepSleepMqttPersist(unittest.AsyncTestCase):
         self.assert_equal([('short', 1), ('long-topic-test', 0)], modem._mqtt_subscriptions)
 
 
-test_modem_deep_sleep = TestModemDeepSleep()
-test_modem_deep_sleep.run()
+test_deep_sleep = TestDeepSleep()
+test_deep_sleep.run()
 
-# test_modem_deep_sleep_mqtt_persist = TestModemDeepSleepMqttPersist()
-# test_modem_deep_sleep_mqtt_persist.run()
+# test_deep_sleep_mqtt_persist = TestModemDeepSleepMqttPersist()
+# test_deep_sleep_mqtt_persist.run()
