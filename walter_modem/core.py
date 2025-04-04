@@ -3,6 +3,8 @@ import io
 import struct
 import time
 
+from machine import RTC # type: ignore
+
 from .enums import (
     WalterModemOpState,
     WalterModemNetworkRegState,
@@ -1163,3 +1165,42 @@ class ModemCore:
             cmd.rsp.result == WalterModemState.OK or
             (cmd.rsp.type == WalterModemRspType.HTTP and cmd.rsp.result == WalterModemState.NO_DATA)
         )
+
+    async def _sleep_wakeup(self):
+        await self._run_cmd(at_cmd='AT+CFUN?', at_rsp=b'OK')
+        await self._run_cmd(at_cmd='AT+CEREG?', at_rsp=b'OK')
+        await self._run_cmd(at_cmd='AT+SQNSCFG?', at_rsp=b'OK')
+
+        rtc = RTC()
+        packed_data = rtc.memory()
+
+        mqtt_subs = packed_data[0]
+        packed_data = packed_data[1:]
+        if mqtt_subs == 1:
+            buffer = io.BytesIO(packed_data)
+            mqtt_subscriptions = self._mqtt_subscriptions
+        
+            while buffer.tell() < len(packed_data):
+                topic_length = struct.unpack('I', buffer.read(4))[0]
+                topic = struct.unpack(f'{topic_length}s', buffer.read(topic_length))[0].decode('utf-8')
+                qos = struct.unpack('B', buffer.read(1))[0]
+
+                mqtt_subscriptions.append((topic, qos))
+
+    def _sleep_prepare(self, persist_mqtt_subs: bool):
+        if persist_mqtt_subs:
+            buffer = io.BytesIO()
+            buffer.write(struct.pack('B', 1))
+
+            for topic, qos in self._mqtt_subscriptions:
+                encoded_topic = topic.encode('utf-8')
+                buffer.write(struct.pack('I', len(encoded_topic)))
+                buffer.write(struct.pack(f'{len(encoded_topic)}s', encoded_topic))
+                buffer.write(struct.pack('B', qos))
+
+            packed_data = buffer.getvalue()
+        else:
+            packed_data = struct.pack('B', 0)
+        
+        rtc = RTC()
+        rtc.memory(packed_data)
