@@ -59,7 +59,7 @@ class TestDeepSleep(unittest.AsyncTestCase):
             modem.sleep(sleep_time_ms=20000, persist_mqtt_subs=False)
 
     async def test_modem_begins_after_deepsleep(self):
-        self.assert_does_not_throw(await modem.begin(), Exception)
+        await self.assert_does_not_throw(modem.begin, Exception)
     
     async def test_modem_retained_connection_during_sleep(self):
         self.assert_equal(WalterModemOpState.FULL, modem._op_state)
