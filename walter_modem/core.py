@@ -4,6 +4,7 @@ import struct
 import time
 
 from machine import RTC # type: ignore
+from esp32 import gpio_deep_sleep_hold # type: ignore
 
 from .enums import (
     WalterModemOpState,
