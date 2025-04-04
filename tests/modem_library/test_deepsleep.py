@@ -98,5 +98,5 @@ class TestDeepSleepMqttPersist(unittest.AsyncTestCase):
 test_deep_sleep = TestDeepSleep()
 test_deep_sleep.run()
 
-# test_deep_sleep_mqtt_persist = TestModemDeepSleepMqttPersist()
-# test_deep_sleep_mqtt_persist.run()
+test_deep_sleep_mqtt_persist = TestDeepSleepMqttPersist()
+test_deep_sleep_mqtt_persist.run()
