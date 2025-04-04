@@ -79,40 +79,6 @@ class ModemSocket(ModemCore):
             complete_handler=complete_handler,
             complete_handler_arg=socket
         )
-
-    async def config_socket(self, socket_id = -1, rsp: ModemRsp = None) -> bool:
-        """
-        Configures a newly created socket to ensure the modem is correctly set up to use it.
-
-        :param socket_id: The id of the socket to connect or -1 to re-use the last one.
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-        try:
-            if socket_id == -1:
-                socket = self._socket
-            else:
-                socket = self._socket_list[socket_id - 1]
-        except Exception:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
-            return False
-        
-        self._socket = socket
-
-        async def complete_handler(result, rsp, complete_handler_arg):
-            sock = complete_handler_arg
-
-            if result == WalterModemState.OK:
-                sock.state = WalterModemSocketState.CONFIGURED
-
-        return await self._run_cmd(
-            rsp=rsp,
-            at_cmd=f'AT+SQNSCFGEXT={socket_id},2,0,0,0,0,0',
-            at_rsp=b'OK',
-            complete_handler=complete_handler,
-            complete_handler_arg=socket
-        )
     
     async def connect_socket(self,
         remote_host: str,

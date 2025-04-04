@@ -2,11 +2,6 @@ import network
 import time
 import ubinascii
 
-
-from .enums import (
-    WalterModemPDPType
-)
-
 def get_mac() -> str:
     return ubinascii.hexlify(network.WLAN().config('mac'),':').decode()
 

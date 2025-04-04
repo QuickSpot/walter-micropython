@@ -1,4 +1,5 @@
 import asyncio
+import time
 
 LPS22HB_ADDRESS = 0x5C
 LPS22HB_WHO_AM_I_REG = 0x0F
@@ -37,7 +38,7 @@ class LPS22HB:
         
         # Wait for ONE_SHOT bit to be cleared by the hardware
         while self.i2c_read(LPS22HB_CTRL2_REG) & 0x01 != 0:
-            asyncio.sleep(0.01)  # Short delay to avoid busy loop
+            time.sleep(0.01) # Short delay to avoid busy loop
 
         # Read pressure value
         reading = (self.i2c_read(LPS22HB_PRESS_OUT_XL_REG) |

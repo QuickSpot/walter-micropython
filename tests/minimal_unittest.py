@@ -4,6 +4,7 @@ import time
 GREEN_FG = '\033[32m'
 RED_FG = '\033[31m'
 BLACK_FG = '\033[30m'
+YELLOW_FG = '\033[33m'
 YELLOW_BG = '\033[43m'
 RESET = '\033[0m'
 
@@ -197,7 +198,13 @@ class TestCase:
 
     def _report_results(self):
         passed_percentage = (self.passed / self.tests_run) * 100 if self.passed else 0
-        print(f'\nRan {self.tests_run} tests, {passed_percentage:.2f}% passed')
+        percentage_color = GREEN_FG if passed_percentage >= 75 else (
+            YELLOW_FG if passed_percentage >= 60 else RED_FG 
+        )
+        print(
+            f'\nRan {self.tests_run} tests, '
+            f'{percentage_color}{passed_percentage:.2f}%{RESET} passed'
+        )
         if self.passed > 0: print(f'  {self.passed} passed')
         if self.failed > 0: print(f'  {self.failed} failed')
         if self.errors > 0: print(f'  {self.errors} errors')
@@ -259,3 +266,37 @@ class AsyncTestCase(TestCase):
             await self.async_teardown()
             print('➜ Teardown complete')
         self._report_results()
+
+class WalterModemAsserts:
+    async def assert_sends_at_command(self,
+        modem_instance,
+        expected_cmd: str,
+        method: callable,
+        at_rsp_pattern: bytes = b'OK',
+        timeout_s = 5
+    ):
+        self.tests_run += 1
+        if callable(method):
+            sent_cmd = None
+
+            def cmd_handler(cmd, at_rsp):
+                nonlocal sent_cmd
+                sent_cmd = cmd.at_cmd
+            modem_instance.register_application_queue_rsp_handler(at_rsp_pattern, cmd_handler)
+
+            await method()
+            
+            for _ in range(timeout_s):
+                if sent_cmd is not None: break
+                await asyncio.sleep(1)
+            modem_instance.unregister_application_queue_rsp_handler(cmd_handler)
+
+            if expected_cmd == sent_cmd:
+                self.passed += 1
+                self.print_success()
+            else:
+                self.failed += 1
+                self.print_fail(f'Sent command: {sent_cmd} is not expected: {expected_cmd}')
+        else:
+            self.errors += 1
+            self.print_error('Provided method is not callable')

@@ -5,22 +5,33 @@ It includes all the standard asserts and measures how long each assert took.
 
 ## Setup
 
+### Using `mpremote`
+
 Copy `minimal_unittest.py` to `/lib/minimal_unittest/__init__.py` on the
 Micropython device.
 
-Example using [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
-
 ```sh
+mpremote mkdir :lib # Make the lib dir on the MicroPython device if not already
+mpremote mkdir :lib/minimal_unittest
 mpremote cp tests/minimal_unittest.py :lib/minimal_unittest/__init__.py
 ```
 
 Then run the tests on the device.
 
-Example using [`mpremote`](https://docs.micropython.org/en/latest/reference/mpremote.html):
-
 ```sh
 mpremote run tests/test_unittest.py
 ```
+
+> [!NOTE]
+> When no device is specified mpremote takes the first available device, the above example leverage that.
+
+### Using `Thonny`
+
+Place `minimal_unittest.py` in `:lib/minimal_unittest` as `__init__.py` on the Micropython device.
+
+![thonny-minimal-unittest-dir](./.readme_img/thonny-minimal-unittest-dir.png)
+
+![thonny-minimal-unittest-install](./.readme_img/thonny-minimal-unittest-install.gif)
 
 ## Usage
 
@@ -32,7 +43,7 @@ Every test method should have 1 assert call.
 
 > [!NOTE]
 > `TestCase` only support synchronous methods,
-> to work with asynchronous methods; inherit from `AsyncTestCase` instead.
+> to work with asynchronous methods inherit from `AsyncTestCase` instead.
 
 ```py
 import minimal_unittest as unittest
@@ -173,7 +184,7 @@ Asserts the first argument is not an instance of second argument
 self.assert_is_instance(4, str)
 ```
 
-### Asser Does Not Throw
+### Assert Does Not Throw
 
 Asserts the callable *(first argument)*does not throw set exception(s) *(second argument)*
 
@@ -184,3 +195,36 @@ Asserts the callable *(first argument)*does not throw set exception(s) *(second 
 ```py
 self.assert_does_not_throw(self.sum, Exception, 1, 2)
 ```
+
+## WalterModemAsserts
+
+These are asserts specific to the micropython waltermodem implimentation,
+made to reduce repetitive code and risk of errors whilst writing tests.
+
+> [!WARNING]
+> These can only be used inside of an [`AynscTestCase`](#usage)
+> as these asserts mut be awaited.
+
+To use these, also inherit from WalterModemAsserts.
+
+```py
+import minimal_unittest as unittest
+
+class TestExample(unittest.TestCase, unittest.WalterModemAsserts):
+    # ...
+```
+
+### Assert Sends AT Command
+
+Asserts a given modem method sents the correct AT command to the modem.
+
+```py
+await self.assert_sends_at_command(
+    modem_instance=modem,
+    expected_cmd='AT+CEREG=1',
+    method=lambda: modem.config_cereg_reports(WalterModemCEREGReportsType.ENABLED)
+)
+```
+
+Optionally you can also provide: `at_rsp_pattern` should it differ from `b'OK'`
+and/or `timeout_s` should you want to wait longer than 5 seconds before timing out.

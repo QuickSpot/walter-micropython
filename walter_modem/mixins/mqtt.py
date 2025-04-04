@@ -52,8 +52,8 @@ class ModemMQTT(ModemCore):
             rsp=rsp,
             at_cmd='AT+SQNSMQTTCFG=0,{},{},{}{}'.format(
                 modem_string(client_id),
-                modem_string(user_name) if user_name else '""',
-                modem_string(password) if user_name else '""',
+                modem_string(user_name),
+                modem_string(password),
                 f',{tls_profile_id}' if tls_profile_id else ''
             ),
             at_rsp=b'OK'
@@ -92,7 +92,7 @@ class ModemMQTT(ModemCore):
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSMQTTDISCONNECT=0',
-            at_rsp=b'+SQNSMQTTONDISCONNECT:0,0'
+            at_rsp=b'+SQNSMQTTONDISCONNECT:0,'
         )
 
     async def mqtt_publish(self,
@@ -135,7 +135,8 @@ class ModemMQTT(ModemCore):
         """
         async def complete_handler(result, rsp, complete_handler_arg):
             if result == WalterModemState.OK:
-                self._mqtt_subscriptions.append(complete_handler_arg)
+                if complete_handler not in self._mqtt_subscriptions:
+                    self._mqtt_subscriptions.append(complete_handler_arg)
 
         return await self._run_cmd(
             rsp=rsp,

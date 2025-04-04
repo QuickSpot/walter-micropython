@@ -3,24 +3,9 @@ import io
 import struct
 import time
 
-from machine import (
-    UART,
-    Pin,
-    lightsleep,
-    deepsleep,
-    wake_reason,
-    DEEPSLEEP_RESET,
-    RTC
-)
-
-from esp32 import gpio_deep_sleep_hold
-
-from .queue import Queue
-
 from .enums import (
-    WalterModemNetworkRegState,
-    WalterModemNetworkSelMode,
     WalterModemOpState,
+    WalterModemNetworkRegState,
     WalterModemRspParserState,
     WalterModemCmdState,
     WalterModemState,
@@ -31,9 +16,8 @@ from .enums import (
     WalterModemSimState,
     WalterModemHttpContextState,
     WalterModemSocketState,
-    WalterModemCMEErrorReportsType,
-    WalterModemCEREGReportsType,
-    WalterModemMqttState
+    WalterModemMqttState,
+    WalterModemMqttResultCode
 )
 
 from .structs import (
@@ -49,7 +33,6 @@ from .structs import (
     ModemGNSSAssistance,
     ModemCmd,
     ModemRsp,
-    ModemATParserData,
     ModemMqttMessage
 )
 
@@ -68,31 +51,31 @@ class ModemCore:
     SMALLER_THAN = ord('<')
     SPACE = ord(' ')
 
-    WALTER_MODEM_DEFAULT_CMD_ATTEMPTS = 3
+    DEFAULT_CMD_ATTEMPTS = 3
     """The default number of attempts to execute a command."""
 
-    WALTER_MODEM_PIN_RX = 14
+    PIN_RX = 14
     """The RX pin on which modem data is received."""
 
-    WALTER_MODEM_PIN_TX = 48
+    PIN_TX = 48
     """The TX to which modem data must be transmitted."""
 
-    WALTER_MODEM_PIN_RTS = 21
+    PIN_RTS = 21
     """The RTS pin on the ESP32 side."""
 
-    WALTER_MODEM_PIN_CTS = 47
+    PIN_CTS = 47
     """The CTS pin on the ESP32 size."""
 
-    WALTER_MODEM_PIN_RESET = 45
+    PIN_RESET = 45
     """The active low modem reset pin."""
 
-    WALTER_MODEM_BAUD = 115200
+    BAUD = 115200
     """The baud rate used to talk to the modem."""
 
-    WALTER_MODEM_CMD_TIMEOUT = 5
+    CMD_TIMEOUT = 5
     """The maximum number of seconds to wait."""
 
-    WALTER_MODEM_MIN_VALID_TIMESTAMP = 1672531200
+    MIN_VALID_TIMESTAMP = 1672531200
     """Any modem time below 1 Jan 2023 00:00:00 UTC is considered an invalid time."""
 
     MIN_PDP_CTX_ID = 1
@@ -101,35 +84,35 @@ class ModemCore:
     MAX_PDP_CTX_ID = 8
     """The highest possible PDP context ID"""
 
-    WALTER_MODEM_MAX_SOCKETS = 6
-    """The maximum number of sockets that the library can support."""
-
-    WALTER_MODEM_MAX_HTTP_PROFILES = 3
-    """The max nr of http profiles"""
-
-    WALTER_MODEM_MAX_TLS_PROFILES = 6
-    """The maximum number of TLS profiles that the library can support"""
-
-    WALTER_MODEM_OPERATOR_MAX_SIZE = 16
-    """The maximum number of characters of an operator name"""
-
-    WALTER_MODEM_MQTT_TOPIC_MAX_SIZE = 127
-    """The recommended mamximum number of characters in an MQTT topic"""
-
-    WALTER_MODEM_MQTT_MAX_PENDING_RINGS = 8
-    """The recommended maximum number of rings that can be pending for the MQTT protocol"""
-
-    WALTER_MODEM_MQTT_MAX_TOPICS = 4
-    """The recommended maximum allowed MQTT topics to subscribe to"""
-
-    WALTER_MODEM_MQTT_MIN_KEEP_ALIVE = 20
-    """The recommended minimum for the MQTT keep alive time"""
-
-    WALTER_MODEM_MQTT_MAX_MESSAGE_LEN = 4096
-    """The maximum MQTT payload length"""
-
     DEFAULT_PDP_CTX_ID = 1
     """The modem's default PDP CTX ID, if none is specified"""
+
+    MAX_SOCKETS = 6
+    """The maximum number of sockets that the library can support."""
+
+    MAX_HTTP_PROFILES = 3
+    """The max nr of http profiles"""
+
+    MAX_TLS_PROFILES = 6
+    """The maximum number of TLS profiles that the library can support"""
+
+    OPERATOR_MAX_SIZE = 16
+    """The maximum number of characters of an operator name"""
+
+    MQTT_TOPIC_MAX_SIZE = 127
+    """The recommended mamximum number of characters in an MQTT topic"""
+
+    MQTT_MAX_PENDING_RINGS = 8
+    """The recommended maximum number of rings that can be pending for the MQTT protocol"""
+
+    MQTT_MAX_TOPICS = 4
+    """The recommended maximum allowed MQTT topics to subscribe to"""
+
+    MQTT_MIN_KEEP_ALIVE = 20
+    """The recommended minimum for the MQTT keep alive time"""
+
+    MQTT_MAX_MESSAGE_LEN = 4096
+    """The maximum MQTT payload length"""
 
     def __init__(self):
         gpio_deep_sleep_hold(True)
@@ -140,13 +123,13 @@ class ModemCore:
         self._reg_state = WalterModemNetworkRegState.NOT_SEARCHING
         """The current network registration state of the modem."""
 
-        self._socket_list = [ModemSocket(idx + 1) for idx in range(ModemCore.WALTER_MODEM_MAX_SOCKETS) ]
+        self._socket_list = [ModemSocket(idx + 1) for idx in range(ModemCore.MAX_SOCKETS) ]
         """The list of sockets"""
 
         self._socket = None
         """The socket which is currently in use by the library or None when no socket is in use."""
 
-        self._http_context_list = [ModemHttpContext() for _ in range(ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES) ]
+        self._http_context_list = [ModemHttpContext() for _ in range(ModemCore.MAX_HTTP_PROFILES) ]
         """The list of http contexts in the modem"""
 
         self._http_current_profile = 0xff
@@ -307,7 +290,7 @@ class ModemCore:
                     self._add_at_byte_to_buffer(b, False)
 
                 elif self._parser_data.state == WalterModemRspParserState.DATA_HTTP_START2:
-                    if b == ModemCore.SMALLER_THAN and self._http_current_profile < ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+                    if b == ModemCore.SMALLER_THAN and self._http_current_profile < ModemCore.MAX_HTTP_PROFILES:
                         # FIXME: modem might block longer than cmd timeout,
                         # will lead to retry, error etc - fix properly
                         self._parser_data.raw_chunk_size = self._http_context_list[self._http_current_profile].content_length + len("\r\nOK\r\n")
@@ -385,7 +368,7 @@ class ModemCore:
 
             else:
                 tick_diff = time.time() - cmd.attempt_start
-                timed_out = tick_diff >= ModemCore.WALTER_MODEM_CMD_TIMEOUT
+                timed_out = tick_diff >= ModemCore.CMD_TIMEOUT
                 if timed_out or cmd.state == WalterModemCmdState.RETRY_AFTER_ERROR:
                     if cmd.attempt >= cmd.max_attempts:
                         if timed_out:
@@ -416,7 +399,7 @@ class ModemCore:
 
             else:
                 tick_diff = time.time() - cmd.attempt_start
-                if tick_diff >= ModemCore.WALTER_MODEM_CMD_TIMEOUT:
+                if tick_diff >= ModemCore.CMD_TIMEOUT:
                     await self._finish_queue_cmd(cmd, WalterModemState.TIMEOUT)
                 else:
                     return
@@ -462,7 +445,7 @@ class ModemCore:
         return WalterModemState.OK
 
     async def _handle_sqn_http_rcv_answer_start(self, tx_stream, cmd, at_rsp):
-        if self._http_current_profile >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES or self._http_context_list[self._http_current_profile].state != WalterModemHttpContextState.GOT_RING:
+        if self._http_current_profile >= ModemCore.MAX_HTTP_PROFILES or self._http_context_list[self._http_current_profile].state != WalterModemHttpContextState.GOT_RING:
             return WalterModemState.ERROR
         else:
             if not cmd:
@@ -485,7 +468,7 @@ class ModemCore:
         http_status = int(http_status_str)
         content_length = int(content_length_str)
 
-        if profile_id >= ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
             # TODO: return error if modem returns invalid profile id.
             # problem: this message is an URC: the associated cmd
             # may be any random command currently executing */
@@ -512,7 +495,7 @@ class ModemCore:
         profile_id = int(profile_id_str)
         result_code = int(result_code_str)
 
-        if profile_id < ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id < ModemCore.MAX_HTTP_PROFILES:
             if result_code == 0:
                 self._http_context_list[profile_id].connected = True
             else:
@@ -523,7 +506,7 @@ class ModemCore:
     async def _handle_sqn_http_disconnect(self, tx_stream, cmd, at_rsp):
         profile_id = int(at_rsp[len("+SQNHTTPDISCONNECT: "):].decode())
 
-        if profile_id < ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id < ModemCore.MAX_HTTP_PROFILES:
             self._http_context_list[profile_id].connected = False
         
         return WalterModemState.OK
@@ -532,7 +515,7 @@ class ModemCore:
         profile_id_str, _ = at_rsp[len('+SQNHTTPSH: '):].decode().split(',')
         profile_id = int(profile_id_str)
 
-        if profile_id < ModemCore.WALTER_MODEM_MAX_HTTP_PROFILES:
+        if profile_id < ModemCore.MAX_HTTP_PROFILES:
             self._http_context_list[profile_id].connected = False
 
         return WalterModemState.OK
@@ -541,23 +524,48 @@ class ModemCore:
         _, result_code_str = at_rsp[len("+SQNSMQTTONCONNECT:"):].decode().split(',')
         result_code = int(result_code_str)
 
-        if self._mqtt_status == WalterModemMqttState.CONNECTED:
-            for (topic, qos) in self._mqtt_subscriptions:
-                asyncio.create_task(self._run_cmd(
-                    at_cmd=f'AT+SQNSMQTTSUBSCRIBE=0,{modem_string(topic)},{qos}',
-                    at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic)),
-                ))
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
 
         if result_code:
             self._mqtt_status = WalterModemMqttState.DISCONNECTED
         else:
             self._mqtt_status = WalterModemMqttState.CONNECTED
 
+        if self._mqtt_status == WalterModemMqttState.CONNECTED:
+            for (topic, qos) in self._mqtt_subscriptions:
+                asyncio.create_task(self._run_cmd(
+                    at_cmd=f'AT+SQNSMQTTSUBSCRIBE=0,{modem_string(topic)},{qos}',
+                    at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic)),
+                ))
+        
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTCONNECT=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
         return WalterModemState.OK
+    
+    async def _handle_sqns_mqtt_on_publish(self, tx_stream, cmd, at_rsp):
+        result_code = int(at_rsp[-2:].strip(b','))
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTPUBLISH=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
+        return WalterModemState.OK        
 
     async def _handle_sqns_mqtt_on_disconnect(self, tx_stream, cmd, at_rsp):
         _, result_code_str = at_rsp[len("+SQNSMQTTONDISCONNECT:"):].decode().split(',')
         result_code = int(result_code_str)
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
 
         if result_code != 0:
             return WalterModemState.ERROR
@@ -566,6 +574,10 @@ class ModemCore:
         self._mqtt_subscriptions = []
         for msg in self._mqtt_msg_buffer:
             msg.free = True
+        
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTDISCONNECT=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
 
         return WalterModemState.OK
 
@@ -590,6 +602,19 @@ class ModemCore:
             msg.free = True
 
         return WalterModemState.OK
+    
+    async def _handle_sqns_mqtt_subscribe(self, tx_stream, cmd, at_rsp):
+        result_code = int(at_rsp[-2:].strip(b','))
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTSUBSCRIBE=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
+        return WalterModemState.OK    
 
     async def _handle_sqn_sh(self, tx_stream, cmd, at_rsp):
         socket_id = int(at_rsp[len('+SQNSH: '):].decode())
@@ -804,7 +829,7 @@ class ModemCore:
 
             if not first_key_parsed and len(pattern) > 2:
                 operator_name = pattern[:-2]
-                cmd.rsp.cell_information.net_name = operator_name[:ModemCore.WALTER_MODEM_OPERATOR_MAX_SIZE]
+                cmd.rsp.cell_information.net_name = operator_name[:ModemCore.OPERATOR_MAX_SIZE]
                 pattern = pattern[-2:]
                 first_key_parsed = True
 
@@ -982,9 +1007,11 @@ class ModemCore:
                 (b'+SQNHTTPSH: ', self._handle_sqn_http_sh),
                 # - MQTT
                 (b'+SQNSMQTTONCONNECT:0,', self._handle_sqns_mqtt_on_connect),
+                (b'+SQNSMQTTONPUBLISH:0', self._handle_sqns_mqtt_on_publish),
                 (b'+SQNSMQTTONDISCONNECT:0,', self._handle_sqns_mqtt_on_disconnect),
                 (b'+SQNSMQTTONMESSAGE:0,', self._handle_sqns_mqtt_on_message),
                 (b'+SQNSMQTTMEMORYFULL', self._handle_sqns_mqtt_memory_full),
+                (b'+SQNSMQTTONSUBSCRIBE:0', self._handle_sqns_mqtt_subscribe),
                 # - Socket
                 (b'+SQNSH: ', self._handle_sqn_sh),
                 (b'+SQNSCFG: ', self._handle_sqnscfg),
@@ -1078,16 +1105,6 @@ class ModemCore:
                 if cur_cmd.state == WalterModemCmdState.COMPLETE:
                     cur_cmd = None
 
-    def _register_application_queue_rsp_handler(self, start_pattern: bytes, handler: callable):
-        if isinstance(start_pattern, bytes) and callable(handler):
-            if not self._application_queue_rsp_handlers_set:
-                self._application_queue_rsp_handlers_set = True
-                self._application_queue_rsp_handlers = [(start_pattern, handler)]
-            else:
-                self._application_queue_rsp_handlers.append((start_pattern, handler))
-        else:
-            log('WARNING', 'Invalid parameters, not registering application queue rsp handler')
-
     async def _run_cmd(self,
         at_cmd: str,
         at_rsp: str, 
@@ -1097,7 +1114,7 @@ class ModemCore:
         data = None,
         complete_handler = None,
         complete_handler_arg = None,
-        max_attempts = WALTER_MODEM_DEFAULT_CMD_ATTEMPTS
+        max_attempts = DEFAULT_CMD_ATTEMPTS
     ) -> bool:
         """
         Add a command to the command queue and await execution.
@@ -1146,103 +1163,3 @@ class ModemCore:
             cmd.rsp.result == WalterModemState.OK or
             (cmd.rsp.type == WalterModemRspType.HTTP and cmd.rsp.result == WalterModemState.NO_DATA)
         )
-
-    async def begin(self, debug_log: bool = False):
-        if not self._begun:
-            self.debug_log = debug_log
-            self._uart = UART(2,
-                baudrate=ModemCore.WALTER_MODEM_BAUD,
-                bits=8,
-                parity=None,
-                stop=1,
-                flow=UART.RTS|UART.CTS,
-                tx=ModemCore.WALTER_MODEM_PIN_TX,
-                rx=ModemCore.WALTER_MODEM_PIN_RX,
-                cts=ModemCore.WALTER_MODEM_PIN_CTS,
-                rts=ModemCore.WALTER_MODEM_PIN_RTS,
-                timeout=0,
-                timeout_char=0,
-                txbuf=2048,
-                rxbuf=2048
-            )
-
-            self._reset_pin = Pin(ModemCore.WALTER_MODEM_PIN_RESET, Pin.OUT, value=1, hold=True)
-
-            self._task_queue = Queue()
-            self._command_queue = Queue()
-            self._parser_data = ModemATParserData()
-
-            self._uart_reader_task = asyncio.create_task(self._uart_reader())
-            self._queue_worker_task = asyncio.create_task(self._queue_worker())
-
-            
-            if wake_reason() == DEEPSLEEP_RESET:
-                await self._sleep_wakeup()
-            else:
-                if not await self.reset():
-                    raise RuntimeError('Failed to reset modem')
-                
-            if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
-                raise RuntimeError('Failed to configure CME error reports')
-            if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED_UE_PSM_WITH_LOCATION_EMM_CAUSE):
-                raise RuntimeError('Failed to configure cereg reports')
-        
-        self._begun = True
-
-    async def _sleep_wakeup(self):
-        await self._run_cmd(at_cmd='AT+CFUN?', at_rsp=b'OK')
-        await self._run_cmd(at_cmd='AT+CEREG?', at_rsp=b'OK')
-        await self._run_cmd(at_cmd='AT+SQNSCFG?', at_rsp=b'OK')
-
-        rtc = RTC()
-        packed_data = rtc.memory()
-
-        mqtt_subs = packed_data[0]
-        packed_data = packed_data[1:]
-        if mqtt_subs == 1:
-            buffer = io.BytesIO(packed_data)
-            mqtt_subscriptions = self._mqtt_subscriptions
-        
-            while buffer.tell() < len(packed_data):
-                topic_length = struct.unpack('I', buffer.read(4))[0]
-                topic = struct.unpack(f'{topic_length}s', buffer.read(topic_length))[0].decode('utf-8')
-                qos = struct.unpack('B', buffer.read(1))[0]
-
-                mqtt_subscriptions.append((topic, qos))
-
-    def _sleep_prepare(self, persist_mqtt_subs: bool):
-        if persist_mqtt_subs:
-            buffer = io.BytesIO()
-            buffer.write(struct.pack('B', 1))
-
-            for topic, qos in self._mqtt_subscriptions:
-                encoded_topic = topic.encode('utf-8')
-                buffer.write(struct.pack('I', len(encoded_topic)))
-                buffer.write(struct.pack(f'{len(encoded_topic)}s', encoded_topic))
-                buffer.write(struct.pack('B', qos))
-
-            packed_data = buffer.getvalue()
-        else:
-            packed_data = struct.pack('B', 0)
-        
-        rtc = RTC()
-        rtc.memory(packed_data)
-
-    def sleep(self,
-        sleep_time_ms: int,
-        light_sleep: bool = False,
-        persist_mqtt_subs: bool = False
-    ):
-        if light_sleep:
-            self._uart.init(flow=0)
-            rts_pin = Pin(ModemCore.WALTER_MODEM_PIN_RTS, value=1, hold=True)
-            lightsleep(sleep_time_ms)
-            rts_pin.init(hold=False)
-        else:
-            self._uart_reader_task.cancel()
-            self._queue_worker_task.cancel()
-            self._uart.deinit()
-
-            self._sleep_prepare(persist_mqtt_subs)
-            time.sleep(1)
-            deepsleep(sleep_time_ms)
