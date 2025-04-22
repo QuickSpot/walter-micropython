@@ -1,6 +1,6 @@
-import network
+import network # type: ignore
 import time
-import ubinascii
+import ubinascii # type: ignore
 
 def get_mac() -> str:
     return ubinascii.hexlify(network.WLAN().config('mac'),':').decode()

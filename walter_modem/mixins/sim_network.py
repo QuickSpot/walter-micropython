@@ -124,11 +124,14 @@ class ModemSimNetwork(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        return await self._run_cmd(
+        rat_cmd_result = await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+SQNMODEACTIVE={rat}',
             at_rsp=b'OK'
         )
+        
+        return rat_cmd_result and await self.soft_reset()
+        
 
     async def get_radio_bands(self, rsp: ModemRsp = None) -> bool:
         """

@@ -1,5 +1,10 @@
 import asyncio
+import io
+import struct
 import time
+
+from machine import RTC # type: ignore
+from esp32 import gpio_deep_sleep_hold # type: ignore
 
 from .enums import (
     WalterModemOpState,
@@ -113,6 +118,8 @@ class ModemCore:
     """The maximum MQTT payload length"""
 
     def __init__(self):
+        gpio_deep_sleep_hold(True)
+
         self._op_state = WalterModemOpState.MINIMUM
         """The current operational state of the modem."""
 
@@ -426,7 +433,7 @@ class ModemCore:
             return None
         
         cmd.rsp.type = WalterModemRspType.RAT
-        cmd.rsp.rat = int(at_rsp.decode().split(':')[1]) - 1
+        cmd.rsp.rat = int(at_rsp.decode().split(':')[1])
 
         return WalterModemState.OK
 
@@ -623,6 +630,17 @@ class ModemCore:
         _socket.state = WalterModemSocketState.FREE
 
         return WalterModemState.OK
+
+    async def _handle_sqnscfg(self, tx_stream, cmd, at_rsp):
+        conn_id, cid, pkt_sz, max_to, conn_to, tx_to = map(int, at_rsp.split(b': ')[1].split(b','))
+
+        socket = self._socket_list[conn_id - 1]
+        socket.id = conn_id
+        socket.pdp_context_id = cid
+        socket.mtu = pkt_sz
+        socket.exchange_timeout = max_to
+        socket.conn_timeout = conn_to / 10
+        socket.send_delay_ms = tx_to * 100
 
     async def _handle_lp_gnss_fix_ready(self, tx_stream, cmd, at_rsp):
         data = at_rsp[len(b'+LPGNSSFIXREADY: '):]
@@ -999,6 +1017,7 @@ class ModemCore:
                 (b'+SQNSMQTTONSUBSCRIBE:0', self._handle_sqns_mqtt_subscribe),
                 # - Socket
                 (b'+SQNSH: ', self._handle_sqn_sh),
+                (b'+SQNSCFG: ', self._handle_sqnscfg),
 
                 # 10. Location Services
                 (b'+LPGNSSFIXREADY: ', self._handle_lp_gnss_fix_ready),
@@ -1105,7 +1124,7 @@ class ModemCore:
         
         This function add a command to the task queue. This function will 
         only fail when the command queue is full. The command which is put
-        onto the queue will automatically get the WALTER_MODEM_CMD_STATE_NEW
+        onto the queue will automatically get the CMD_STATE_NEW
         state. This function will never call any callbacks.
         
         :param rsp: the ModemRsp 
@@ -1147,3 +1166,42 @@ class ModemCore:
             cmd.rsp.result == WalterModemState.OK or
             (cmd.rsp.type == WalterModemRspType.HTTP and cmd.rsp.result == WalterModemState.NO_DATA)
         )
+
+    async def _sleep_wakeup(self):
+        await self._run_cmd(at_cmd='AT+CFUN?', at_rsp=b'OK')
+        await self._run_cmd(at_cmd='AT+CEREG?', at_rsp=b'OK')
+        await self._run_cmd(at_cmd='AT+SQNSCFG?', at_rsp=b'OK')
+
+        rtc = RTC()
+        packed_data = rtc.memory()
+
+        mqtt_subs = packed_data[0]
+        packed_data = packed_data[1:]
+        if mqtt_subs == 1:
+            buffer = io.BytesIO(packed_data)
+            mqtt_subscriptions = self._mqtt_subscriptions
+        
+            while buffer.tell() < len(packed_data):
+                topic_length = struct.unpack('I', buffer.read(4))[0]
+                topic = struct.unpack(f'{topic_length}s', buffer.read(topic_length))[0].decode('utf-8')
+                qos = struct.unpack('B', buffer.read(1))[0]
+
+                mqtt_subscriptions.append((topic, qos))
+
+    def _sleep_prepare(self, persist_mqtt_subs: bool):
+        if persist_mqtt_subs:
+            buffer = io.BytesIO()
+            buffer.write(struct.pack('B', 1))
+
+            for topic, qos in self._mqtt_subscriptions:
+                encoded_topic = topic.encode('utf-8')
+                buffer.write(struct.pack('I', len(encoded_topic)))
+                buffer.write(struct.pack(f'{len(encoded_topic)}s', encoded_topic))
+                buffer.write(struct.pack('B', qos))
+
+            packed_data = buffer.getvalue()
+        else:
+            packed_data = struct.pack('B', 0)
+        
+        rtc = RTC()
+        rtc.memory(packed_data)

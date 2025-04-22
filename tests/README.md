@@ -23,11 +23,13 @@ mpremote run tests/test_unittest.py
 ```
 
 > [!NOTE]
-> When no device is specified mpremote takes the first available device, the above example leverage that.
+> When no device is specified mpremote takes the first available device,
+> the above example leverage that.
 
 ### Using `Thonny`
 
-Place `minimal_unittest.py` in `:lib/minimal_unittest` as `__init__.py` on the Micropython device.
+Place `minimal_unittest.py` in `:lib/minimal_unittest` as `__init__.py`
+on the Micropython device.
 
 ![thonny-minimal-unittest-dir](./.readme_img/thonny-minimal-unittest-dir.png)
 
@@ -41,10 +43,6 @@ and call the `run()` method to run all tests.
 
 Every test method should have 1 assert call.
 
-> [!NOTE]
-> `TestCase` only support synchronous methods,
-> to work with asynchronous methods inherit from `AsyncTestCase` instead.
-
 ```py
 import minimal_unittest as unittest
 
@@ -56,6 +54,10 @@ class TestExample(unittest.TestCase):
 test_example = TestExample()
 test_example.run()
 ```
+
+> [!TIP]
+> `TestCase` only support synchronous methods,
+> to work with asynchronous methods inherit from `AsyncTestCase` instead.
 
 ## Asserts
 
@@ -105,8 +107,8 @@ Assert the two given arguments are the same *(memory reference)*.
 > b = 42
 > assert_is(a, b)  # May pass unexpectedly
 > ```
-> This optimization varies by implementation and can cause unexpected results with is.
-> For reliable equality checks, use == unless object identity is necessary.
+> This optimisation varies by implementation and can cause unexpected results with `is`.
+> For reliable equality checks, use `==`/`Assert Equal` unless object identity is necessary.
 
 ```py
 l = [1, 2, 3]
@@ -119,8 +121,9 @@ self.assert_is(l[0], n)
 Assert the two given arguments are not the same *(memory reference)*.
 
 > [!WARNING]
-> The same warning stated above, for assert is, also applies here.\
-> For reliable equality checks, use != unless object identity is necessary.
+> The same warning stated above, for `Assert Is`, also applies here.\
+> For reliable equality checks, use `!=`/`Assert Not Equal`
+> unless object identity is necessary.
 
 ```py
 self.assert_is_not([1], [1])
@@ -201,7 +204,7 @@ self.assert_does_not_throw(self.sum, Exception, 1, 2)
 These are asserts specific to the micropython waltermodem implimentation,
 made to reduce repetitive code and risk of errors whilst writing tests.
 
-> [!WARNING]
+> [!NOTE]
 > These can only be used inside of an [`AynscTestCase`](#usage)
 > as these asserts mut be awaited.
 
@@ -225,6 +228,9 @@ await self.assert_sends_at_command(
     method=lambda: modem.config_cereg_reports(WalterModemCEREGReportsType.ENABLED)
 )
 ```
+
+> [!NOTE]
+> The expected_cmd can also be a tuple of expected_cmds *(strs)*.
 
 Optionally you can also provide: `at_rsp_pattern` should it differ from `b'OK'`
 and/or `timeout_s` should you want to wait longer than 5 seconds before timing out.

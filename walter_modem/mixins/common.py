@@ -22,10 +22,11 @@ class ModemCommon(ModemCore):
 
         :return bool: true on success, false on failure
         """
-        reset_pin = Pin(ModemCore.PIN_RESET, Pin.OUT)
-        reset_pin.off()
-        time.sleep(0.1)
-        reset_pin.on()
+        self._reset_pin.init(hold=False)
+        self._reset_pin.off()
+        time.sleep(0.3)
+        self._reset_pin.on()
+        self._reset_pin.init(hold=True)
 
         # Also reset internal "modem mirror" state
         super().__init__()
@@ -36,6 +37,16 @@ class ModemCommon(ModemCore):
             at_rsp=b'+SYSSTART',
             cmd_type=WalterModemCmdType.WAIT
         )
+    
+    async def soft_reset(self) -> bool:
+        """
+        Perform a soft reset on the modem, wait for it to complete.
+        The method will fail when the modem doesn't reset.
+        """
+        return await self._run_cmd(
+            at_cmd='AT^RESET',
+            at_rsp='+SYSSTART'
+        ) and super().__init__()
     
     async def check_comm(self, rsp: ModemRsp = None) -> bool:
         """

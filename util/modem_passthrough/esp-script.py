@@ -1,7 +1,7 @@
 import asyncio
 import os
 import sys
-from machine import UART, Pin
+from machine import UART, Pin # type: ignore
 
 FILEPATH = '/remote/cmd'
 

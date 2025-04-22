@@ -1,12 +1,10 @@
 import asyncio
-import network
 
 import minimal_unittest as unittest
 from walter_modem import Modem
 from walter_modem.enums import (
     WalterModemNetworkRegState,
     WalterModemOpState,
-    WalterModemRspType,
     WalterModemHttpQueryCmd
 )
 from walter_modem.structs import (

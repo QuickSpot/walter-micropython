@@ -411,3 +411,16 @@ class WalterModemTlsVersion(Enum):
     TLS_VERSION_12 = 2
     TLS_VERSION_13 = 3
     TLS_VERSION_RESET = 255
+
+class WalterModemPSMMode(Enum):
+    """Indication to disable or enable the use of PSM."""
+    DISABLE_PSM = 0
+    ENABLE_PSM = 1
+    DISABLE_AND_DISCARD_ALL_PARAMS = 2
+
+class WalterModemEDRXMODE(Enum):
+    """Indication to disable or enable the use of eDRX."""
+    DISABLE_EDRX = 0
+    ENABLE_EDRX = 1
+    ENABLE_EDRX_AND_UNSOLICITED_RESULT_CODE = 2
+    DISABLE_AND_DISCARD_ALL_PARAMS = 3
