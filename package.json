@@ -11,6 +11,7 @@
         ["walter_modem/mixins/common.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/common.py"],
         ["walter_modem/mixins/sim_network.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/sim_network.py"],
         ["walter_modem/mixins/tls_certs.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/sim_network.py"],
+        ["walter_modem/mixins/sleep.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/sleep.py"],
         ["walter_modem/mixins/gnss.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/gnss.py"],
         ["walter_modem/mixins/http.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/http.py"],
         ["walter_modem/mixins/mqtt.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/mqtt.py"],

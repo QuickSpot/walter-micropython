@@ -5,9 +5,7 @@ from machine import ( # type: ignore
     UART,
     Pin,
     wake_reason,
-    DEEPSLEEP_RESET,
-    lightsleep,
-    deepsleep
+    DEEPSLEEP_RESET
 )
 from .queue import Queue
 from .core import ModemCore
@@ -31,7 +29,8 @@ class Modem(
     mixins.ModemGNSS,
     mixins.ModemSocket,
     mixins.ModemMQTT,
-    mixins.ModemHTTP
+    mixins.ModemHTTP,
+    mixins.ModemSleep
 ):
     def __init__(self):
         ModemCore.__init__(self)
@@ -77,25 +76,6 @@ class Modem(
                 raise RuntimeError('Failed to configure cereg reports')
         
         self._begun = True
-
-    def sleep(self,
-        sleep_time_ms: int,
-        light_sleep: bool = False,
-        persist_mqtt_subs: bool = False
-    ):
-        if light_sleep:
-            self._uart.init(flow=0)
-            rts_pin = Pin(ModemCore.PIN_RTS, value=1, hold=True)
-            lightsleep(sleep_time_ms)
-            rts_pin.init(hold=False)
-        else:
-            self._uart_reader_task.cancel()
-            self._queue_worker_task.cancel()
-            self._uart.deinit()
-
-            self._sleep_prepare(persist_mqtt_subs)
-            time.sleep(1)
-            deepsleep(sleep_time_ms)
 
     def register_application_queue_rsp_handler(self, start_pattern: bytes, handler: callable):
         if isinstance(start_pattern, bytes) and callable(handler):
