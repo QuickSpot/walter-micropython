@@ -1,8 +1,13 @@
 import asyncio
+import time
 
-from machine import UART # type: ignore
+from machine import ( # type: ignore
+    UART,
+    Pin,
+    reset_cause,
+    DEEPSLEEP_RESET,
+)
 from .queue import Queue
-
 from .core import ModemCore
 import walter_modem.mixins as mixins
 from .enums import (
@@ -24,7 +29,8 @@ class Modem(
     mixins.ModemGNSS,
     mixins.ModemSocket,
     mixins.ModemMQTT,
-    mixins.ModemHTTP
+    mixins.ModemHTTP,
+    mixins.ModemSleep
 ):
     def __init__(self):
         ModemCore.__init__(self)
@@ -48,21 +54,28 @@ class Modem(
                 rxbuf=2048
             )
 
+            self._reset_pin = Pin(ModemCore.PIN_RESET, Pin.OUT, value=1, hold=True)
+
             self._task_queue = Queue()
             self._command_queue = Queue()
             self._parser_data = ModemATParserData()
 
-            asyncio.create_task(self._uart_reader())
-            asyncio.create_task(self._queue_worker())
+            self._uart_reader_task = asyncio.create_task(self._uart_reader())
+            self._queue_worker_task = asyncio.create_task(self._queue_worker())
 
-            if not await self.reset():
-                raise RuntimeError('Failed to reset modem')
+            
+            if reset_cause() == DEEPSLEEP_RESET:
+                await self._sleep_wakeup()
+            else:
+                if not await self.reset():
+                    raise RuntimeError('Failed to reset modem')
+                
             if not await self.config_cme_error_reports(WalterModemCMEErrorReportsType.NUMERIC):
                 raise RuntimeError('Failed to configure CME error reports')
             if not await self.config_cereg_reports(WalterModemCEREGReportsType.ENABLED_UE_PSM_WITH_LOCATION_EMM_CAUSE):
                 raise RuntimeError('Failed to configure cereg reports')
-            
-            self._begun = True
+        
+        self._begun = True
 
     def register_application_queue_rsp_handler(self, start_pattern: bytes, handler: callable):
         if isinstance(start_pattern, bytes) and callable(handler):

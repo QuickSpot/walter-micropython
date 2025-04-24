@@ -1,7 +1,7 @@
 import asyncio
-import network
+import network # type: ignore
 import sys
-import ubinascii
+import ubinascii # type: ignore
 
 from walter_modem import Modem
 
@@ -16,7 +16,7 @@ from walter_modem.structs import (
     WalterModemRat
 )
 
-import config
+import config # type: ignore
 
 modem = Modem()
 """

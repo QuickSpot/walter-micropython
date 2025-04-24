@@ -2,8 +2,8 @@ import asyncio
 import sys
 import random
 
-from machine import Pin, I2C, WDT, reset
-from hdc1080 import HDC1080
+from machine import Pin, I2C, WDT, reset # type: ignore
+from hdc1080 import HDC1080 # type: ignore
 from lps22hb import LPS22HB
 from ltc4015 import LTC4015
 
@@ -21,7 +21,7 @@ from walter_modem.structs import (
     WalterModemRat
 )
 
-import config
+import config # type: ignore
 
 hdc1080: HDC1080
 lps22hb: LPS22HB

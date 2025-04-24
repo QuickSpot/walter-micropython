@@ -270,7 +270,7 @@ class AsyncTestCase(TestCase):
 class WalterModemAsserts:
     async def assert_sends_at_command(self,
         modem_instance,
-        expected_cmd: str,
+        expected_cmd: str | tuple,
         method: callable,
         at_rsp_pattern: bytes = b'OK',
         timeout_s = 5
@@ -278,11 +278,18 @@ class WalterModemAsserts:
         self.tests_run += 1
         if callable(method):
             sent_cmd = None
+            error = False
 
             def cmd_handler(cmd, at_rsp):
                 nonlocal sent_cmd
+                nonlocal error
+
                 sent_cmd = cmd.at_cmd
+                if b'ERROR' in at_rsp: error = True
+
             modem_instance.register_application_queue_rsp_handler(at_rsp_pattern, cmd_handler)
+            modem_instance.register_application_queue_rsp_handler(b'ERROR', cmd_handler)
+            modem_instance.register_application_queue_rsp_handler(b'+CME ERROR:', cmd_handler)
 
             await method()
             
@@ -291,7 +298,13 @@ class WalterModemAsserts:
                 await asyncio.sleep(1)
             modem_instance.unregister_application_queue_rsp_handler(cmd_handler)
 
-            if expected_cmd == sent_cmd:
+            if error:
+                self.failed += 1
+                self.print_fail(f'Sent command: {sent_cmd} resulted in an ERROR from the modem')
+                return
+
+            if ((isinstance(expected_cmd, tuple) and sent_cmd in expected_cmd) or
+            (isinstance(expected_cmd, str) and sent_cmd == expected_cmd)):
                 self.passed += 1
                 self.print_success()
             else:

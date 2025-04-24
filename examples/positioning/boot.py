@@ -1,9 +1,9 @@
 import asyncio
-import esp32
-import network
+import esp32 # type: ignore
+import network # type: ignore
 import sys
 import struct
-import ubinascii
+import ubinascii # type: ignore
 
 from walter_modem import Modem
 from walter_modem.enums import (
@@ -21,7 +21,7 @@ from walter_modem.structs import (
     ModemRsp
 )
 
-import config
+import config # type: ignore
 
 modem = Modem()
 """

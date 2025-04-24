@@ -1,5 +1,5 @@
 import asyncio
-import network
+import network # type: ignore
 
 import minimal_unittest as unittest
 from walter_modem import Modem
