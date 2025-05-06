@@ -57,7 +57,7 @@ class ModemHTTP(ModemCore):
         if self._http_context_list[profile_id].content_length == 0:
             self._http_context_list[profile_id].state = WalterModemHttpContextState.IDLE
 
-            rsp.type = WalterModemRspType.HTTP_RESPONSE
+            rsp.type = WalterModemRspType.HTTP
             rsp.http_response = ModemHttpResponse()
             rsp.http_response.http_status = self._http_context_list[profile_id].http_status
             rsp.http_response.content_length = 0
