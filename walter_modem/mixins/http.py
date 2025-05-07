@@ -1,5 +1,6 @@
 from ..core import ModemCore
 from ..enums import (
+    WalterModemCmdType,
     WalterModemState,
     WalterModemHttpContextState,
     WalterModemHttpQueryCmd,
@@ -287,6 +288,7 @@ class ModemHTTP(ModemCore):
                 ),
                 at_rsp=b'OK',
                 data=data,
+                cmd_type=WalterModemCmdType.DATA_TX_WAIT,
                 complete_handler=complete_handler,
                 complete_handler_arg=self._http_context_list[profile_id]
             )
@@ -298,6 +300,7 @@ class ModemHTTP(ModemCore):
                 ),
                 at_rsp=b'OK',
                 data=data,
+                cmd_type=WalterModemCmdType.DATA_TX_WAIT,
                 complete_handler=complete_handler,
                 complete_handler_arg=self._http_context_list[profile_id]
             )
