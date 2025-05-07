@@ -18,5 +18,5 @@
         ["walter_modem/mixins/socket.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/socket.py"],
         ["walter_modem/mixins/sleep.py", "github:QuickSpot/walter-micropython/walter_modem/mixins/sleep.py"]
     ],
-    "version": "1.2.1"
+    "version": "1.2.2"
 }
