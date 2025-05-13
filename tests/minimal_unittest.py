@@ -355,7 +355,7 @@ class WalterModemAsserts:
                 nonlocal sent_cmd
                 nonlocal error
 
-                sent_cmd = cmd.at_cmd
+                if cmd is not None: sent_cmd = cmd.at_cmd
                 if b'ERROR' in at_rsp: error = True
 
             modem_instance.register_application_queue_rsp_handler(at_rsp_pattern, cmd_handler)
@@ -366,7 +366,7 @@ class WalterModemAsserts:
             
             for _ in range(timeout_s):
                 if sent_cmd is not None: break
-                await asyncio.sleep(1)
+                await asyncio.sleep(3)
             modem_instance.unregister_application_queue_rsp_handler(cmd_handler)
 
             if error:
