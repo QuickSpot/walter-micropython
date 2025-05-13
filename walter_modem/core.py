@@ -156,7 +156,7 @@ class ModemCore:
         self._proc_queue_rsp_cmd_handlers = None
         """The mapping of cmd patterns to handler methods for processing the rsp queue"""
 
-        self._application_queue_rsp_handlers: tuple = None
+        self._application_queue_rsp_handlers: list[tuple] = None
         """The mapping of rsp patterns to handler methods defined by the application code"""
 
         self._application_queue_rsp_handlers_set: bool = False
