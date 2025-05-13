@@ -17,7 +17,13 @@ from .enums import (
     WalterModemSocketProto,
     WalterModemSocketState,
     WalterModemState,
-    WalterModemMqttResultCode
+    WalterModemMqttResultCode,
+    WalterModemCoapCloseCause,
+    WalterModemCoapReqResp,
+    WalterModemCoapType,
+    WalterModemCoapMethod,
+    WalterModemCoapResponseCode,
+    WalterModemCoapOption
 )
 
 
@@ -215,6 +221,13 @@ class ModemRsp:
 
         self.cell_information: ModemCellInformation | None = None
 
+        self.coap_rcv_response: ModemCoapResponse | None = None
+        """The CoAP response from receiving ring data (coap_receive_data)"""
+
+        self.coap_options: ModemCoapOption | list[ModemCoapOption] | None = None
+        """The CoAP options either from receiving a ring options (coap_receive_options)
+        or from the READ action in coap_set_options"""
+
 class ModemMqttMessage:
     def __init__(self, topic, length, qos, message_id = None, payload = None):
         self.topic = topic
@@ -408,3 +421,50 @@ class ModemCellInformation:
 
         self.ce_level: int = 0
         """Coverage Enhancement Level"""
+    
+class ModemCoapContextState:
+    def __init__(self):
+        self.connected: bool = False
+        """Whether or not the coap profile is connected or listening."""
+
+        self.cause: None | WalterModemCoapCloseCause = None
+        """If connection lost/disconnected; the reason why"""
+
+        self.rings: list[ModemCoapRing] = []
+        """List of coap rings, errornous rings are ignored"""
+
+    @property
+    def configured(self):
+        """
+        Whether or not the coap profile has been configured yet.
+        Note, the context configuration is lost on disconnect.
+        """
+        return self.connected
+
+class ModemCoapRing:
+    def __init__(self, ctx_id, msg_id, req_resp, m_type, method, rsp_code, length):
+        self.ctx_id: int = ctx_id
+        self.msg_id: int = msg_id
+        self.req_resp: WalterModemCoapReqResp = req_resp
+        self.type: WalterModemCoapType = m_type
+        self.method: WalterModemCoapMethod | None = method
+        self.rsp_code: WalterModemCoapResponseCode | None = rsp_code
+        self.length: int = length
+
+class ModemCoapResponse:
+    def __init__(self, ctx_id, msg_id, token, req_resp, m_type, method, rsp_code, length, payload):
+        self.ctx_id: int = ctx_id
+        self.msg_id: int = msg_id
+        self.token: str = token
+        self.req_resp: int = req_resp
+        self.type: WalterModemCoapType = m_type
+        self.method: WalterModemCoapMethod | None = method
+        self.rsp_code: WalterModemCoapResponseCode | None = rsp_code
+        self.length: int = length
+        self.payload: bytearray = payload
+
+class ModemCoapOption:
+    def __init__(self, ctx_id, option, value):
+        self.ctx_id: int = ctx_id,
+        self.option: WalterModemCoapOption = option,
+        self.value: str = value
