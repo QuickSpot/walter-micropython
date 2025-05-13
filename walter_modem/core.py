@@ -907,8 +907,12 @@ class ModemCore:
         return WalterModemState.OK
 
     async def _handle_cereg(self, tx_stream, cmd, at_rsp):
-        self._reg_state = int(at_rsp.decode().split(':')[1].split(',')[0])
-        return WalterModemState.OK
+        parts = at_rsp.decode().split(':')[1].split(',')
+        parts_len = len(parts)
+        if parts_len == 1 or parts_len > 2:
+            self._reg_state = int(parts[0])
+        elif parts_len == 2:
+            self._reg_state = int(parts[1])
     
     async def _handle_cgpaddr(self, tx_stream, cmd, at_rsp):
         if not cmd:
