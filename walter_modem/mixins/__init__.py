@@ -7,3 +7,4 @@ from .socket import ModemSocket
 from .http import ModemHTTP
 from .mqtt import ModemMQTT
 from .sleep import ModemSleep
+from .coap import ModemCoap
