@@ -262,8 +262,8 @@ class TestCase:
 
     def _report_results(self):
         passed_percentage = (self.passed / self.tests_run) * 100 if self.passed else 0
-        percentage_color = GREEN_FG if passed_percentage >= 75 else (
-            YELLOW_FG if passed_percentage >= 60 else RED_FG 
+        percentage_color = GREEN_FG if passed_percentage == 100 else (
+            YELLOW_FG if passed_percentage >= 70 else RED_FG 
         )
         print(
             f'\nRan {self.tests_run} tests, '
