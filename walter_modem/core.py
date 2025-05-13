@@ -20,7 +20,8 @@ from .enums import (
     WalterModemHttpContextState,
     WalterModemSocketState,
     WalterModemMqttState,
-    WalterModemMqttResultCode
+    WalterModemMqttResultCode,
+    WalterModemCoapReqResp
 )
 
 from .structs import (
@@ -36,7 +37,11 @@ from .structs import (
     ModemGNSSAssistance,
     ModemCmd,
     ModemRsp,
-    ModemMqttMessage
+    ModemMqttMessage,
+    ModemCoapRing,
+    ModemCoapContextState,
+    ModemCoapResponse,
+    ModemCoapOption
 )
 
 from .utils import (
@@ -117,6 +122,18 @@ class ModemCore:
     MQTT_MAX_MESSAGE_LEN = 4096
     """The maximum MQTT payload length"""
 
+    COAP_MIN_CTX_ID = 0
+
+    COAP_MAX_CTX_ID = 2
+
+    COAP_MIN_TIMEOUT = 1
+
+    COAP_MAX_TIMEOUT = 120
+
+    COAP_MIN_BYTES_LENGTH = 0
+
+    COAP_MAX_BYTES_LENGTH = 1024
+
     def __init__(self):
         gpio_deep_sleep_hold(True)
 
@@ -164,6 +181,12 @@ class ModemCore:
 
         self._begun = False
         """Whether or not the begin method has already been run."""
+
+        self.coap_context_states = tuple(
+            ModemCoapContextState()
+            for _ in range(self.COAP_MIN_CTX_ID, self.COAP_MAX_CTX_ID + 1)
+        )
+        """Index maps to the profile ID"""
 
     def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
         # According to modem documentation;
@@ -249,6 +272,9 @@ class ModemCore:
                         # This is the start of a new line in a multiline response
                         self._parser_data.state = WalterModemRspParserState.DATA
                         self._add_at_byte_to_buffer(b, False)
+                    else:
+                        self._parser_data.state = WalterModemRspParserState.DATA
+                        self._add_at_byte_to_buffer(b, False)
                 
                 elif self._parser_data.state == WalterModemRspParserState.START_LF:
                     if b == ModemCore.LF:
@@ -305,10 +331,10 @@ class ModemCore:
 
                 elif self._parser_data.state == WalterModemRspParserState.END_LF:
                     if b == ModemCore.LF:
-                        chunk_size = 0 # FIXME
-                        #uint16_t chunkSize = _extractRawBufferChunkSize();
-                        if chunk_size:
-                            self._parser_data.raw_chunk_size = chunk_size
+                        if b'+CME ERROR' in self._parser_data.line:
+                            self._parser_data.raw_chunk_size = 0
+
+                        if self._parser_data.raw_chunk_size:
                             self._parser_data.line += b'\r'
                             self._parser_data.state = WalterModemRspParserState.RAW
                         else:
@@ -330,6 +356,141 @@ class ModemCore:
                     self._parser_data.raw_chunk_size -= 1
 
                     if self._parser_data.raw_chunk_size == 0:
+                        self._parser_data.state = WalterModemRspParserState.START_CR
+                        await self._queue_rx_buffer()
+
+    async def _dev_debug_uart_reader(self):
+        rx_stream = asyncio.StreamReader(self._uart, {})
+
+        while True:
+            incoming_uart_data = bytearray(256)
+            size = await rx_stream.readinto(incoming_uart_data)
+            print(incoming_uart_data[:size].strip(b'\x00'))
+            print(WalterModemRspParserState.get_value_name(self._parser_data.state))
+
+            for b in incoming_uart_data[:size].strip(b'\x00'):
+                if self._parser_data.state == WalterModemRspParserState.START_CR:
+                    print('UART >>> START_CR')
+                    if b == ModemCore.CR:
+                        print('UART >>>   CR')
+                        self._parser_data.state = WalterModemRspParserState.START_LF
+                    elif b == ModemCore.PLUS:
+                        print('UART >>>   PLUS')
+                        # This is the start of a new line in a multiline response
+                        self._parser_data.state = WalterModemRspParserState.DATA
+                        self._add_at_byte_to_buffer(b, False)
+                    else:
+                        self._parser_data.state = WalterModemRspParserState.DATA
+                        self._add_at_byte_to_buffer(b, False)
+                
+                elif self._parser_data.state == WalterModemRspParserState.START_LF:
+                    print('UART >>> START_LF')
+                    if b == ModemCore.LF:
+                        print('UART >>>   LF')
+                        self._parser_data.state = WalterModemRspParserState.DATA
+                
+                elif self._parser_data.state == WalterModemRspParserState.DATA:
+                    print('UART >>> DATA')
+                    if b == ModemCore.GREATER_THAN:
+                        print('UART >>>   GREATER_THAN')
+                        self._parser_data.state = WalterModemRspParserState.DATA_PROMPT
+                    elif b == ModemCore.SMALLER_THAN:
+                        print('UART >>>   SMALLER_THAN')
+                        self._parser_data.state = WalterModemRspParserState.DATA_HTTP_START1
+                
+                    self._add_at_byte_to_buffer(b, False)
+                    
+                elif self._parser_data.state == WalterModemRspParserState.DATA_PROMPT:
+                    print('UART >>> DATA_PROMPT')
+                    self._add_at_byte_to_buffer(b, False)
+                    if b == ModemCore.SPACE:
+                        print('UART >>>   SPACE')
+                        self._parser_data.state = WalterModemRspParserState.START_CR
+                        await self._queue_rx_buffer()
+                    elif b == ModemCore.GREATER_THAN:
+                        print('UART >>>   GREATTER_THAN')
+                        self._parser_data.state = WalterModemRspParserState.DATA_PROMPT_HTTP
+                    else:
+                        print('UART >>>   else...')
+                        # state might have changed after detecting end \r
+                        if self._parser_data.state == WalterModemRspParserState.DATA_PROMPT:
+                            self._parser_data.state = WalterModemRspParserState.DATA
+                
+                elif self._parser_data.state == WalterModemRspParserState.DATA_PROMPT_HTTP:
+                    print('UART >>> DATA_PROMPT_HTTP')
+                    self._add_at_byte_to_buffer(b, False)
+                    if b == ModemCore.GREATER_THAN:
+                        print('UART >>>   GREATER_THAN')
+                        self._parser_data.state = WalterModemRspParserState.START_CR
+                        await self._queue_rx_buffer()
+                    else:
+                        print('UART >>>   else...')
+                        # state might have changed after detecting end \r
+                        if self._parser_data.state == WalterModemRspParserState.DATA_PROMPT_HTTP:
+                            print('UART >>>     DATA_PROMPT_HTTP')
+                            self._parser_data.state = WalterModemRspParserState.DATA
+
+                elif self._parser_data.state == WalterModemRspParserState.DATA_HTTP_START1:
+                    print('UART >>> DATA_HTTP_START1')
+                    if b == ModemCore.SMALLER_THAN:
+                        print('UART >>>   SMALLER_THAN')
+                        self._parser_data.state = WalterModemRspParserState.DATA_HTTP_START2
+                    else:
+                        print('UART >>>   else...')
+                        self._parser_data.state = WalterModemRspParserState.DATA
+
+                    self._add_at_byte_to_buffer(b, False)
+
+                elif self._parser_data.state == WalterModemRspParserState.DATA_HTTP_START2:
+                    print('UART >>> DATA_HTTP_START2')
+                    if b == ModemCore.SMALLER_THAN and self._http_current_profile < ModemCore.MAX_HTTP_PROFILES:
+                        print('UART >>>   SMALLER_THAN')
+                        # FIXME: modem might block longer than cmd timeout,
+                        # will lead to retry, error etc - fix properly
+                        self._parser_data.raw_chunk_size = self._http_context_list[self._http_current_profile].content_length + len("\r\nOK\r\n")
+                        self._parser_data.state = WalterModemRspParserState.RAW
+                    else:
+                        print('UART >>>   else...')
+                        self._parser_data.state = WalterModemRspParserState.DATA
+
+                    self._add_at_byte_to_buffer(b, False)
+
+                elif self._parser_data.state == WalterModemRspParserState.END_LF:
+                    print('UART >>> END_LF')
+                    if b == ModemCore.LF:
+                        print('UART >>>   LF')
+                        if b'+CME ERROR' in self._parser_data.line:
+                            print('UART >>>     +CME ERROR detected')
+                            self._parser_data.raw_chunk_size = 0
+
+                        if self._parser_data.raw_chunk_size:
+                            print('UART >>>     chunk size truthy')
+                            self._parser_data.line += b'\r'
+                            self._parser_data.state = WalterModemRspParserState.RAW
+                        else:
+                            print('UART >>>     else...')
+                            self._parser_data.state = WalterModemRspParserState.START_CR
+                            await self._queue_rx_buffer()
+                    else:
+                        print('UART >>>   else...')
+                        # only now we know the \r was thrown away for no good reason
+                        self._parser_data.line += b'\r'
+
+                        # next byte gets the same treatment; since we really are
+                        # back in semi DATA state, as we now know
+                        # (but > will not lead to data prompt mode)
+                        self._add_at_byte_to_buffer(b, False)
+                        if b != ModemCore.CR:
+                            print('UART >>>     CR')
+                            self._parser_data.state = WalterModemRspParserState.DATA
+
+                elif self._parser_data.state == WalterModemRspParserState.RAW:
+                    print('UART >>> RAW')
+                    self._add_at_byte_to_buffer(b, True)
+                    self._parser_data.raw_chunk_size -= 1
+
+                    if self._parser_data.raw_chunk_size == 0:
+                        print('UART >>>   raw_chunk_size == 0')
                         self._parser_data.state = WalterModemRspParserState.START_CR
                         await self._queue_rx_buffer()
 
@@ -446,6 +607,89 @@ class ModemCore:
         cmd.rsp.clock = parse_cclk_time(time_str)
 
         return WalterModemState.OK
+
+    async def _handle_sqn_coap_closed(self, tx_stream, cmd, at_rsp):
+        ctx_id, cause = at_rsp.split(b': ')[1].split(b',')
+        ctx_id = int(ctx_id)
+        cause = cause.strip(b'"')
+
+        self.coap_context_states[ctx_id].connected = False
+        self.coap_context_states[ctx_id].cause = cause
+
+        return WalterModemState.OK
+
+    async def _handle_sqn_coap_error(self, tx_stream, cmd, at_rsp):
+        return WalterModemState.ERROR
+    
+    async def _handle_sqn_coap_ring(self, tx_stream, cmd, at_rsp):
+        parts = at_rsp.split(b': ')[1].split(b',')
+        ctx_id, msg_id, req_resp, m_type, method_or_rsp_code, length = [int(p.decode()) for p in parts]
+
+        self.coap_context_states[ctx_id].rings.append(ModemCoapRing(
+            ctx_id=ctx_id,
+            msg_id=msg_id,
+            req_resp=req_resp,
+            m_type=m_type,
+            method=method_or_rsp_code if req_resp == WalterModemCoapReqResp.REQUEST else None,
+            rsp_code=method_or_rsp_code if req_resp == WalterModemCoapReqResp.RESPONSE else None,
+            length=length
+        ))
+
+        return WalterModemState.OK
+
+    async def _handle_sqn_coap_rcv(self, tx_stream, cmd, at_rsp):
+        header, payload = at_rsp.split(b': ')[1].split(b'\r')
+        header = header.split(b',')
+
+        ctx_id, msg_id = int(header[0].decode()), int(header[1].decode())
+        token = header[2].decode()
+        req_resp, m_type, method_or_rsp_code, length = [int(p.decode()) for p in header[3:]]
+
+        cmd.rsp.type = WalterModemRspType.COAP
+        cmd.rsp.coap_rcv_response = ModemCoapResponse(
+            ctx_id=ctx_id,
+            msg_id=msg_id,
+            token=token,
+            req_resp=req_resp,
+            m_type=m_type,
+            method=method_or_rsp_code if req_resp == WalterModemCoapReqResp.REQUEST else None,
+            rsp_code=method_or_rsp_code if req_resp == WalterModemCoapReqResp.RESPONSE else None,
+            length=length,
+            payload=payload
+        )
+
+        return WalterModemState.OK
+
+    async def _handle_sqn_coap_create(self, tx_stream, cmd, at_rsp):
+        if (ctx_info := at_rsp.split(b': ')[1]) and b',' in ctx_info:
+            ctx_id = int(ctx_info.split(b',')[0].decode())
+            self.coap_context_states[ctx_id].connected = True
+        else:
+            ctx_id = int(ctx_info.decode())
+            self.coap_context_states[ctx_id].connected = False
+    
+    async def _handle_sqn_coap_options(self, tx_stream, cmd, at_rsp):
+        if cmd and cmd.at_cmd:
+            if (cmd.at_cmd.startswith('AT+SQNCOAPOPT=')
+            and cmd.at_cmd.split('=')[1].split(',')[1] == '2'):
+                ctx_id_str, option_str, value = at_rsp[13:].decode().split(',', 2)
+                cmd.rsp.coap_options = ModemCoapOption(
+                    ctx_id=int(ctx_id_str),
+                    option=int(option_str),
+                    value=value
+                )
+    
+    async def _handle_sqn_coap_rcvo(self, tx_stream, cmd, at_rsp):
+        ctx_id_str, option_str, value = at_rsp[14:].decode().split(',', 2)
+        coap_option = ModemCoapOption(
+            ctx_id=int(ctx_id_str),
+            option=int(option_str),
+            value=value
+        )
+        if isinstance(cmd.rsp.coap_options, list):
+            cmd.rsp.coap_options.append(coap_option)
+        else:
+            cmd.rsp.coap_options = [coap_option]
 
     async def _handle_sqn_http_rcv_answer_start(self, tx_stream, cmd, at_rsp):
         if self._http_current_profile >= ModemCore.MAX_HTTP_PROFILES or self._http_context_list[self._http_current_profile].state != WalterModemHttpContextState.GOT_RING:
@@ -1002,6 +1246,14 @@ class ModemCore:
                 (b'+SQNMODEACTIVE: ', self._handle_sqn_mode_active),
 
                 # 8. IP Data Services
+                # - CoAP
+                (b'+SQNCOAPCLOSED: ', self._handle_sqn_coap_closed),
+                (b'+SQNCOAP: ERROR', self._handle_sqn_coap_error),
+                (b'+SQNCOAPRING:', self._handle_sqn_coap_ring),
+                (b'+SQNCOAPRCV: ', self._handle_sqn_coap_rcv),
+                (b'+SQNCOAPCREATE: ', self._handle_sqn_coap_create),
+                (b'+SQNCOAPOPT: ', self._handle_sqn_coap_options),
+                (b'+SQNCOAPRCVO: ', self._handle_sqn_coap_rcvo),
                 # - HTTP
                 (b'<<<', self._handle_sqn_http_rcv_answer_start),
                 (b'+SQNHTTPRING: ', self._handle_sqn_http_ring),
@@ -1063,13 +1315,28 @@ class ModemCore:
                 if at_rsp.startswith(pattern):
                     handler(cmd, at_rsp)
                     break
-
+# FOR DEBUGGING:        
+#        if cmd is not None and cmd.at_rsp is not None:
+#            print('=====')
+#            print('Full response:', at_rsp)
+#            print('cmd.at_rsp:', cmd.at_rsp)
+#            if isinstance(cmd.at_rsp, bytes):
+#                print('Expected prefix (bytearray):', cmd.at_rsp)
+#                print('Response start:', at_rsp[:len(cmd.at_rsp)])
+#                print('Mismatch:', cmd.at_rsp != at_rsp[:len(cmd.at_rsp)])
+#            elif isinstance(cmd.at_rsp, tuple):
+#                print('Expected prefixes (tuple):', cmd.at_rsp)
+#                for rsp in cmd.at_rsp:
+#                    print(f'Checking prefix "{rsp}":', at_rsp.startswith(rsp))
         if (
             result is None or
             cmd is None or
             cmd.at_rsp is None or
             cmd.type == WalterModemCmdType.TX or
-            cmd.at_rsp != at_rsp[:len(cmd.at_rsp)]
+            (isinstance(cmd.at_rsp, bytes) and cmd.at_rsp != at_rsp[:len(cmd.at_rsp)]) or
+            (isinstance(cmd.at_rsp, tuple) and not any(
+                at_rsp.startswith(rsp) for rsp in cmd.at_rsp)
+            )
         ):
             return
 
@@ -1110,7 +1377,7 @@ class ModemCore:
 
     async def _run_cmd(self,
         at_cmd: str,
-        at_rsp: str, 
+        at_rsp: str | tuple[str], 
         rsp: ModemRsp | None = None,
         ring_return: list | None = None,
         cmd_type: int = WalterModemCmdType.TX_WAIT,
@@ -1132,7 +1399,9 @@ class ModemCore:
         :param at_cmd: NULL terminated array of command elements. The elements
         must stay available until the command is complete. The array is only
         shallow copied.
-        :param at_rsp: The expected AT response.
+        :param at_rsp: The expected AT response(s), when providing a tuple of multiple responses,
+        they are to be seen as "OR", when either one of the responses are received,
+        the cmd will be seen as complete.
         :param data: The extra data to be sent to the modem
         :param complete_handler: Optional complete handler function.
         :param complete_handler_arg: Optional argument for the complete handler.
@@ -1171,6 +1440,7 @@ class ModemCore:
         await self._run_cmd(at_cmd='AT+CFUN?', at_rsp=b'OK')
         await self._run_cmd(at_cmd='AT+CEREG?', at_rsp=b'OK')
         await self._run_cmd(at_cmd='AT+SQNSCFG?', at_rsp=b'OK')
+        await self._run_cmd(at_cmd='AT+SQNCOAPCREATE?', at_rsp=b'OK')
 
         rtc = RTC()
         packed_data = rtc.memory()

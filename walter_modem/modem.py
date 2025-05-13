@@ -1,5 +1,4 @@
 import asyncio
-import time
 
 from machine import ( # type: ignore
     UART,
@@ -30,12 +29,16 @@ class Modem(
     mixins.ModemSocket,
     mixins.ModemMQTT,
     mixins.ModemHTTP,
+    mixins.ModemCoap,
     mixins.ModemSleep
 ):
     def __init__(self):
         ModemCore.__init__(self)
 
-    async def begin(self, debug_log: bool = False):
+    async def begin(self,
+        debug_log: bool = False,
+        _dev_debug_uart_reader = False
+    ):
         if not self._begun:
             self.debug_log = debug_log
             self._uart = UART(2,
@@ -60,7 +63,10 @@ class Modem(
             self._command_queue = Queue()
             self._parser_data = ModemATParserData()
 
-            self._uart_reader_task = asyncio.create_task(self._uart_reader())
+            if _dev_debug_uart_reader:
+                self._uart_reader_task = asyncio.create_task(self._dev_debug_uart_reader())
+            else:
+                self._uart_reader_task = asyncio.create_task(self._uart_reader())
             self._queue_worker_task = asyncio.create_task(self._queue_worker())
 
             
