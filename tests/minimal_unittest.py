@@ -1,5 +1,6 @@
 import asyncio
 import time
+import sys
 
 from walter_modem import Modem
 from walter_modem.structs import ModemRsp
@@ -34,6 +35,12 @@ class TestCase:
     
     def print_error(self, msg):
         print(f'{YELLOW_BG}{BLACK_FG}⚠ ERROR:{RESET}', msg, end=' ')
+        self._result_overwrite = (False, '')
+    
+    def print_exception(self, exception):
+        print(f'\n{YELLOW_BG}{BLACK_FG}!! ============== !!{RESET}')
+        sys.print_exception(exception)
+        print(f'{YELLOW_BG}{BLACK_FG}!! ============== !!{RESET}\n\n')
         self._result_overwrite = (False, '')
 
     def assert_equal(self, a, b):
@@ -244,7 +251,8 @@ class TestCase:
                 except Exception as e:
                     self.tests_run += 1
                     self.errors += 1
-                    self.print_error(e)
+                    self.print_error('An exception occured running the test')
+                    self.print_exception(e)
                 finally:
                     end_time = time.ticks_ms()
                     elapsed_ms = time.ticks_diff(end_time, start_time)
@@ -303,6 +311,8 @@ class AsyncTestCase(TestCase):
             await self.async_setup()
         except Exception as e:
             self.print_error(e)
+            self.print_error('An exception occured running the test')
+            self.print_exception(e)
             return
         print('➜ Setup complete\n')
         try:
@@ -316,7 +326,8 @@ class AsyncTestCase(TestCase):
                     except Exception as e:
                         self.tests_run += 1
                         self.errors += 1
-                        self.print_error(e)
+                        self.print_error('An exception occured running the test')
+                        self.print_exception(e)
                     finally:
                         end_time = time.ticks_ms()
                         elapsed_ms = time.ticks_diff(end_time, start_time)
