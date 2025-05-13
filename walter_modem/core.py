@@ -210,7 +210,11 @@ class ModemCore:
         qitem = ModemTaskQueueItem()
         qitem.rsp = self._parser_data.line
         
-        if self.debug_log: log('DEBUG, RX', qitem.rsp.decode())
+        if self.debug_log:
+            try:
+                log('DEBUG, RX', qitem.rsp.decode())
+            except:
+                log('DEBUG, RX', qitem.rsp)
         await self._task_queue.put(qitem)
 
         self._parser_data.line = bytearray()
