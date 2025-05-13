@@ -1,6 +1,13 @@
 import asyncio
 import time
 
+from walter_modem import Modem
+from walter_modem.structs import ModemRsp
+from walter_modem.enums import (
+    WalterModemOpState,
+    WalterModemNetworkRegState
+)
+
 GREEN_FG = '\033[32m'
 RED_FG = '\033[31m'
 BLACK_FG = '\033[30m'
@@ -14,19 +21,27 @@ class TestCase:
         self.passed = 0
         self.failed = 0
         self.errors = 0
+        self._result_overwrite: tuple[bool, str] | None = (False, '')
+        """For extension classes to overwrite the test result"""
     
     def print_success(self):
         print(f'{GREEN_FG}✔{RESET}', end=' ')
+        self._result_overwrite = (False, '')
     
     def print_fail(self, msg):
         print(f'{RED_FG}✘ FAIL:{RESET}', msg, end=' ')
+        self._result_overwrite = (False, '')
     
     def print_error(self, msg):
         print(f'{YELLOW_BG}{BLACK_FG}⚠ ERROR:{RESET}', msg, end=' ')
+        self._result_overwrite = (False, '')
 
     def assert_equal(self, a, b):
         self.tests_run += 1
-        if a != b:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        elif a != b:
             self.failed += 1
             self.print_fail(f'{a!r} != {b!r}')
         else:
@@ -35,7 +50,10 @@ class TestCase:
 
     def assert_not_equal(self, a, b):
         self.tests_run += 1
-        if a == b:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        elif a == b:
             self.failed += 1
             self.print_fail(f'{a!r} == {b!r}')
         else:
@@ -44,7 +62,10 @@ class TestCase:
 
     def assert_true(self, a):
         self.tests_run += 1
-        if not a:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        elif not a:
             self.failed += 1
             self.print_fail(f'condition: "{a}" is not truthy')
         else:
@@ -53,7 +74,10 @@ class TestCase:
 
     def assert_false(self, a):
         self.tests_run += 1
-        if a:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        elif a:
             self.failed += 1
             self.print_fail(f'condition: "{a}" is not falsy')
         else:
@@ -62,7 +86,10 @@ class TestCase:
 
     def assert_is(self, a, b):
         self.tests_run += 1
-        if a is not b:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        elif a is not b:
             self.failed += 1
             self.print_fail(f'{a!r} is not {b!r}')
         else:
@@ -71,7 +98,10 @@ class TestCase:
 
     def assert_is_not(self, a, b):
         self.tests_run += 1
-        if a is b:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        elif a is b:
             self.failed += 1
             self.print_fail(f'{a!r} is {b!r}')
         else:
@@ -80,7 +110,10 @@ class TestCase:
     
     def assert_is_none(self, a):
         self.tests_run +=1
-        if a is not None:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        elif a is not None:
             self.failed += 1
             self.print_fail(f'{a!r} is not None')
         else:
@@ -89,7 +122,10 @@ class TestCase:
     
     def assert_is_not_none(self, a):
         self.tests_run +=1
-        if a is None:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        elif a is None:
             self.failed += 1
             self.print_fail(f'{a!r} is None')
         else:
@@ -98,69 +134,85 @@ class TestCase:
 
     def assert_in(self, a, b):
         self.tests_run += 1
-        try:
-            if a not in b:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        else:
+            try:
+                if a not in b:
+                    self.failed += 1
+                    self.print_fail(f'{a!r} is not in {b!r}')
+                else:
+                    self.passed += 1
+                    self.print_success()
+            except TypeError:
                 self.failed += 1
-                self.print_fail(f'{a!r} is not in {b!r}')
-            else:
-                self.passed += 1
-                self.print_success()
-        except TypeError:
-            self.failed += 1
-            self.print_fail(f'{b!r}, of type {type(b)}, does not support membership checks')
+                self.print_fail(f'{b!r}, of type {type(b)}, does not support membership checks')
 
     def assert_not_in(self, a, b):
         self.tests_run += 1
-        try:
-            if a in b:
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
+        else:
+            try:
+                if a in b:
+                    self.failed += 1
+                    self.print_fail(f'{a!r} is in {b!r}')
+                else:
+                    self.passed += 1
+                    self.print_success()
+            except TypeError:
                 self.failed += 1
-                self.print_fail(f'{a!r} is in {b!r}')
-            else:
-                self.passed += 1
-                self.print_success()
-        except TypeError:
-            self.failed += 1
-            self.print_fail(f'{b!r}, of type {type(b)}, does not support membership checks')
+                self.print_fail(f'{b!r}, of type {type(b)}, does not support membership checks')
     
     def assert_is_instance(self, a, b):
         self.tests_run += 1
-        if isinstance(b, tuple):
-            for t in b:
-                if not isinstance(t, type):
-                    self.failed += 1
-                    self.print_fail(f'{b!r}; {t!r} is not a valid type')
-                    return
-        elif not isinstance(b, type):
-            self.failed += 1
-            self.print_fail(f'{b!r} is not a valid type')
-            return
-
-        if not isinstance(a, b):
-            self.failed += 1
-            self.print_fail(f'{a!r} is not of type {b!r}')
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
         else:
-            self.passed += 1
-            self.print_success()
+            if isinstance(b, tuple):
+                for t in b:
+                    if not isinstance(t, type):
+                        self.failed += 1
+                        self.print_fail(f'{b!r}; {t!r} is not a valid type')
+                        return
+            elif not isinstance(b, type):
+                self.failed += 1
+                self.print_fail(f'{b!r} is not a valid type')
+                return
+
+            if not isinstance(a, b):
+                self.failed += 1
+                self.print_fail(f'{a!r} is not of type {b!r}')
+            else:
+                self.passed += 1
+                self.print_success()
 
     def assert_not_is_instance(self, a, b):
         self.tests_run += 1
-        if isinstance(b, tuple):
-            for t in b:
-                if not isinstance(t, type):
-                    self.failed += 1
-                    self.print_fail(f'{b!r}; {t!r} is not a valid type')
-                    return
-        elif not isinstance(b, type):
-            self.failed += 1
-            self.print_fail(f'{b!r} is not a valid type')
-            return
-
-        if isinstance(a, b):
-            self.failed += 1
-            self.print_fail(f'{a!r} is of type {b!r}')
+        if self._result_overwrite[0]:
+            self.errors += 1
+            self.print_error(self._result_overwrite[1])
         else:
-            self.passed += 1
-            self.print_success()
+            if isinstance(b, tuple):
+                for t in b:
+                    if not isinstance(t, type):
+                        self.failed += 1
+                        self.print_fail(f'{b!r}; {t!r} is not a valid type')
+                        return
+            elif not isinstance(b, type):
+                self.failed += 1
+                self.print_fail(f'{b!r} is not a valid type')
+                return
+
+            if isinstance(a, b):
+                self.failed += 1
+                self.print_fail(f'{a!r} is of type {b!r}')
+            else:
+                self.passed += 1
+                self.print_success()
 
     def assert_does_not_throw(self, a: callable, b: Exception | tuple, *args):
         self.tests_run += 1
@@ -168,6 +220,10 @@ class TestCase:
             raise TypeError(f'Expected callable, got {type(a)}')
         try:
             a(*args)
+            if self._result_overwrite[0]:
+                self.errors += 1
+                self.print_error(self._result_overwrite[1])
+                return
             self.passed += 1
             self.print_success()
         except b as e:
@@ -225,6 +281,10 @@ class AsyncTestCase(TestCase):
             raise TypeError(f'Expected callable, got {type(a)}')
         try:
             await a(*args)
+            if self._result_overwrite[0]:
+                self.errors += 1
+                self.print_error(self._result_overwrite[1])
+                return
             self.passed += 1
             self.print_success()
         except b as e:
@@ -313,6 +373,15 @@ class WalterModemAsserts:
         else:
             self.errors += 1
             self.print_error('Provided method is not callable')
+
+    def _cme_err_handler(self, cmd, at_rsp):
+        self._result_overwrite = (True, at_rsp[1:].decode())
+    
+    def register_fail_on_cme_error(self, modem_instance: Modem):
+        modem_instance.register_application_queue_rsp_handler(b'+CME ERROR: ', self._cme_err_handler)
+    
+    def unregister_fail_on_cme_error(self, modem_instance: Modem):
+        modem_instance.unregister_application_queue_rsp_handler(self._cme_err_handler)
     
 class NetworkConnectivity:
     async def await_connection(self, modem_instance: Modem):
