@@ -607,7 +607,7 @@ class ModemCore:
         return WalterModemState.OK
     
     async def _handle_sqns_mqtt_subscribe(self, tx_stream, cmd, at_rsp):
-        result_code = int(at_rsp[-2:].strip(b','))
+        result_code = int(at_rsp[-2:].strip(b',').decode())
 
         if cmd and cmd.at_cmd:
             cmd.rsp.type = WalterModemRspType.MQTT
