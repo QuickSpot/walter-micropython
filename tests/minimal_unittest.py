@@ -313,3 +313,28 @@ class WalterModemAsserts:
         else:
             self.errors += 1
             self.print_error('Provided method is not callable')
+    
+class NetworkConnectivity:
+    async def await_connection(self, modem_instance: Modem):
+        print('Showing modem debug logs:')
+        modem_instance.debug_log = True
+        for _ in range(600):
+            if modem_instance.get_network_reg_state() in (
+                WalterModemNetworkRegState.REGISTERED_HOME,
+                WalterModemNetworkRegState.REGISTERED_ROAMING
+            ):
+                modem_instance.debug_log = False
+                return
+            await asyncio.sleep(1)
+        modem_instance.debug_log = False
+        raise OSError('Connection Timed-out')
+    
+    async def ensure_network_connection(self, modem_instance: Modem):
+        modem_rsp = ModemRsp()
+        await modem_instance.get_op_state(rsp=modem_rsp)
+        if modem_rsp.op_state is not WalterModemOpState.FULL:
+            print('Establishing network connection...')
+            await modem_instance.set_op_state(WalterModemOpState.FULL)
+        
+        await self.await_connection(modem_instance=modem_instance)
+        print('Connected to network\n')
