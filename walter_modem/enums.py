@@ -424,3 +424,102 @@ class WalterModemEDRXMODE(Enum):
     ENABLE_EDRX = 1
     ENABLE_EDRX_AND_UNSOLICITED_RESULT_CODE = 2
     DISABLE_AND_DISCARD_ALL_PARAMS = 3
+
+class WalterModemCoapCloseCause(Enum):
+    """Reason why connection has been closed."""
+    USER = b'USER'
+    SERVER = b'SERVER'
+    NAT_TIMEOUT = b'NAT_TIMEOUT'
+    NETWORK = b'NETWORK'
+
+class WalterModemCoapReqResp(Enum):
+    """Indicator whether a ring is a request from or response from a CoAP seever."""
+    REQUEST = 0
+    RESPONSE = 1
+
+class WalterModemCoapType(Enum):
+    CON = 0
+    NON = 1
+    ACK = 2
+    RST = 3
+
+class WalterModemCoapMethod(Enum):
+    GET = 1
+    POST = 2
+    PUT = 3
+    DELETE = 4
+
+class WalterModemCoapResponseCode(Enum):
+    CREATED = 201
+    DELETED = 202
+    VALID = 203
+    CHANGED = 204
+    CONTENT = 205
+    BAD_REQUEST = 400
+    UNAUTHORIZED = 401
+    BAD_OPTION = 402
+    FORBIDDEN = 403
+    NOT_FOUND = 404
+    METHOD_NOT_ALLOWED = 405
+    NOT_ACCEPTABLE = 406
+    PRECONDITION_FAILED = 412
+    REQUEST_ENTITY_TOO_LARGE = 413
+    UNSUPPORTED_MEDIA_TYPE = 415
+    INERNAL_SERVER_ERROR = 500
+    NOT_IMPLIMENTED = 501
+    BAD_GATEWAY = 502
+    SERVICE_UNAVAILABLE = 503
+    GATEWAY_TIMEOUT = 501
+    PROXYING_NOT_SUPPORTED = 505
+
+class WalterModemCoapOptionAction(Enum):
+    SET = 0
+    DELETE = 1
+    READ = 2
+    EXTEND = 3
+
+class WalterModemCoapOption(Enum):
+    IF_MATCH = 1
+    URI_HOST = 3
+    ETAG = 4
+    IF_NONE_MATCH = 5
+    OBSERVE = 6
+    URI_PORT = 7
+    LOCATION_PATH = 8
+    URI_PATH = 11
+    CONTENT_TYPE = 12
+    MAX_AGE = 14
+    URI_QUERY = 15
+    ACCEPT = 17
+    TOKEN = 19
+    LOCATION_QUERY = 20
+    BLOCK2 = 23
+    BLOCK1 = 27
+    SIZE2 = 28
+    PROXY_URI = 35
+    SIZE1 = 60
+
+class WalterModemCoapContentType(Enum):
+    TEXT_PLAIN = '0'
+    TEXT_XML = '1'
+    TEXT_CSV = '2'
+    TEXT_HTML = '3'
+    IMAGE_GIF = '21'
+    IMAGE_JPEG = '22'
+    IMAGE_PNG = '23'
+    IMAGE_TIFF = '24'
+    AUDIO_RAW = '25'
+    VIDEO_RAW = '26'
+    APPLICATION_LINK_FORMAT = '40'
+    APPLICATION_XML = '41'
+    APPLICATION_OCTET_STREAM = '42'
+    APPLICATION_RDF_XML = '43'
+    APPLICATION_SOAP_XML = '44'
+    APPLICATION_ATOM_XML = '45'
+    APPLICATION_XMPP_XML = '46'
+    APPLICATION_EXI = '47'
+    APPLICATION_FASTINFOSET = '48'
+    APPLICATION_SOAP_FASTINFOSET = '49'
+    APPLICATION_JSON = '50'
+    APPLICATION_X_OBIX_BINARY = '51'
+    APPLICATION_CBOR = '60'
