@@ -27,11 +27,15 @@ uart = UART(2,
 async def uart_reader():
     print('[i] >> Started UART Reader')
     while True:
-        line = uart.readline()
-        if line:
-            line = line.replace(b'\x00', b'').strip()
-            print(line.decode())
-        await asyncio.sleep(0.5)
+        try:
+            line = uart.readline()
+            if line:
+                line = line.replace(b'\x00', b'').strip()
+                print(line.decode('utf-8', 'replace'))
+            await asyncio.sleep(0.5)
+        except Exception as e:
+            print(f'[i] >> UART Read Error: {e}')
+            await asyncio.sleep(0.5)
 
 async def reset():
     reset_pin = Pin(45, Pin.OUT)
@@ -51,7 +55,7 @@ def ensure_no_interrupt():
     with open(FILEPATH, 'r+') as f:
         content = f.read().strip()
 
-        if content is 'INTERRUPT':
+        if content == 'INTERRUPT':
             ack_read()
 
 async def cmd_sender():
