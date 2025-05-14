@@ -280,7 +280,7 @@ class WalterModemHttpContextState(Enum):
 
 class WalterModemMqttState(Enum):
     CONNECTED = 0
-    DISCONNECTED = 0
+    DISCONNECTED = 1
 
 class WalterModemMqttResultCode(Enum):
     SUCCESS = 0
