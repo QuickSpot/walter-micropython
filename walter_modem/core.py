@@ -173,7 +173,7 @@ class ModemCore:
         self._proc_queue_rsp_cmd_handlers = None
         """The mapping of cmd patterns to handler methods for processing the rsp queue"""
 
-        self._application_queue_rsp_handlers: tuple = None
+        self._application_queue_rsp_handlers: list[tuple] = None
         """The mapping of rsp patterns to handler methods defined by the application code"""
 
         self._application_queue_rsp_handlers_set: bool = False
@@ -233,7 +233,11 @@ class ModemCore:
         qitem = ModemTaskQueueItem()
         qitem.rsp = self._parser_data.line
         
-        if self.debug_log: log('DEBUG, RX', qitem.rsp.decode())
+        if self.debug_log:
+            try:
+                log('DEBUG, RX', qitem.rsp.decode())
+            except:
+                log('DEBUG, RX', qitem.rsp)
         await self._task_queue.put(qitem)
 
         self._parser_data.line = bytearray()
@@ -1147,8 +1151,12 @@ class ModemCore:
         return WalterModemState.OK
 
     async def _handle_cereg(self, tx_stream, cmd, at_rsp):
-        self._reg_state = int(at_rsp.decode().split(':')[1].split(',')[0])
-        return WalterModemState.OK
+        parts = at_rsp.decode().split(':')[1].split(',')
+        parts_len = len(parts)
+        if parts_len == 1 or parts_len > 2:
+            self._reg_state = int(parts[0])
+        elif parts_len == 2:
+            self._reg_state = int(parts[1])
     
     async def _handle_cgpaddr(self, tx_stream, cmd, at_rsp):
         if not cmd:
