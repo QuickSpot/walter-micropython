@@ -28,8 +28,7 @@ class ModemCommon(ModemCore):
         self._reset_pin.on()
         self._reset_pin.init(hold=True)
 
-        # Also reset internal "modem mirror" state
-        super().__init__()
+        super().__init__() # Reset internal mirror state
 
         return await self._run_cmd(
             rsp=rsp,
@@ -43,10 +42,15 @@ class ModemCommon(ModemCore):
         Perform a soft reset on the modem, wait for it to complete.
         The method will fail when the modem doesn't reset.
         """
-        return await self._run_cmd(
+        cmd_result = await self._run_cmd(
             at_cmd='AT^RESET',
-            at_rsp='+SYSSTART'
-        ) and super().__init__()
+            at_rsp=b'+SYSSTART'
+        )
+
+        if cmd_result:
+            super().__init__() # Reset internal mirror state
+        
+        return cmd_result
     
     async def check_comm(self, rsp: ModemRsp = None) -> bool:
         """
