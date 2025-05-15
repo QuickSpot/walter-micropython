@@ -8,6 +8,7 @@ from minimal_unittest import (
 
 from walter_modem import Modem
 from walter_modem.enums import (
+    WalterModemState,
     WalterModemOpState,
     WalterModemCEREGReportsType,
     WalterModemCMEErrorReportsType
@@ -129,8 +130,45 @@ class TestGetClock(
     async def test_clock_is_set_in_modem_rsp(self):
         modem_rsp = ModemRsp()
         await modem.get_clock(rsp=modem_rsp)
-        
+
         self.assert_is_not_none(modem_rsp.clock)
+
+class TestConfigCMEErrorReports(
+    AsyncTestCase,
+    WalterModemAsserts
+):
+    async def async_setup(self):
+        await modem.begin() # Modem begin is idempotent
+
+    # Test fail on invalid params
+    
+    async def test_fails_on_invalid_reports_type(self):
+        self.assert_false(await modem.config_cme_error_reports(reports_type=70))
+    
+    async def test_result_error_set_in_modem_rsp_on_invalid_reports_type(self):
+        modem_rsp = ModemRsp()
+        await modem.config_cme_error_reports(reports_type=-10, rsp=modem_rsp)
+
+        self.assert_equal(WalterModemState.ERROR, modem_rsp.result)
+    
+    # Test normal run
+    
+    async def test_returns_true_on_no_param(self):
+        self.assert_true(await modem.config_cme_error_reports())
+    
+    async def test_returns_true_on_valid_param(self):
+        self.assert_true(await modem.config_cme_error_reports(
+            reports_type=WalterModemCMEErrorReportsType.OFF)
+        )
+    
+    async def test_sends_expected_at_cmd(self):
+        await self.assert_sends_at_command(
+            modem,
+            'AT+CMEE=1',
+            lambda: modem.config_cme_error_reports(
+                reports_type=WalterModemCMEErrorReportsType.NUMERIC
+            )
+        )
 
 testcases = [testcase() for testcase in (
     TestBegin,
@@ -138,6 +176,7 @@ testcases = [testcase() for testcase in (
     TestSoftReset,
     TestCheckComm,
     TestGetClock,
+    TestConfigCMEErrorReports,
 )]
 
 for testcase in testcases:
