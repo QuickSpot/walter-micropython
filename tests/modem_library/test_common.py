@@ -89,10 +89,28 @@ class TestSoftReset(
         await modem.soft_reset()
         self.assert_true(modem._begun)
 
+class TestCheckComm(
+    AsyncTestCase,
+    WalterModemAsserts
+):
+    async def async_setup(self):
+        await modem.begin() # Modem begin is idempotent
+
+    async def test_returns_true(self):
+        self.assert_true(await modem.check_comm())
+
+    async def test_sends_expected_at_cmd(self):
+        await self.assert_sends_at_command(
+            modem,
+            'AT',
+            lambda: modem.check_comm()
+        )    
+
 testcases = [testcase() for testcase in (
     TestBegin,
     TestReset,
     TestSoftReset,
+    TestCheckComm,
 )]
 
 for testcase in testcases:
