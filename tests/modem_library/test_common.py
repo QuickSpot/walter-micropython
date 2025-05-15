@@ -2,7 +2,8 @@ import asyncio
 
 from minimal_unittest import (
     AsyncTestCase,
-    WalterModemAsserts
+    WalterModemAsserts,
+    NetworkConnectivity
 )
 
 from walter_modem import Modem
@@ -104,13 +105,39 @@ class TestCheckComm(
             modem,
             'AT',
             lambda: modem.check_comm()
-        )    
+        )
+
+class TestGetClock(
+    AsyncTestCase,
+    WalterModemAsserts,
+    NetworkConnectivity
+):
+    async def async_setup(self):
+        await modem.begin() # Modem begin is idempotent
+        await self.ensure_network_connection(modem) # Clock sync
+    
+    async def test_returns_true(self):
+        self.assert_true(await modem.get_clock())
+    
+    async def test_sends_expected_at_cmd(self):
+        await self.assert_sends_at_command(
+            modem,
+            'AT+CCLK?',
+            lambda: modem.get_clock()
+        )
+    
+    async def test_clock_is_set_in_modem_rsp(self):
+        modem_rsp = ModemRsp()
+        await modem.get_clock(rsp=modem_rsp)
+        
+        self.assert_is_not_none(modem_rsp.clock)
 
 testcases = [testcase() for testcase in (
     TestBegin,
     TestReset,
     TestSoftReset,
     TestCheckComm,
+    TestGetClock,
 )]
 
 for testcase in testcases:
