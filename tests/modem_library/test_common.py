@@ -158,8 +158,8 @@ class TestConfigCMEErrorReports(
     
     async def test_returns_true_on_valid_param(self):
         self.assert_true(await modem.config_cme_error_reports(
-            reports_type=WalterModemCMEErrorReportsType.OFF)
-        )
+            reports_type=WalterModemCMEErrorReportsType.OFF
+            ))
     
     async def test_sends_expected_at_cmd(self):
         await self.assert_sends_at_command(
@@ -170,6 +170,43 @@ class TestConfigCMEErrorReports(
             )
         )
 
+class TestConfigCeregReports(
+    AsyncTestCase,
+    WalterModemAsserts
+):
+    async def async_setup(self):
+        await modem.begin() # Modem begin is idempotent
+    
+    # Test fail on invalid params
+    
+    async def test_fails_on_invalid_reports_type(self):
+        self.assert_false(await modem.config_cereg_reports(reports_type=70))
+    
+    async def test_result_error_set_in_modem_rsp_on_invalid_reports_type(self):
+        modem_rsp = ModemRsp()
+        await modem.config_cereg_reports(reports_type=-10, rsp=modem_rsp)
+
+        self.assert_equal(WalterModemState.ERROR, modem_rsp.result)
+    
+    # Test normal run
+
+    async def test_returns_true_on_no_param(self):
+        self.assert_true(await modem.config_cereg_reports())
+    
+    async def test_returns_true_on_valid_param(self):
+        self.assert_true(await modem.config_cereg_reports(
+            reports_type=WalterModemCEREGReportsType.ENABLED
+        ))
+    
+    async def test_sends_expected_at_cmd(self):
+        await self.assert_sends_at_command(
+            modem,
+            'AT+CEREG=5',
+            lambda: modem.config_cereg_reports(
+                reports_type=WalterModemCEREGReportsType.ENABLED_UE_PSM_WITH_LOCATION_EMM_CAUSE
+            )
+        )
+
 testcases = [testcase() for testcase in (
     TestBegin,
     TestReset,
@@ -177,6 +214,7 @@ testcases = [testcase() for testcase in (
     TestCheckComm,
     TestGetClock,
     TestConfigCMEErrorReports,
+    TestConfigCeregReports,
 )]
 
 for testcase in testcases:
