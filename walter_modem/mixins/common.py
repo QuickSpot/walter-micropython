@@ -29,6 +29,7 @@ class ModemCommon(ModemCore):
         self._reset_pin.init(hold=True)
 
         super().__init__() # Reset internal mirror state
+        self._begun = True # Keep begin idempotent
 
         return await self._run_cmd(
             rsp=rsp,
@@ -49,6 +50,7 @@ class ModemCommon(ModemCore):
 
         if cmd_result:
             super().__init__() # Reset internal mirror state
+            self._begun = True # Keep begin idempotent
         
         return cmd_result
     
