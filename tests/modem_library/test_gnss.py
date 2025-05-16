@@ -1,17 +1,19 @@
 from minimal_unittest import (
     AsyncTestCase,
-    WalterModemAsserts
+    WalterModemAsserts,
 )
 
 from walter_modem import Modem
 from walter_modem.enums import (
+    WalterModemRspType,
     WalterModemGNSSSensMode,
     WalterModemGNSSAcqMode,
     WalterModemGNSSLocMode,
     WalterModemCMEError
 )
 from walter_modem.structs import (
-    ModemRsp
+    ModemRsp,
+    ModemGNSSAssistance,
 )
 
 modem = Modem()
@@ -66,8 +68,42 @@ class TestConfigGNNS(
             )
         )
 
+class TestGetGNNSAssistanceStatus(
+    AsyncTestCase,
+    WalterModemAsserts
+):
+    async def async_setup(self):
+        await modem.begin() # Modem begin is idempotent
+        self.register_fail_on_cme_error(modem)
+    
+    async def async_teardown(self):
+        self.unregister_fail_on_cme_error(modem)
+    
+    async def test_returns_true(self):
+        self.assert_true(await modem.get_gnss_assistance_status())
+    
+    async def test_sends_expected_at_cmd(self):
+        await self.assert_sends_at_command(
+            modem,
+            'AT+LPGNSSASSISTANCE?',
+            lambda: modem.get_gnss_assistance_status()
+        )
+
+    async def test_gnss_assistance_set_in_modem_rsp(self):
+        modem_rsp = ModemRsp()
+        await modem.get_gnss_assistance_status(rsp=modem_rsp)
+        
+        self.assert_is_instance(modem_rsp.gnss_assistance, ModemGNSSAssistance)
+    
+    async def test_type_set_to_gnss_assistance_data_in_modem_rsp(self):
+        modem_rsp = ModemRsp()
+        await modem.get_gnss_assistance_status(rsp=modem_rsp)
+
+        self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
+
 testcases = [testcase() for testcase in (
     TestConfigGNNS,
+    TestGetGNNSAssistanceStatus,
 )]
 
 for testcase in testcases:
