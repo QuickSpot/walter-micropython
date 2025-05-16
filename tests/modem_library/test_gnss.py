@@ -1,3 +1,5 @@
+import asyncio
+
 from minimal_unittest import (
     AsyncTestCase,
     WalterModemAsserts,
@@ -11,6 +13,7 @@ from walter_modem.enums import (
     WalterModemGNSSAcqMode,
     WalterModemGNSSLocMode,
     WalterModemGNSSAssistanceType,
+    WalterModemGNSSAction,
     WalterModemCMEError
 )
 from walter_modem.structs import (
@@ -142,10 +145,66 @@ class TestUpdateGNNSAssistance(
             )
         )
 
+class TestPerformGNSSAction(
+    AsyncTestCase,
+    WalterModemAsserts,
+    NetworkConnectivity
+):
+    async def async_setup(self):
+        await modem.begin() # Modem begin is idempotent
+
+        print('NOTE: This TestCase uses get_clock() and might fail if get_clock() is broken.')
+
+        modem_rsp = ModemRsp()
+        await modem.get_clock(rsp=modem_rsp)
+
+        if not modem_rsp.clock:
+            print('No RTC (clock time), briefly connecting to LTE to retrieve time')
+            await self.ensure_network_connection(modem)
+            await asyncio.sleep(3)
+        # Time synced, LTE connection & GNSS cannot work simultaniously
+        await modem._run_cmd('AT+CFUN=0', b'OK')
+
+    async def async_teardown(self):
+        # Ensure no gnns action is still running
+        await modem._run_cmd(
+            at_cmd='AT+LPGNSSFIXPROG="stop"',
+            at_rsp=b'OK'
+        )
+
+    # Test fail on invalid param
+
+    async def test_fails_on_invalid_param(self):
+        self.assert_false(await modem.perform_gnss_action(action=-10))
+    
+    async def test_cme_4_set_in_modem_rsp_on_invalid_param(self):
+        modem_rsp = ModemRsp()
+        await modem.perform_gnss_action(action=-10, rsp=modem_rsp)
+
+        self.assert_equal(WalterModemCMEError.OPERATION_NOT_SUPPORTED, modem_rsp.cme_error)
+    
+    # Test normal run
+
+    async def test_returns_true_on_no_param(self):
+        self.assert_true(await modem.perform_gnss_action())
+        await asyncio.sleep(1)
+        await modem._run_cmd('AT+LPGNSSFIXPROG="stop"', b'OK')
+
+    async def test_perform_gnss_action_single_fix_runs(self):
+        self.assert_true(await modem.perform_gnss_action(action=WalterModemGNSSAction.GET_SINGLE_FIX))
+        await asyncio.sleep(1)
+        await modem._run_cmd('AT+LPGNSSFIXPROG="stop"', b'OK')
+    
+    async def test_perform_gnss_action_cancel_runs(self):
+        await modem._run_cmd('AT+LPGNSSFIXPROG="single"', b'OK')
+        await asyncio.sleep(1)
+        self.assert_true(await modem.perform_gnss_action(action=WalterModemGNSSAction.CANCEL))
+
 testcases = [testcase() for testcase in (
     TestConfigGNNS,
     TestGetGNNSAssistanceStatus,
     TestUpdateGNNSAssistance,
+    TestPerformGNSSAction,
 )]
 
 for testcase in testcases:
