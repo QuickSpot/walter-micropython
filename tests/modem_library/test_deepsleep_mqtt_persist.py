@@ -39,7 +39,7 @@ class TestDeepSleepMqttPersist(unittest.AsyncTestCase):
         await modem.begin()
         
         if machine.reset_cause() != machine.DEEPSLEEP_RESET:
-            await modem.create_PDP_context()
+            await modem.pdp_context_create()
             await modem.get_op_state(rsp=modem_rsp)
             if modem_rsp.op_state is not WalterModemOpState.FULL:
                 await modem.set_op_state(WalterModemOpState.FULL)
