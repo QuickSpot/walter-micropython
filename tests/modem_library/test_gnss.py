@@ -1,6 +1,7 @@
 from minimal_unittest import (
     AsyncTestCase,
     WalterModemAsserts,
+    NetworkConnectivity
 )
 
 from walter_modem import Modem
@@ -9,6 +10,7 @@ from walter_modem.enums import (
     WalterModemGNSSSensMode,
     WalterModemGNSSAcqMode,
     WalterModemGNSSLocMode,
+    WalterModemGNSSAssistanceType,
     WalterModemCMEError
 )
 from walter_modem.structs import (
@@ -101,9 +103,49 @@ class TestGetGNNSAssistanceStatus(
 
         self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
 
+class TestUpdateGNNSAssistance(
+    AsyncTestCase,
+    WalterModemAsserts,
+    NetworkConnectivity
+):
+    async def async_setup(self):
+        await modem.begin() # Modem begin is idempotent
+        await self.ensure_network_connection(modem)
+    
+    # Test fail on invalid param
+
+    async def test_fails_on_invalid_type(self):
+        self.assert_false(await modem.update_gnss_assistance(type=-3))
+
+    async def test_cme_50_set_in_modem_rsp_on_invalid_param(self):
+        modem_rsp = ModemRsp()
+        await modem.update_gnss_assistance(type=-3, rsp=modem_rsp)
+
+        self.assert_equal(WalterModemCMEError.INCORRECT_PARAMETERS, modem_rsp.cme_error)
+
+    # Test normal run
+
+    async def test_returns_true_on_no_param(self):
+        self.assert_true(await modem.update_gnss_assistance())
+
+    async def test_returns_true_on_valid_param(self):
+        self.assert_true(await modem.update_gnss_assistance(
+            type=WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS
+        ))
+
+    async def test_sends_correct_at_cmd(self):
+        await self.assert_sends_at_command(
+            modem,
+            'AT+LPGNSSASSISTANCE=1',
+            lambda: modem.update_gnss_assistance(
+                type=WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS
+            )
+        )
+
 testcases = [testcase() for testcase in (
     TestConfigGNNS,
     TestGetGNNSAssistanceStatus,
+    TestUpdateGNNSAssistance,
 )]
 
 for testcase in testcases:
