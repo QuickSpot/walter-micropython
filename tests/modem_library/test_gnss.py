@@ -19,6 +19,7 @@ from walter_modem.enums import (
 from walter_modem.structs import (
     ModemRsp,
     ModemGNSSAssistance,
+    ModemGNSSFix
 )
 
 modem = Modem()
@@ -200,11 +201,27 @@ class TestPerformGNSSAction(
         await asyncio.sleep(1)
         self.assert_true(await modem.perform_gnss_action(action=WalterModemGNSSAction.CANCEL))
 
+class TestWaitForGNSSFix(
+    AsyncTestCase,
+    WalterModemAsserts
+):
+    async def async_setup(self):
+        await modem.begin() # Modem begin is idempotent
+
+    async def test_wait_for_gnss_fix_returns_gnss_fix(self):
+        await modem._run_cmd('AT+LPGNSSFIXPROG="single"', b'OK')
+        try:
+            result = await asyncio.wait_for(modem.wait_for_gnss_fix(), timeout=180)
+            self.assert_is_instance(result, ModemGNSSFix)
+        except asyncio.TimeoutError:
+            raise OSError('Runtime Error, timeout whilst waiting for "wait_for_gnss_fix"')
+
 testcases = [testcase() for testcase in (
     TestConfigGNNS,
     TestGetGNNSAssistanceStatus,
     TestUpdateGNNSAssistance,
     TestPerformGNSSAction,
+    TestWaitForGNSSFix,
 )]
 
 for testcase in testcases:
