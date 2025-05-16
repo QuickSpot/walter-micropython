@@ -36,7 +36,7 @@ class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
         modem_rsp = ModemRsp()
         await modem.begin()
 
-        await modem.create_PDP_context()
+        await modem.pdp_context_create()
 
         await modem.get_op_state(rsp=modem_rsp)
         if modem_rsp.op_state is not WalterModemOpState.FULL:

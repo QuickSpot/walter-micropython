@@ -13,8 +13,32 @@ from ..structs import (
 )
 
 class ModemGNSS(ModemCore):
-    async def config_gnss(
-        self,
+
+    # Deprecated aliases, to bre removed in a later release
+
+    async def config_gnss(self, *args, **kwargs):
+        """DEPRECATED; use `gnss_config()` instead."""
+        return await self.gnss_config(*args, **kwargs)
+    
+    async def get_gnss_assistance_status(self, *args, **kwargs):
+        """DEPRECATED; use `gnss_assistance_get_status()` instead"""
+        return await self.gnss_assistance_get_status(*args, **kwargs)
+    
+    async def update_gnss_assistance(self, *args, **kwargs):
+        """DEPRECATED; use `gnss_assistance_update()` instead"""
+        return await self.gnss_assistance_update(*args, **kwargs)
+    
+    async def perform_gnss_action(self, *args, **kwargs):
+        """DEPRECATED; use `gnss_perform_action()` instead"""
+        return await self.gnss_perform_action(*args, **kwargs)
+    
+    async def wait_for_gnss_fix(self):
+        """DEPRECATED; use `gnss_wait_for_fix()` instead"""
+        return await self.gnss_wait_for_fix()
+
+    # ---
+
+    async def gnss_config(self,
         sens_mode: int = WalterModemGNSSSensMode.HIGH,
         acq_mode: int = WalterModemGNSSAcqMode.COLD_WARM_START,
         loc_mode: int = WalterModemGNSSLocMode.ON_DEVICE_LOCATION,
@@ -42,7 +66,9 @@ class ModemGNSS(ModemCore):
             at_rsp=b'OK'
         )
 
-    async def get_gnss_assistance_status(self, rsp: ModemRsp = None) -> bool:
+    async def gnss_assistance_get_status(self,
+        rsp: ModemRsp = None
+    ) -> bool:
         """
         Retrieves the status of the assistance data currently loaded in the GNSS subsystem.
 
@@ -56,7 +82,7 @@ class ModemGNSS(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def update_gnss_assistance(self,
+    async def gnss_assistance_update(self,
         type: int = WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS, 
         rsp: ModemRsp = None
     ) -> bool:
@@ -77,7 +103,7 @@ class ModemGNSS(ModemCore):
             at_rsp=b'+LPGNSSASSISTANCE:'
         )
     
-    async def perform_gnss_action(self,
+    async def gnss_perform_action(self,
         action: int = WalterModemGNSSAction.GET_SINGLE_FIX,
         rsp: ModemRsp = None
     ) -> bool:
@@ -103,7 +129,7 @@ class ModemGNSS(ModemCore):
             at_rsp=b'OK'
         )
 
-    async def wait_for_gnss_fix(self) -> ModemGNSSFix:
+    async def gnss_wait_for_fix(self) -> ModemGNSSFix:
         """
         Waits for a gnss fix before then returning it.
 

@@ -51,14 +51,14 @@ class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.Wal
         )
     
     # ---
-    # create_pdp_context()
+    # pdp_context_create()
 
-    async def test_create_pdp_context_runs(self):
-        self.assert_true(await modem.create_PDP_context())
+    async def test_pdp_context_create_runs(self):
+        self.assert_true(await modem.pdp_context_create())
 
-    async def test_create_pdp_context_correctly_creates_context_in_modem(self):
+    async def test_pdp_context_create_correctly_creates_context_in_modem(self):
         modem_rsp = ModemRsp()
-        if not await modem.create_PDP_context(
+        if not await modem.pdp_context_create(
             context_id=PDP_CTX_ID,
             apn=APN,
             pdp_type=WalterModemPDPType.IP,
@@ -95,11 +95,11 @@ class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.Wal
         self.assert_equal(b'"IP","",,,,1,0,1,1,0,0,1,,0', pdp_ctx_str_from_modem)
     
     # ---
-    # set_pdp_auth_params()
+    # pdp_set_auth_params()
 
-    async def test_set_pdp_auth_params_runs(self):
+    async def test_pdp_set_auth_params_runs(self):
         self.assert_true(
-            await modem.set_PDP_auth_params(
+            await modem.pdp_set_auth_params(
                 context_id=PDP_CTX_ID,
                 protocol=AUTH_PROTO,
                 user_id=AUTH_USER,
@@ -107,12 +107,12 @@ class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.Wal
             )
         )
     
-    async def test_set_pdp_auth_params_sends_correct_at_cmd(self):
+    async def test_pdp_set_auth_params_sends_correct_at_cmd(self):
         await self.assert_sends_at_command(
             modem,
             f'AT+CGAUTH={PDP_CTX_ID},{AUTH_PROTO},'
             f'"{AUTH_USER if AUTH_USER else ''}","{AUTH_PASS if AUTH_PASS else ''}"',
-            lambda: modem.set_PDP_auth_params(PDP_CTX_ID, AUTH_PROTO, AUTH_USER, AUTH_PASS)
+            lambda: modem.pdp_set_auth_params(PDP_CTX_ID, AUTH_PROTO, AUTH_USER, AUTH_PASS)
         )
 
 class TestPDPContextManagementPostConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
@@ -120,7 +120,7 @@ class TestPDPContextManagementPostConnection(unittest.AsyncTestCase, unittest.Wa
         modem_rsp = ModemRsp()
         await modem.begin()
 
-        await modem.create_PDP_context(context_id=PDP_CTX_ID)
+        await modem.pdp_context_create(context_id=PDP_CTX_ID)
 
         await modem.get_op_state(rsp=modem_rsp)
         if modem_rsp.op_state is not WalterModemOpState.FULL:
@@ -135,51 +135,51 @@ class TestPDPContextManagementPostConnection(unittest.AsyncTestCase, unittest.Wa
         )
     
     # ---
-    # set_pdp_context_active()
+    # pdp_context_set_active()
     
-    async def test_set_pdp_context_active_runs(self):
+    async def test_pdp_context_set_active_runs(self):
         self.assert_true(
-            await modem.set_PDP_context_active(
+            await modem.pdp_context_set_active(
                 active=True,
                 context_id=PDP_CTX_ID,
             )
         )
     
-    async def test_set_pdp_context_active_sends_correct_at_cmd(self):
+    async def test_pdp_context_set_active_sends_correct_at_cmd(self):
         await self.assert_sends_at_command(
             modem,
             f'AT+CGACT=1,{PDP_CTX_ID}',
-            lambda: modem.set_PDP_context_active(True, PDP_CTX_ID)
+            lambda: modem.pdp_context_set_active(True, PDP_CTX_ID)
         )
     
     # ---
-    # get_pdp_address()
+    # pdp_get_addressess()
     
-    async def test_get_pdp_address_runs(self):
+    async def test_pdp_get_addressess_runs(self):
         modem_rsp = ModemRsp()
-        self.assert_true(await modem.get_PDP_address(context_id=PDP_CTX_ID, rsp=modem_rsp))
+        self.assert_true(await modem.pdp_get_addressess(context_id=PDP_CTX_ID, rsp=modem_rsp))
     
-    async def test_get_pdp_address_sets_correct_response_type(self):
+    async def test_pdp_get_addressess_sets_correct_response_type(self):
         modem_rsp = ModemRsp()
-        await modem.get_PDP_address(context_id=PDP_CTX_ID, rsp=modem_rsp)
+        await modem.pdp_get_addressess(context_id=PDP_CTX_ID, rsp=modem_rsp)
         self.assert_equal(WalterModemRspType.PDP_ADDR, modem_rsp.type)
     
-    async def test_get_pdp_address_sets_pdp_address_list_in_response(self):
+    async def test_pdp_get_addressess_sets_pdp_address_list_in_response(self):
         modem_rsp = ModemRsp()
-        await modem.get_PDP_address(context_id=PDP_CTX_ID, rsp=modem_rsp)
+        await modem.pdp_get_addressess(context_id=PDP_CTX_ID, rsp=modem_rsp)
         self.assert_is_instance(modem_rsp.pdp_address_list, list)
     
     # ---
     # attach_pdp_context()
     
-    async def test_set_network_attachment_state_runs(self):
-        self.assert_true(await modem.set_network_attachment_state(attach=True))
+    async def test_pdp_set_attach_state_runs(self):
+        self.assert_true(await modem.pdp_set_attach_state(attach=True))
     
-    async def test_set_network_attachment_state_sends_correct_at_cmd(self):
+    async def test_pdp_set_attach_state_sends_correct_at_cmd(self):
         await self.assert_sends_at_command(
             modem,
             'AT+CGATT=1',
-            lambda: modem.set_network_attachment_state(True)
+            lambda: modem.pdp_set_attach_state(True)
         )
 
 

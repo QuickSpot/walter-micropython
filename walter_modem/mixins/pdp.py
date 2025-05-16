@@ -18,7 +18,32 @@ from ..utils import (
 )
 
 class ModemPDP(ModemCore):
-    async def create_PDP_context(self,
+
+    # Deprecated aliases, to be removed in a later release
+
+    async def create_PDP_context(self, *args, **kwargs):
+        """DEPRECATED; use `pdp_context_create()` instead"""
+        return await self.pdp_context_create(*args, **kwargs)
+    
+    async def set_PDP_auth_params(self, *args, **kwargs):
+        """DEPRECATED; use `pdp_set_auth_params()` instead"""
+        return await self.pdp_set_auth_params(*args, **kwargs)
+    
+    async def set_PDP_context_active(self, *args, **kwargs):
+        """DEPRECATED; use `pdp_context_set_active()` instead"""
+        return await self.pdp_context_set_active(*args, **kwargs)
+    
+    async def set_network_attachment_state(self, *args, **kwargs):
+        """DEPRECATED; use `pdp_set_attach_state()` instead"""
+        return await self.pdp_set_attach_state(*args, **kwargs)
+    
+    async def get_PDP_address(self, *args, **kwargs):
+        """DEPRECATED; use `pdp_get_addressess()` instead"""
+        return await self.pdp_get_addressess(*args, **kwargs)
+
+    # ---
+
+    async def pdp_context_create(self,
         context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         apn: str = '',
         pdp_type: str = WalterModemPDPType.IP,
@@ -84,7 +109,7 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def set_PDP_auth_params(self,
+    async def pdp_set_auth_params(self,
         context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         protocol: int = WalterModemPDPAuthProtocol.NONE,
         user_id: str = None,
@@ -117,7 +142,7 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def set_PDP_context_active(self,
+    async def pdp_context_set_active(self,
         active: bool = True,
         context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         rsp: ModemRsp = None
@@ -141,7 +166,7 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
         
-    async def set_network_attachment_state(self,
+    async def pdp_set_attach_state(self,
         attach: bool = True,
         rsp: ModemRsp = None
     ) -> bool:
@@ -159,7 +184,7 @@ class ModemPDP(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def get_PDP_address(self,
+    async def pdp_get_addressess(self,
         context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         rsp: ModemRsp = None
     ) -> bool:

@@ -33,6 +33,19 @@ _PSM_ACTIVE_UNIT_OPTIONS = (
 )
 
 class ModemSleep(ModemCore):
+
+    # Deprecated aliases, to be removed in a later release
+
+    async def config_PSM(self, *args, **kwargs):
+        """DEPRECATED; use `config_psm()` instead"""
+        return await self.config_psm(*args, **kwargs)
+    
+    async def config_EDRX(self, *args, **kwargs):
+        """DEPRECATED; use `config_edrx()` instead"""
+        return await self.config_edrx(*args, **kwargs)
+
+    # ---
+
     def sleep(self,
         sleep_time_ms: int,
         light_sleep: bool = False,
@@ -119,9 +132,9 @@ class ModemSleep(ModemCore):
                 f'No valid encoding for Active Time={active_time_s}s found, skipping property')
             return None
         
-        return f'{code:08b}'
+        return f'{code:08b}'    
     
-    async def config_PSM(self,
+    async def config_psm(self,
         mode: int,
         periodic_TAU_s: int = None,
         active_time_s: int = None,
@@ -168,7 +181,7 @@ class ModemSleep(ModemCore):
             at_rsp=b'OK'
         )
 
-    async def config_EDRX(self,
+    async def config_edrx(self,
         mode: int,
         req_edrx_val: str = None,
         req_ptw: str = None,
