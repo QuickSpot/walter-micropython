@@ -236,7 +236,7 @@ def check_assistance_data() -> tuple[bool, bool]:
 
     return update_almanac, update_ephemeris
 
-async def update_gnss_assistance() -> bool:
+async def gnss_assistance_update() -> bool:
     """
     This function will update GNNS assistance data when needed.
 
@@ -270,7 +270,7 @@ async def update_gnss_assistance() -> bool:
 
         await asyncio.sleep(.5)
 
-    if not await modem.get_gnss_assistance_status(rsp=modem_rsp):
+    if not await modem.gnss_assistance_get_status(rsp=modem_rsp):
         if modem_rsp.type != WalterModemRspType.GNSS_ASSISTANCE_DATA:
             print('  - Failed to request GNSS assistance status')
             return False
@@ -283,7 +283,7 @@ async def update_gnss_assistance() -> bool:
             print('  - Failed to connect to LTE network')
             return False
         
-        if not await modem.update_gnss_assistance(WalterModemGNSSAssistanceType.ALMANAC):
+        if not await modem.gnss_assistance_update(WalterModemGNSSAssistanceType.ALMANAC):
             print('  - Failed to update almanac data')
             return False
         
@@ -293,7 +293,7 @@ async def update_gnss_assistance() -> bool:
             print('  - Failed to connect to LTE network')
             return False
         
-        if not await modem.update_gnss_assistance(WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS):
+        if not await modem.gnss_assistance_update(WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS):
             print('  - Failed to update ephemeris data')
             return False
         
@@ -342,7 +342,7 @@ async def setup():
         print('Failed to create socket')
         return False
     
-    if not await modem.config_gnss():
+    if not await modem.gnns_config():
         print('Failed to configure GNSS subsystem')
         return False
     
@@ -352,7 +352,7 @@ async def loop():
     global modem_rsp
 
     print('Checking GNSS assistance data...')
-    if not await update_gnss_assistance():
+    if not await gnss_assistance_update():
         print('Failed to update GNSS assistance data')
 
     print('Attempting to request a GNSS fix')
@@ -362,7 +362,7 @@ async def loop():
             print(f'  - trying again, run: {i+1}/5')
         await lte_disconnect()
 
-        if not await modem.perform_gnss_action(
+        if not await modem.gnss_perform_action(
             action=WalterModemGNSSAction.GET_SINGLE_FIX,
             rsp=modem_rsp
         ):
@@ -372,7 +372,7 @@ async def loop():
 
         print('  - Requested GNSS fix')
         print('  - Waiting for GNSS fix')
-        gnss_fix = await modem.wait_for_gnss_fix()
+        gnss_fix = await modem.gnss_wait_for_fix()
 
         if gnss_fix.estimated_confidence <= config.MAX_GNSS_CONFIDENCE:
             print(f'  - Fix success, estimated confidence: {gnss_fix.estimated_confidence}')

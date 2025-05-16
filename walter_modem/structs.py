@@ -359,7 +359,7 @@ class ModemSocket:
 
 
 class ModemGnssFixWaiter:
-    """Represents a wait_for_gnss_fix call that is waiting for data"""
+    """Represents a gnss_wait_for_fix call that is waiting for data"""
     def __init__(self):
         self.event = Event()
         self.gnss_fix = None
