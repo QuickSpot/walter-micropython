@@ -1453,18 +1453,19 @@ class ModemCore:
         rtc = RTC()
         packed_data = rtc.memory()
 
-        mqtt_subs = packed_data[0]
-        packed_data = packed_data[1:]
-        if mqtt_subs == 1:
-            buffer = io.BytesIO(packed_data)
-            mqtt_subscriptions = self._mqtt_subscriptions
-        
-            while buffer.tell() < len(packed_data):
-                topic_length = struct.unpack('I', buffer.read(4))[0]
-                topic = struct.unpack(f'{topic_length}s', buffer.read(topic_length))[0].decode('utf-8')
-                qos = struct.unpack('B', buffer.read(1))[0]
+        if len(packed_data) > 0:
+            mqtt_subs = packed_data[0]
+            packed_data = packed_data[1:]
+            if mqtt_subs == 1:
+                buffer = io.BytesIO(packed_data)
+                mqtt_subscriptions = self._mqtt_subscriptions
 
-                mqtt_subscriptions.append((topic, qos))
+                while buffer.tell() < len(packed_data):
+                    topic_length = struct.unpack('I', buffer.read(4))[0]
+                    topic = struct.unpack(f'{topic_length}s', buffer.read(topic_length))[0].decode('utf-8')
+                    qos = struct.unpack('B', buffer.read(1))[0]
+
+                    mqtt_subscriptions.append((topic, qos))
 
     def _sleep_prepare(self, persist_mqtt_subs: bool):
         if persist_mqtt_subs:
