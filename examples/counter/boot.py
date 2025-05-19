@@ -161,14 +161,14 @@ async def setup():
     if config.SIM_PIN != None and not await unlock_sim():
         return False
     
-    if not await modem.create_PDP_context(
+    if not await modem.pdp_context_create(
         apn=config.CELL_APN,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.set_PDP_auth_params(
+    if config.APN_USERNAME and not await modem.pdp_set_auth_params(
         protocol=config.AUTHENTICATION_PROTOCOL,
         user_id=config.APN_USERNAME,
         password=config.APN_PASSWORD
@@ -180,14 +180,14 @@ async def setup():
         return False
    
     print('Creating socket')
-    if await modem.create_socket(rsp=modem_rsp):
+    if await modem.socket_create(rsp=modem_rsp):
         socket_id = modem_rsp.socket_id
     else:
         print('Failed to create socket')
         return False
     
     print('Connecting socket')
-    if not await modem.connect_socket(
+    if not await modem.socket_connect(
         remote_host=config.SERVER_ADDRESS,
         remote_port=config.SERVER_PORT,
         local_port=config.SERVER_PORT,

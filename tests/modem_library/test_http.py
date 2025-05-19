@@ -36,7 +36,7 @@ class TestHTTP(unittest.AsyncTestCase, unittest.WalterModemAsserts):
         modem_rsp = ModemRsp()
         await modem.begin()
 
-        await modem.create_PDP_context(context_id=1)
+        await modem.pdp_context_create(context_id=1)
 
         await modem.get_op_state(rsp=modem_rsp)
         if modem_rsp.op_state is not WalterModemOpState.FULL:

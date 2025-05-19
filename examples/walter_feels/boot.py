@@ -244,7 +244,7 @@ async def modem_setup():
     if config.SIM_PIN != None and not await unlock_sim():
         return False
     
-    if not await modem.create_PDP_context(
+    if not await modem.pdp_context_create(
         apn=config.CELL_APN,
         rsp=modem_rsp
     ):
@@ -253,7 +253,7 @@ async def modem_setup():
     
     wdt.feed()
    
-    if config.APN_USERNAME and not await modem.set_PDP_auth_params(
+    if config.APN_USERNAME and not await modem.pdp_set_auth_params(
         protocol=config.AUTHENTICATION_PROTOCOL,
         user_id=config.APN_USERNAME,
         password=config.APN_PASSWORD
