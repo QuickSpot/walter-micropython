@@ -74,7 +74,7 @@ class TestGNSSConfig(
             )
         )
 
-class TestGNNSAssistanceGetStatus(
+class TestGNSSAssistanceGetStatus(
     AsyncTestCase,
     WalterModemAsserts
 ):
@@ -107,7 +107,7 @@ class TestGNNSAssistanceGetStatus(
 
         self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
 
-class TestGNNSAssistanceUpdate(
+class TestGNSSAssistanceUpdate(
     AsyncTestCase,
     WalterModemAsserts,
     NetworkConnectivity
@@ -167,7 +167,7 @@ class TestGNSSPerformAction(
         await modem._run_cmd('AT+CFUN=0', b'OK')
 
     async def async_teardown(self):
-        # Ensure no gnns action is still running
+        # Ensure no gnss action is still running
         await modem._run_cmd(
             at_cmd='AT+LPGNSSFIXPROG="stop"',
             at_rsp=b'OK'
@@ -218,8 +218,8 @@ class TestGNSSWaitForFix(
 
 testcases = [testcase() for testcase in (
     TestGNSSConfig,
-    TestGNNSAssistanceGetStatus,
-    TestGNNSAssistanceUpdate,
+    TestGNSSAssistanceGetStatus,
+    TestGNSSAssistanceUpdate,
     TestGNSSPerformAction,
     TestGNSSWaitForFix,
 )]

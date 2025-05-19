@@ -238,7 +238,7 @@ def check_assistance_data() -> tuple[bool, bool]:
 
 async def gnss_assistance_update() -> bool:
     """
-    This function will update GNNS assistance data when needed.
+    This function will update GNSS assistance data when needed.
 
     Check if the current real-time ephemeris data is good enough to get a fast GNSS fix.
     If not, the function will connect to the LTE network to download newer assistance data.
@@ -342,7 +342,7 @@ async def setup():
         print('Failed to create socket')
         return False
     
-    if not await modem.gnns_config():
+    if not await modem.gnss_config():
         print('Failed to configure GNSS subsystem')
         return False
     
