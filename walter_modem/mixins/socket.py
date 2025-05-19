@@ -16,7 +16,24 @@ from ..utils import (
 )
 
 class ModemSocket(ModemCore):
-    async def create_socket(self,
+
+    # Deprecated aliases, to be removed in a later release
+
+    async def create_socket(self, *args, **kwargs):
+        """DEPRECATED; use `socket_create()` instead"""
+        return await self.socket_create(*args, **kwargs)
+    
+    async def connect_socket(self, *args, **kwargs):
+        """DEPRECATED; use `socket_connect()` instead"""
+        return await self.socket_connect(*args, **kwargs)
+    
+    async def close_socket(self, *args, **kwargs):
+        """DEPRECATED; use `socket_close()` instead"""
+        return await self.socket_close(*args, **kwargs)
+
+    # ---
+
+    async def socket_create(self,
         pdp_context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
         mtu: int = 300,
         exchange_timeout: int = 90,
@@ -80,7 +97,7 @@ class ModemSocket(ModemCore):
             complete_handler_arg=socket
         )
     
-    async def connect_socket(self,
+    async def socket_connect(self,
         remote_host: str,
         remote_port: int,
         local_port: int = 0,
@@ -135,9 +152,11 @@ class ModemSocket(ModemCore):
             complete_handler=complete_handler,
             complete_handler_arg=socket
         )
-
     
-    async def close_socket(self, socket_id: int = -1, rsp: ModemRsp = None) -> bool:
+    async def socket_close(self,
+        socket_id: int = -1,
+        rsp: ModemRsp = None
+    ) -> bool:
         """
         Closes a socket. Sockets can only be closed when suspended; 
         active connections cannot be closed.        

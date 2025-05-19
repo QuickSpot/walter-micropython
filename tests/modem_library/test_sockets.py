@@ -42,19 +42,19 @@ class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):
 
         await await_connection()
 
-        self.create_socket_modem_rsp = ModemRsp()
+        self.socket_create_modem_rsp = ModemRsp()
 
     # ---
-    # create_socket()
+    # socket_create()
 
-    async def test_create_socket_runs(self):
-        self.assert_true(await modem.create_socket(rsp=self.create_socket_modem_rsp))
+    async def test_socket_create_runs(self):
+        self.assert_true(await modem.socket_create(rsp=self.socket_create_modem_rsp))
     
-    async def test_create_socket_sends_correct_at_command(self):
+    async def test_socket_create_sends_correct_at_command(self):
         await self.assert_sends_at_command(
             modem,
             'AT+SQNSCFG=2,1,500,120,900,30',
-            lambda: modem.create_socket(
+            lambda: modem.socket_create(
                 pdp_context_id=1,
                 mtu=500,
                 exchange_timeout=120,
@@ -63,17 +63,17 @@ class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):
             )
         )
     
-    async def test_create_socket_sets_correct_response_type(self):
-        self.assert_equal(WalterModemRspType.SOCKET_ID, self.create_socket_modem_rsp.type)
+    async def test_socket_create_sets_correct_response_type(self):
+        self.assert_equal(WalterModemRspType.SOCKET_ID, self.socket_create_modem_rsp.type)
     
-    async def test_create_socket_sets_socket_id_in_response(self):
-        self.assert_is_instance(self.create_socket_modem_rsp.socket_id, int)
+    async def test_socket_create_sets_socket_id_in_response(self):
+        self.assert_is_instance(self.socket_create_modem_rsp.socket_id, int)
     
     # ---
-    # connect_socket()
+    # socket_connect()
 
-    async def test_connect_socket_runs(self):
-        self.assert_true(await modem.connect_socket(
+    async def test_socket_connect_runs(self):
+        self.assert_true(await modem.socket_connect(
             remote_host='walterdemo.quickspot.io',
             remote_port=1999,
             local_port=1999
@@ -92,8 +92,8 @@ class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     # ---
     # socket_close()
 
-    async def test_close_socket(self):
-        self.assert_true(await modem.close_socket())
+    async def test_socket_close(self):
+        self.assert_true(await modem.socket_close())
 
 test_sockets = TestSockets()
 test_sockets.run()

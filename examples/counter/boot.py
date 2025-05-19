@@ -180,14 +180,14 @@ async def setup():
         return False
    
     print('Creating socket')
-    if await modem.create_socket(rsp=modem_rsp):
+    if await modem.socket_create(rsp=modem_rsp):
         socket_id = modem_rsp.socket_id
     else:
         print('Failed to create socket')
         return False
     
     print('Connecting socket')
-    if not await modem.connect_socket(
+    if not await modem.socket_connect(
         remote_host=config.SERVER_ADDRESS,
         remote_port=config.SERVER_PORT,
         local_port=config.SERVER_PORT,

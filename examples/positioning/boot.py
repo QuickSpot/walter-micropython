@@ -164,7 +164,7 @@ async def lte_transmit(socket_id: int, address: str, port: int, buffer: bytearra
 
     :return bool: True on success, False on failure
     """
-    if not await modem.connect_socket(
+    if not await modem.socket_connect(
         remote_host=address,
         remote_port=port,
         socket_id=socket_id,
@@ -183,7 +183,7 @@ async def lte_transmit(socket_id: int, address: str, port: int, buffer: bytearra
         print('  - Failed to transmit to UDP socket')
         return False
     
-    if not await modem.close_socket(
+    if not await modem.socket_close(
         socket_id=socket_id
     ):
         print('  - Failed to close UDP socket')
@@ -336,7 +336,7 @@ async def setup():
         return False
    
     print('Creating socket')
-    if await modem.create_socket(rsp=modem_rsp):
+    if await modem.socket_create(rsp=modem_rsp):
         socket_id = modem_rsp.socket_id
     else:
         print('Failed to create socket')
