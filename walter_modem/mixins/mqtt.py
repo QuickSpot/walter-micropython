@@ -1,7 +1,18 @@
+import asyncio
+import gc
+import io
+import struct
+
+from machine import RTC # type: ignore
+from micropython import const # type: ignore
+
 from ..core import ModemCore
 from ..enums import (
     WalterModemCmdType,
-    WalterModemState
+    WalterModemState,
+    WalterModemMqttState,
+    WalterModemMqttResultCode,
+    WalterModemRspType
 )
 from ..structs import (
     ModemRsp,
@@ -14,7 +25,80 @@ from ..utils import (
     log
 )
 
+_MQTT_TOPIC_MAX_SIZE = const(127)
+"""The recommended mamximum number of characters in an MQTT topic"""
+
+_MQTT_MAX_PENDING_RINGS = const(8)
+"""The recommended maximum number of rings that can be pending for the MQTT protocol"""
+
+_MQTT_MAX_TOPICS = const(4)
+"""The recommended maximum allowed MQTT topics to subscribe to"""
+
+_MQTT_MIN_KEEP_ALIVE = const(20)
+"""The recommended minimum for the MQTT keep alive time"""
+
+_MQTT_MAX_MESSAGE_LEN = const(4096)
+"""The maximum MQTT payload length"""
+
 class ModemMQTT(ModemCore):
+    def __init__(self, *args, **kwargs):
+        if not hasattr(self, '__initialised_mixins'):
+            super().__init__(*args, **kwargs)
+
+        self.mqtt_status = WalterModemMqttState.DISCONNECTED
+        """Status of the MQTT connection"""
+
+        self.__mqtt_msg_buffer: list[ModemMqttMessage] = []
+        """Inbox for MQTT messages"""
+
+        self.__mqtt_subscriptions: list[tuple[str, int]] = []
+
+        self.__queue_rsp_rsp_handlers = (
+            self.__queue_rsp_rsp_handlers + (
+                (b'+SQNSMQTTONCONNECT:0,', self.__handle_mqtt_on_connect),
+                (b'+SQNSMQTTONPUBLISH:0', self.__handle_mqtt_on_publish),
+                (b'+SQNSMQTTONDISCONNECT:0,', self.__handle_mqtt_on_disconnect),
+                (b'+SQNSMQTTONMESSAGE:0,', self.__handle_mqtt_on_message),
+                (b'+SQNSMQTTMEMORYFULL', self.__handle_mqtt_memory_full),
+                (b'+SQNSMQTTONSUBSCRIBE:0', self.__handle_mqtt_subscribe),
+            ) 
+        )
+
+        self.__queue_rsp_cmd_handlers = (
+            self.__queue_rsp_cmd_handlers + (
+                ('AT+SQNSMQTTRCVMESSAGE=0', self._handle_sqns_mqtt_rcv_message),
+            )
+        )
+
+        self.__deep_sleep_prepare_callables = (
+            self.__deep_sleep_prepare_callables + (self.__mqtt_deep_sleep_prepare,)
+        )
+
+        self.__deep_sleep_wakeup_callables = (
+            self.__deep_sleep_wakeup_callables + (self.__mqtt_deep_sleep_wake,)
+        )
+
+        self.__mirror_state_reset_callables = (
+            self.__mirror_state_reset_callables + (self._mqtt_mirror_state_reset,)
+        )
+
+        self.__initialised_mixins.append(ModemMQTT)
+        if len(self.__initialised_mixins) == len(self.__class__.__bases__):
+            del self.__initialised_mixins
+            next_base = None
+        else:
+            next_base: callable
+            for base in self.__class__.__bases__:
+                if base not in self.__initialised_mixins:
+                    next_base = base
+                    break
+
+        gc.collect()
+        log('INFO', 'MQTT mixin loaded')
+        if next_base is not None: next_base.__init__(self, *args, **kwargs)
+
+#region PublicMethods
+
     async def mqtt_config(self,
         client_id: str = get_mac(),
         user_name: str = '',
@@ -46,7 +130,7 @@ class ModemMQTT(ModemCore):
                 'Setting the MQTT Message Buffer too high may consume excessive memory')
 
         for _ in range(library_message_buffer):
-            self._mqtt_msg_buffer.append(ModemMqttMessage('', 0, 0, None))
+            self.__mqtt_msg_buffer.append(ModemMqttMessage('', 0, 0, None))
 
         return await self._run_cmd(
             rsp=rsp,
@@ -135,8 +219,8 @@ class ModemMQTT(ModemCore):
         """
         async def complete_handler(result, rsp, complete_handler_arg):
             if result == WalterModemState.OK:
-                if complete_handler not in self._mqtt_subscriptions:
-                    self._mqtt_subscriptions.append(complete_handler_arg)
+                if complete_handler not in self.__mqtt_subscriptions:
+                    self.__mqtt_subscriptions.append(complete_handler_arg)
 
         return await self._run_cmd(
             rsp=rsp,
@@ -168,8 +252,8 @@ class ModemMQTT(ModemCore):
         msg = None
         msg_index = -1
 
-        for i in range(len(self._mqtt_msg_buffer)):
-            _msg = self._mqtt_msg_buffer[i]
+        for i in range(len(self.__mqtt_msg_buffer)):
+            _msg = self.__mqtt_msg_buffer[i]
             if not _msg.free:
                 if (topic and _msg.topic == topic) or topic is None:
                     msg = _msg
@@ -184,7 +268,7 @@ class ModemMQTT(ModemCore):
         if msg.message_id:
             at_cmd += f',{msg.message_id}'
 
-        self._mqtt_msg_buffer[msg_index].free = True
+        self.__mqtt_msg_buffer[msg_index].free = True
 
         async def complete_handler(result, rsp, complete_handler_arg):
             if result == WalterModemState.OK:
@@ -198,3 +282,197 @@ class ModemMQTT(ModemCore):
             complete_handler=complete_handler,
             complete_handler_arg=ModemMQTTResponse(msg.topic, msg.qos)
         )
+
+#region PrivateMethods
+
+    def _add_msg_to_mqtt_buffer(self, msg_id, topic, length, qos):
+        # According to modem documentation;
+        # A message with <qos>=0 doesn't have a <mid>,
+        # as this type of message is overwritten every time a new message arrives.
+        # No <mid> value is to be given to read a message with <qos>=0.
+        if qos == 0:
+            for msg in self.__mqtt_msg_buffer:
+                if msg.qos == 0:
+                    msg.topic = topic
+                    msg.length = length
+                    msg.free = False
+                    msg.payload = None
+                    return
+
+        if qos > 0:
+            for msg in self.__mqtt_msg_buffer:
+                if msg.message_id == msg_id and msg.topic == topic:
+                    return
+
+        for msg in self.__mqtt_msg_buffer:
+            if msg.free:
+                msg.topic = topic
+                msg.length = length
+                msg.qos = qos
+                msg.message_id = msg_id
+                msg.payload = None
+                msg.free = False
+                return
+            
+        log('WARN', 'Modem Library\'s MQTT Message Buffer is full, incoming message was dropped')
+    
+    def _mqtt_mirror_state_reset(self):
+        self.mqtt_status = WalterModemMqttState.DISCONNECTED
+        self.__mqtt_msg_buffer: list[ModemMqttMessage] = []
+        self.__mqtt_subscriptions: list[tuple[str, int]] = []
+
+#endregion
+
+#endregion
+
+#region QueueResponseHandlers
+
+    async def __handle_mqtt_on_connect(self, tx_stream, cmd, at_rsp):
+        _, result_code_str = at_rsp[len("+SQNSMQTTONCONNECT:"):].decode().split(',')
+        result_code = int(result_code_str)
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if result_code:
+            self.mqtt_status = WalterModemMqttState.DISCONNECTED
+        else:
+            self.mqtt_status = WalterModemMqttState.CONNECTED
+
+        if self.mqtt_status == WalterModemMqttState.CONNECTED:
+            for (topic, qos) in self.__mqtt_subscriptions:
+                asyncio.create_task(self._run_cmd(
+                    at_cmd=f'AT+SQNSMQTTSUBSCRIBE=0,{modem_string(topic)},{qos}',
+                    at_rsp=b'+SQNSMQTTONSUBSCRIBE:0,{}'.format(modem_string(topic)),
+                ))
+        
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTCONNECT=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
+        return WalterModemState.OK
+    
+    async def __handle_mqtt_on_publish(self, tx_stream, cmd, at_rsp):
+        result_code = int(at_rsp[-2:].strip(b','))
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTPUBLISH=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
+        return WalterModemState.OK        
+
+    async def __handle_mqtt_on_disconnect(self, tx_stream, cmd, at_rsp):
+        _, result_code_str = at_rsp[len("+SQNSMQTTONDISCONNECT:"):].decode().split(',')
+        result_code = int(result_code_str)
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if result_code != 0:
+            return WalterModemState.ERROR
+
+        self.mqtt_status = WalterModemMqttState.DISCONNECTED
+        self.__mqtt_subscriptions = []
+        for msg in self.__mqtt_msg_buffer:
+            msg.free = True
+        
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTDISCONNECT=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+
+        return WalterModemState.OK
+
+    async def __handle_mqtt_on_message(self, tx_stream, cmd, at_rsp):
+        parts = at_rsp[len("+SQNSMQTTONMESSAGE:"):].decode().split(',')
+        topic = parts[1].replace('"', '')
+        length = int(parts[2])
+        qos = int(parts[3])
+        if qos != 0 and len(parts) > 4:
+            message_id = parts[4]
+        else:
+            message_id = None
+
+        self._add_msg_to_mqtt_buffer(message_id, topic, length, qos)
+        return WalterModemState.OK
+
+    async def __handle_mqtt_memory_full(self, tx_stream, cmd, at_rsp):
+        log('WARNING',
+            'Sequans Modem\'s MQTT Memory full')
+
+        for msg in self.__mqtt_msg_buffer:
+            msg.free = True
+
+        return WalterModemState.OK
+    
+    async def __handle_mqtt_subscribe(self, tx_stream, cmd, at_rsp):
+        result_code = int(at_rsp[-2:].strip(b',').decode())
+
+        if cmd and cmd.at_cmd:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            cmd.rsp.mqtt_rc = result_code
+
+        if cmd and cmd.at_cmd and cmd.at_cmd.startswith('AT+SQNSMQTTSUBSCRIBE=0'):
+            if result_code != WalterModemMqttResultCode.SUCCESS:
+                return WalterModemState.ERROR
+        
+        return WalterModemState.OK
+
+    async def _handle_sqns_mqtt_rcv_message(self, tx_stream, cmd, at_rsp):
+        if cmd.rsp.type != WalterModemRspType.MQTT:
+            cmd.rsp.type = WalterModemRspType.MQTT
+            
+        if isinstance(cmd.ring_return, list) and (at_rsp != b'OK' and at_rsp != b'ERROR'):
+            cmd.ring_return.append(at_rsp.decode())
+        
+        return WalterModemState.OK
+
+#endregion
+
+#region Sleep
+
+    def __mqtt_deep_sleep_prepare(self, persist_mqtt_subs: bool, *args):
+        if persist_mqtt_subs:
+            buffer = io.BytesIO()
+            buffer.write(struct.pack('B', 1))
+
+            for topic, qos in self.__mqtt_subscriptions:
+                encoded_topic = topic.encode('utf-8')
+                buffer.write(struct.pack('I', len(encoded_topic)))
+                buffer.write(struct.pack(f'{len(encoded_topic)}s', encoded_topic))
+                buffer.write(struct.pack('B', qos))
+
+            packed_data = buffer.getvalue()
+        else:
+            packed_data = struct.pack('B', 0)
+        
+        rtc = RTC()
+        rtc.memory(packed_data)
+    
+    async def __mqtt_deep_sleep_wake(self):
+        rtc = RTC()
+        packed_data = rtc.memory()
+
+        if len(packed_data) > 0:
+            mqtt_subs = packed_data[0]
+            packed_data = packed_data[1:]
+            if mqtt_subs == 1:
+                buffer = io.BytesIO(packed_data)
+                mqtt_subscriptions = self.__mqtt_subscriptions
+
+                while buffer.tell() < len(packed_data):
+                    topic_length = struct.unpack('I', buffer.read(4))[0]
+                    topic = struct.unpack(
+                        f'{topic_length}s',
+                        buffer.read(topic_length)
+                    )[0].decode('utf-8')
+                    qos = struct.unpack('B', buffer.read(1))[0]
+
+                    mqtt_subscriptions.append((topic, qos))
+
+#endregion
