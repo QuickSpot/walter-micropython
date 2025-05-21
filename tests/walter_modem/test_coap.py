@@ -7,6 +7,7 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
+from walter_modem.mixins.coap import ModemCoap
 from walter_modem.enums import (
     WalterModemState,
     WalterModemOpState,
@@ -25,10 +26,7 @@ from walter_modem.structs import (
     ModemCoapOption
 )
 
-# To avoid disconnecting & reconnecting from the network too frequently;
-# A single modem library instance is re-used, keeping a network connection open
-# from the moment RequireNetworkConnection was first inheriteed.
-modem = Modem()
+modem = Modem(ModemCoap)
 
 class TestCoapContextCreate(
     AsyncTestCase,

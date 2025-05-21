@@ -2,6 +2,7 @@ import asyncio
 
 import minimal_unittest as unittest
 from walter_modem import Modem
+from walter_modem.mixins.http import ModemHTTP
 from walter_modem.enums import (
     WalterModemNetworkRegState,
     WalterModemOpState,
@@ -14,7 +15,7 @@ from walter_modem.structs import (
 HTTP_PROFILE_ID = 2
 """CAREFUL; The tests will overwrite this profile"""
 
-modem = Modem()
+modem = Modem(ModemHTTP)
 
 async def await_connection():
         print('\nShowing modem debug logs:')

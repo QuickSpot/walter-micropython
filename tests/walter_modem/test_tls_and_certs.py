@@ -1,5 +1,6 @@
 import minimal_unittest as unittest
 from walter_modem import Modem
+from walter_modem.mixins.tls_certs import ModemTLSCerts
 from walter_modem.enums import (
     WalterModemTlsValidation,
     WalterModemTlsVersion
@@ -27,7 +28,7 @@ CAREFUL; the tests will overwrite this profile.
 If there is a profile with this ID you wish not to be overwritten, change this id.
 """
 
-modem = Modem()
+modem = Modem(ModemTLSCerts)
 
 class TestTLSAndCertificates(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
