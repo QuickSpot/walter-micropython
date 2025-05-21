@@ -3,6 +3,7 @@ import network # type: ignore
 
 import minimal_unittest as unittest
 from walter_modem import Modem
+from walter_modem.mixins.socket import ModemSocket
 from walter_modem.enums import (
     WalterModemNetworkRegState,
     WalterModemOpState,
@@ -12,21 +13,21 @@ from walter_modem.structs import (
     ModemRsp
 )
 
-modem = Modem()
+modem = Modem(ModemSocket)
 
 async def await_connection():
         print('\nShowing modem debug logs:')
-        modem.debug_log = True
+        modem.uart_debug = True
 
         for _ in range(600):
             if modem.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem.debug_log = False
+                modem.uart_debug = False
                 return
             await asyncio.sleep(1)
-        modem.debug_log = False
+        modem.uart_debug = False
         raise OSError('Connection Timed-out')
 
 class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):

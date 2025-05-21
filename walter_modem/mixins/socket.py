@@ -1,3 +1,6 @@
+import gc
+from micropython import const # type: ignore
+
 from ..core import ModemCore
 from ..enums import (
     WalterModemState,
@@ -10,12 +13,57 @@ from ..enums import (
 )
 from ..structs import (
     ModemRsp,
+    ModemSocket as sModemSocket
 )
 from ..utils import (
-    modem_string
+    modem_string,
+    log
 )
 
+_SOCKET_MIN_CTX_ID = const(1)
+_SOCKET_MAX_CTX_ID = const(6)
+_PDP_DEFAULT_CTX_ID = const(1)
+_PDP_MIN_CTX_ID = const(1)
+_PDP_MAX_CTX_ID = const(8)
+
 class ModemSocket(ModemCore):
+    def __init__(self, *args, **kwargs):
+        if not hasattr(self, '__initialised_mixins'):
+            super().__init__(*args, **kwargs)
+
+        self._socket_list = [sModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
+        """The list of sockets"""
+
+        self._socket = None
+        """The socket which is currently in use by the library or None when no socket is in use."""
+
+        self.__queue_rsp_rsp_handlers = (
+            self.__queue_rsp_rsp_handlers + (
+                (b'+SQNSH: ', self.__handle_sh),
+                (b'+SQNSCFG: ', self.__handle_sqnscfg),
+            )
+        )
+
+        self.__mirror_state_reset_callables = (
+            self.__mirror_state_reset_callables + (self._socket_mirror_state_reset,)
+        )
+
+        self.__initialised_mixins.append(ModemSocket)
+        if len(self.__initialised_mixins) == len(self.__class__.__bases__):
+            del self.__initialised_mixins
+            next_base = None
+        else:
+            next_base: callable
+            for base in self.__class__.__bases__:
+                if base not in self.__initialised_mixins:
+                    next_base = base
+                    break
+
+        gc.collect()
+        log('INFO', 'Socket mixin loaded')
+        if next_base is not None: next_base.__init__(self, *args, **kwargs)
+
+#region PublicMethods
 
     # Deprecated aliases, to be removed in a later release
 
@@ -34,7 +82,7 @@ class ModemSocket(ModemCore):
     # ---
 
     async def socket_create(self,
-        pdp_context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
+        pdp_context_id: int = _PDP_DEFAULT_CTX_ID,
         mtu: int = 300,
         exchange_timeout: int = 90,
         conn_timeout: int = 60,
@@ -55,7 +103,7 @@ class ModemSocket(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if pdp_context_id < ModemCore.MIN_PDP_CTX_ID or pdp_context_id > ModemCore.MAX_PDP_CTX_ID:
+        if pdp_context_id < _PDP_MIN_CTX_ID or pdp_context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
 
@@ -219,3 +267,40 @@ class ModemSocket(ModemCore):
             cmd_type=WalterModemCmdType.DATA_TX_WAIT,
             data=data
         )
+
+#endregion
+
+#region PrivateMethods
+
+    def _socket_mirror_state_reset(self):
+        self._socket_list = [sModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
+        self._socket = None
+
+#endregion
+
+#region QueueResponseHandlers
+
+    async def __handle_sh(self, tx_stream, cmd, at_rsp):
+        socket_id = int(at_rsp[len('+SQNSH: '):].decode())
+        try:
+            _socket = self._socket_list[socket_id - 1]
+        except Exception:
+            return None
+
+        self._socket = _socket
+        _socket.state = WalterModemSocketState.FREE
+
+        return WalterModemState.OK
+
+    async def __handle_sqnscfg(self, tx_stream, cmd, at_rsp):
+        conn_id, cid, pkt_sz, max_to, conn_to, tx_to = map(int, at_rsp.split(b': ')[1].split(b','))
+
+        socket = self._socket_list[conn_id - 1]
+        socket.id = conn_id
+        socket.pdp_context_id = cid
+        socket.mtu = pkt_sz
+        socket.exchange_timeout = max_to
+        socket.conn_timeout = conn_to / 10
+        socket.send_delay_ms = tx_to * 100
+
+#endregion

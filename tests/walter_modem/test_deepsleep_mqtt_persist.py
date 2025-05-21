@@ -52,14 +52,14 @@ class TestDeepSleepMqttPersist(unittest.AsyncTestCase):
             print('setting MQTT subscriptions')
             await modem.mqtt_subscribe(topic='short', qos=1)
             await modem.mqtt_subscribe(topic='long-topic-test', qos=0)
-            print(modem._mqtt_subscriptions)
+            print(modem.__mqtt_subscriptions)
             print('Waiting 5sec before entering deepsleep')
             await asyncio.sleep(5)
             print('Starting 20s deepsleep')
             modem.sleep(sleep_time_ms=20000, persist_mqtt_subs=True)
         
     async def test_mqtt_subscriptions_persist_after_deepsleep(self):
-        self.assert_equal([('short', 1), ('long-topic-test', 0)], modem._mqtt_subscriptions)
+        self.assert_equal([('short', 1), ('long-topic-test', 0)], modem.__mqtt_subscriptions)
 
 test_deep_sleep_mqtt_persist = TestDeepSleepMqttPersist()
 test_deep_sleep_mqtt_persist.run()

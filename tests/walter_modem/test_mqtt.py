@@ -2,6 +2,7 @@ import asyncio
 import minimal_unittest as unittest
 
 from walter_modem import Modem
+from walter_modem.mixins.mqtt import ModemMQTT
 from walter_modem.enums import (
     WalterModemNetworkRegState,
     WalterModemRspType
@@ -14,21 +15,21 @@ from walter_modem.utils import (
     get_mac
 )
 
-modem = Modem()
+modem = Modem(ModemMQTT)
 
 async def await_connection():
         print('\nShowing modem debug logs:')
-        modem.debug_log = True
+        modem.uart_debug = True
 
         for _ in range(600):
             if modem.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem.debug_log = False
+                modem.uart_debug = False
                 return
             await asyncio.sleep(1)
-        modem.debug_log = False
+        modem.uart_debug = False
         raise OSError('Connection Timed-out')
 
 class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
@@ -43,6 +44,7 @@ class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
             await modem.set_op_state(WalterModemOpState.FULL)
 
         await await_connection()
+        modem.uart_debug = True
     
     # ---
     # mqtt_config()
@@ -50,12 +52,11 @@ class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def test_mqtt_config_sends_correct_at_cmd(self):
         await self.assert_sends_at_command(
             modem,
-            f'AT+SQNSMQTTCFG=0,"mqtt-test","test-username","test-pwd",1',
+            f'AT+SQNSMQTTCFG=0,"mqtt-test","test-username","test-pwd"',
             lambda: modem.mqtt_config(
                 client_id='mqtt-test',
                 user_name='test-username',
-                password='test-pwd',
-                tls_profile_id=1
+                password='test-pwd'
             )
         )
     
@@ -79,6 +80,7 @@ class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
         self.assert_equal(WalterModemRspType.MQTT, modem_rsp.type)
     
     async def test_mqtt_connect_to_valid_server_runs(self):
+        await modem._run_cmd('AT+SQNSMQTTCFG=0,"walter-mqtt-test"', b'OK')
         self.assert_true(await modem.mqtt_connect(server_name='test.mosquitto.org', port=1883))
     
     # ---
@@ -99,7 +101,7 @@ class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     
     async def test_mqtt_subscribe_adds_new_subscription_to_mirror_state(self):
         await modem.mqtt_subscribe(topic=f'/walter/mqtt-test/{get_mac()}', qos=1)
-        self.assert_in((f'/walter/mqtt-test/{get_mac()}',1), modem._mqtt_subscriptions)
+        self.assert_in((f'/walter/mqtt-test/{get_mac()}',1), modem.__mqtt_subscriptions)
 
     # ---
     # mqtt_publish()

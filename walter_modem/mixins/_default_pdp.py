@@ -1,3 +1,7 @@
+import gc
+
+from micropython import const # type: ignore
+
 from ..core import ModemCore
 from ..enums import (
     WalterModemPDPAuthProtocol,
@@ -7,17 +11,49 @@ from ..enums import (
     WalterModemPDPIPv4AddrAllocMethod,
     WalterModemPDPRequestType,
     WalterModemPDPPCSCFDiscoveryMethod,
-    WalterModemState
+    WalterModemState,
+    WalterModemRspType
 )
 from ..structs import (
     ModemRsp,
 )
 from ..utils import (
     modem_string,
-    modem_bool
+    modem_bool,
+    log
 )
 
-class ModemPDP(ModemCore):
+_PDP_MIN_CTX_ID = const(1)
+_PDP_MAX_CTX_ID = const(8)
+_PDP_DEFAULT_CTX_ID = const(1)
+
+class _ModemPDP(ModemCore):
+    def __init__(self, *args, **kwargs):
+        if not hasattr(self, '__initialised_mixins'):
+            super().__init__(*args, **kwargs)
+
+        self.__queue_rsp_rsp_handlers = (
+            self.__queue_rsp_rsp_handlers + (
+                (b'+CGPADDR: ', self._handle_cgpaddr),
+            )
+        )
+
+        self.__initialised_mixins.append(_ModemPDP)
+        if len(self.__initialised_mixins) == len(self.__class__.__bases__):
+            del self.__initialised_mixins
+            next_base = None
+        else:
+            next_base: callable
+            for base in self.__class__.__bases__:
+                if base not in self.__initialised_mixins:
+                    next_base = base
+                    break
+
+        gc.collect()
+        log('INFO', '(default) PDP mixin loaded')
+        if next_base is not None: next_base.__init__(self, *args, **kwargs)
+
+#region PublicMethods
 
     # Deprecated aliases, to be removed in a later release
 
@@ -44,7 +80,7 @@ class ModemPDP(ModemCore):
     # ---
 
     async def pdp_context_create(self,
-        context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
+        context_id: int = _PDP_DEFAULT_CTX_ID,
         apn: str = '',
         pdp_type: str = WalterModemPDPType.IP,
         pdp_address: str = None,
@@ -90,7 +126,7 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if context_id < ModemCore.MIN_PDP_CTX_ID or context_id > ModemCore.MAX_PDP_CTX_ID:
+        if context_id < _PDP_MIN_CTX_ID or context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
 
@@ -110,7 +146,7 @@ class ModemPDP(ModemCore):
         )
     
     async def pdp_set_auth_params(self,
-        context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
+        context_id: int = _PDP_DEFAULT_CTX_ID,
         protocol: int = WalterModemPDPAuthProtocol.NONE,
         user_id: str = None,
         password: str = None,
@@ -128,7 +164,7 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if context_id < ModemCore.MIN_PDP_CTX_ID or context_id > ModemCore.MAX_PDP_CTX_ID:
+        if context_id < _PDP_MIN_CTX_ID or context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
         
@@ -144,7 +180,7 @@ class ModemPDP(ModemCore):
     
     async def pdp_context_set_active(self,
         active: bool = True,
-        context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
+        context_id: int = _PDP_DEFAULT_CTX_ID,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -156,7 +192,7 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if context_id < ModemCore.MIN_PDP_CTX_ID or context_id > ModemCore.MAX_PDP_CTX_ID:
+        if context_id < _PDP_MIN_CTX_ID or context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
                 
@@ -185,7 +221,7 @@ class ModemPDP(ModemCore):
         )
     
     async def pdp_get_addressess(self,
-        context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
+        context_id: int = _PDP_DEFAULT_CTX_ID,
         rsp: ModemRsp = None
     ) -> bool:
         """
@@ -196,7 +232,7 @@ class ModemPDP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if context_id < ModemCore.MIN_PDP_CTX_ID or context_id > ModemCore.MAX_PDP_CTX_ID:
+        if context_id < _PDP_MIN_CTX_ID or context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
 
@@ -205,3 +241,25 @@ class ModemPDP(ModemCore):
             at_cmd=f'AT+CGPADDR={context_id}',
             at_rsp=b'OK'
         )
+
+#endregion
+
+#region QueueResponseHandlers
+
+    async def _handle_cgpaddr(self, tx_stream, cmd, at_rsp):
+        if not cmd:
+            return None
+
+        cmd.rsp.type = WalterModemRspType.PDP_ADDR 
+        cmd.rsp.pdp_address_list = []
+
+        parts = at_rsp.decode().split(',')
+            
+        if len(parts) > 1 and parts[1]:
+            cmd.rsp.pdp_address_list.append(parts[1][1:-1])
+        if len(parts) > 2 and parts[2]:
+            cmd.rsp.pdp_address_list.append(parts[2][1:-1])
+        
+        return WalterModemState.OK
+
+#endregion

@@ -57,7 +57,7 @@ class TestReset(
     
     async def test_keeps_internal_begun_flag(self):
         await modem.reset()
-        self.assert_true(modem._begun)
+        self.assert_true(modem.__begun)
 
 class TestSoftReset(
     AsyncTestCase,
@@ -89,7 +89,7 @@ class TestSoftReset(
     
     async def test_keeps_internal_begun_flag(self):
         await modem.soft_reset()
-        self.assert_true(modem._begun)
+        self.assert_true(modem.__begun)
 
 class TestCheckComm(
     AsyncTestCase,

@@ -396,17 +396,17 @@ class WalterModemAsserts:
     
 class NetworkConnectivity:
     async def await_connection(self, modem_instance: Modem):
-        print('Showing modem debug logs:')
-        modem_instance.debug_log = True
+        print('Showing modem uart debug logs:')
+        modem_instance.uart_debug = True
         for _ in range(600):
             if modem_instance.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem_instance.debug_log = False
+                modem_instance.uart_debug = False
                 return
             await asyncio.sleep(1)
-        modem_instance.debug_log = False
+        modem_instance.uart_debug = False
         raise OSError('Connection Timed-out')
     
     async def ensure_network_connection(self, modem_instance: Modem):
