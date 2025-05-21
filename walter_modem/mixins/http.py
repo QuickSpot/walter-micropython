@@ -1,3 +1,7 @@
+import gc
+
+from micropython import const # type: ignore
+
 from ..core import ModemCore
 from ..enums import (
     WalterModemCmdType,
@@ -10,14 +14,62 @@ from ..enums import (
 )
 from ..structs import (
     ModemRsp,
-    ModemHttpResponse
+    ModemHttpResponse,
+    ModemHttpContext
 )
 from ..utils import (
     modem_bool,
-    modem_string
+    modem_string,
+    log
 )
 
+_HTTP_MIN_CTX_ID = const(0)
+_HTTP_MAX_CTX_ID = const(2)
+_TLS_MIN_CTX_ID = const(1)
+_TLS_MAX_CTX_ID = const(6)
+
 class ModemHTTP(ModemCore):
+    def __init__(self, *args, **kwargs):
+        if not hasattr(self, '__initialised_mixins'):
+            super().__init__(*args, **kwargs)
+
+        self._http_context_list = [ModemHttpContext() for _ in range(_HTTP_MAX_CTX_ID + 1)]
+        """The list of http contexts in the modem"""
+
+        self._http_current_profile = 0xff
+        """Current http profile in use in the modem"""
+
+        self.__queue_rsp_rsp_handlers = (
+            self.__queue_rsp_rsp_handlers + (
+                (b'<<<', self.__handle_http_rcv_answer_start),
+                (b'+SQNHTTPRING: ', self.__handle_http_ring),
+                (b'+SQNHTTPCONNECT: ', self.__handle_http_connect),
+                (b'+SQNHTTPDISCONNECT: ', self.__handle_http_disconnect),
+                (b'+SQNHTTPSH: ', self.__handle_http_sh),
+            )
+        )
+
+        self.__mirror_state_reset_callables = (
+            self.__mirror_state_reset_callables + (self._http_mirror_state_reset,)
+        )
+
+        self.__initialised_mixins.append(ModemHTTP)
+        if len(self.__initialised_mixins) == len(self.__class__.__bases__):
+            del self.__initialised_mixins
+            next_base = None
+        else:
+            next_base: callable
+            for base in self.__class__.__bases__:
+                if base not in self.__initialised_mixins:
+                    next_base = base
+                    break
+
+        gc.collect()
+        log('INFO', 'HTTP mixin loaded')
+        if next_base is not None: next_base.__init__(self, *args, **kwargs)
+    
+#region PublicMethods
+
     async def http_did_ring(self, profile_id: int, rsp: ModemRsp = None
     ) -> bool:
         """
@@ -32,7 +84,7 @@ class ModemHTTP(ModemCore):
             if rsp: rsp.result = WalterModemState.ERROR
             return False
 
-        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
+        if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -107,11 +159,11 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.MAX_HTTP_PROFILES or profile_id < 0:
+        if profile_id > _HTTP_MAX_CTX_ID or profile_id < 0:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
-        if tls_profile_id and tls_profile_id > ModemCore.MAX_TLS_PROFILES:
+        if tls_profile_id and tls_profile_id > _TLS_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -141,7 +193,7 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
+        if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -160,7 +212,7 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
+        if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -180,7 +232,7 @@ class ModemHTTP(ModemCore):
 
         :return bool:
         """
-        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
+        if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -217,7 +269,7 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
+        if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -266,7 +318,7 @@ class ModemHTTP(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id >= ModemCore.MAX_HTTP_PROFILES:
+        if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
 
@@ -304,3 +356,93 @@ class ModemHTTP(ModemCore):
                 complete_handler=complete_handler,
                 complete_handler_arg=self._http_context_list[profile_id]
             )
+
+#endregion
+
+#region PrivateMethods
+
+    def _http_mirror_state_reset(self):
+        self._http_context_list = [ModemHttpContext() for _ in range(_HTTP_MAX_CTX_ID + 1)]
+        self._http_current_profile = 0xff
+
+#endregion
+
+#region QueueResponseHandlers
+
+    async def __handle_http_rcv_answer_start(self, tx_stream, cmd, at_rsp):
+        if self._http_current_profile > _HTTP_MAX_CTX_ID or self._http_context_list[self._http_current_profile].state != WalterModemHttpContextState.GOT_RING:
+            return WalterModemState.ERROR
+        else:
+            if not cmd:
+                return
+
+            cmd.rsp.type = WalterModemRspType.HTTP
+            cmd.rsp.http_response = ModemHttpResponse()
+            cmd.rsp.http_response.http_status = self._http_context_list[self._http_current_profile].http_status
+            cmd.rsp.http_response.data = at_rsp[3:-len(b'\r\nOK\r\n')] # 3 skips: <<<
+            cmd.rsp.http_response.content_type = self._http_context_list[self._http_current_profile].content_type
+            cmd.rsp.http_response.content_length = self._http_context_list[self._http_current_profile].content_length
+
+            # the complete handler will reset the state,
+            # even if we never received <<< but got an error instead
+            return WalterModemState.OK
+
+    async def __handle_http_ring(self, tx_stream, cmd, at_rsp):
+        profile_id_str, http_status_str, content_type, content_length_str = at_rsp[len("+SQNHTTPRING: "):].decode().split(',')
+        profile_id = int(profile_id_str)
+        http_status = int(http_status_str)
+        content_length = int(content_length_str)
+
+        if profile_id > _HTTP_MAX_CTX_ID:
+            # TODO: return error if modem returns invalid profile id.
+            # problem: this message is an URC: the associated cmd
+            # may be any random command currently executing */
+            return
+
+        # TODO: if not expecting a ring, it may be a bug in the modem
+        # or at our side and we should report an error + read the
+        # content to free the modem buffer
+        # (knowing that this is a URC so there is no command
+        # to give feedback to)
+        if self._http_context_list[profile_id].state != WalterModemHttpContextState.EXPECT_RING:
+            return
+
+        # remember ring info
+        self._http_context_list[profile_id].state = WalterModemHttpContextState.GOT_RING
+        self._http_context_list[profile_id].http_status = http_status
+        self._http_context_list[profile_id].content_type = content_type
+        self._http_context_list[profile_id].content_length = content_length
+
+        return WalterModemState.OK
+
+    async def __handle_http_connect(self, tx_stream, cmd, at_rsp):
+        profile_id_str, result_code_str = at_rsp[len("+SQNHTTPCONNECT: "):].decode().split(',')
+        profile_id = int(profile_id_str)
+        result_code = int(result_code_str)
+
+        if profile_id <= _HTTP_MAX_CTX_ID:
+            if result_code == 0:
+                self._http_context_list[profile_id].connected = True
+            else:
+                self._http_context_list[profile_id].connected = False
+        
+        return WalterModemState.OK
+
+    async def __handle_http_disconnect(self, tx_stream, cmd, at_rsp):
+        profile_id = int(at_rsp[len("+SQNHTTPDISCONNECT: "):].decode())
+
+        if profile_id <= _HTTP_MAX_CTX_ID:
+            self._http_context_list[profile_id].connected = False
+        
+        return WalterModemState.OK
+
+    async def __handle_http_sh(self, tx_stream, cmd, at_rsp):
+        profile_id_str, _ = at_rsp[len('+SQNHTTPSH: '):].decode().split(',')
+        profile_id = int(profile_id_str)
+
+        if profile_id <= _HTTP_MAX_CTX_ID:
+            self._http_context_list[profile_id].connected = False
+
+        return WalterModemState.OK
+
+#endregion
