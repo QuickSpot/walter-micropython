@@ -1,3 +1,7 @@
+import gc
+
+from micropython import const # type: ignore
+
 from ..core import ModemCore
 from ..enums import (
     WalterModemCmdType,
@@ -11,7 +15,31 @@ from ..utils import (
     log
 )
 
+_TLS_MIN_CTX_ID = const(1)
+_TLS_MAX_CTX_ID = const(6)
+
 class ModemTLSCerts(ModemCore):
+    def __init__(self, *args, **kwargs):
+        if not hasattr(self, '__initialised_mixins'):
+            super().__init__(*args, **kwargs)
+
+        self.__initialised_mixins.append(ModemTLSCerts)
+        if len(self.__initialised_mixins) == len(self.__class__.__bases__):
+            del self.__initialised_mixins
+            next_base = None
+        else:
+            next_base: callable
+            for base in self.__class__.__bases__:
+                if base not in self.__initialised_mixins:
+                    next_base = base
+                    break
+
+        gc.collect()
+        log('INFO', 'TLS & Certs mixin loaded')
+        if next_base is not None: next_base.__init__(self, *args, **kwargs)
+
+#region PublicMethods
+
     async def tls_config_profile(self,
         profile_id: int,
         tls_version: int,
@@ -39,7 +67,7 @@ class ModemTLSCerts(ModemCore):
 
         :return bool: True on success, False on failure
         """
-        if profile_id > ModemCore.MAX_TLS_PROFILES or profile_id <= 0:
+        if profile_id > _TLS_MAX_CTX_ID or profile_id <= 0:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
         
@@ -108,26 +136,28 @@ class ModemTLSCerts(ModemCore):
         """
         if walter_certificate:
             if not await self.tls_write_credential(False, 5, walter_certificate, rsp):
-                if self.debug_log: log('DEBUG'
+                if __debug__: log('DEBUG'
                     'Failed to upload client certificate.')
                 return False
-            if self.debug_log: log('DEBUG',
+            if __debug__: log('DEBUG',
                 'Certificate stored in NVRAM slot 5.')
 
         if walter_private_key:
             if not await self.tls_write_credential(True, 0, walter_private_key, rsp):
-                if self.debug_log: log('DEBUG',
+                if __debug__: log('DEBUG',
                     'Failed to upload private key.')
                 return False
-            if self.debug_log: log('DEBUG',
+            if __debug__: log('DEBUG',
                 'Private key stored in NVRAM slot 0.')
 
         if ca_certificate:
             if not await self.tls_write_credential(False, 6, ca_certificate, rsp):
-                if self.debug_log: log('DEBUG',
+                if __debug__: log('DEBUG',
                     'Failed to upload CA certificate.')
                 return False
-            if self.debug_log: log('DEBUG',
+            if __debug__: log('DEBUG',
                 'CA certificate stored in NVRAM slot 6.')
 
         return True
+
+#endregion
