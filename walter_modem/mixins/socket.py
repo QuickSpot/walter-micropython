@@ -13,7 +13,7 @@ from ..enums import (
 )
 from ..structs import (
     ModemRsp,
-    ModemSocket as sModemSocket
+    ModemSocket
 )
 from ..utils import (
     modem_string,
@@ -26,12 +26,12 @@ _PDP_DEFAULT_CTX_ID = const(1)
 _PDP_MIN_CTX_ID = const(1)
 _PDP_MAX_CTX_ID = const(8)
 
-class ModemSocket(ModemCore):
+class SocketMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)
 
-        self._socket_list = [sModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
+        self._socket_list = [ModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
         """The list of sockets"""
 
         self._socket = None
@@ -48,7 +48,7 @@ class ModemSocket(ModemCore):
             self.__mirror_state_reset_callables + (self._socket_mirror_state_reset,)
         )
 
-        self.__initialised_mixins.append(ModemSocket)
+        self.__initialised_mixins.append(SocketMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None

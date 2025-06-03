@@ -27,7 +27,7 @@ _PDP_MIN_CTX_ID = const(1)
 _PDP_MAX_CTX_ID = const(8)
 _PDP_DEFAULT_CTX_ID = const(1)
 
-class _ModemPDP(ModemCore):
+class PDPMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)
@@ -38,7 +38,7 @@ class _ModemPDP(ModemCore):
             )
         )
 
-        self.__initialised_mixins.append(_ModemPDP)
+        self.__initialised_mixins.append(PDPMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None

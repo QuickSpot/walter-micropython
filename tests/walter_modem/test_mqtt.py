@@ -2,7 +2,7 @@ import asyncio
 import minimal_unittest as unittest
 
 from walter_modem import Modem
-from walter_modem.mixins.mqtt import ModemMQTT
+from walter_modem.mixins.mqtt import MQTTMixin
 from walter_modem.enums import (
     WalterModemNetworkRegState,
     WalterModemRspType
@@ -15,7 +15,7 @@ from walter_modem.utils import (
     get_mac
 )
 
-modem = Modem(ModemMQTT)
+modem = Modem(MQTTMixin)
 
 async def await_connection():
         print('\nShowing modem debug logs:')

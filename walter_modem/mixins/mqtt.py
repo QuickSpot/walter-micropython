@@ -40,7 +40,7 @@ _MQTT_MIN_KEEP_ALIVE = const(20)
 _MQTT_MAX_MESSAGE_LEN = const(4096)
 """The maximum MQTT payload length"""
 
-class ModemMQTT(ModemCore):
+class MQTTMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)
@@ -82,7 +82,7 @@ class ModemMQTT(ModemCore):
             self.__mirror_state_reset_callables + (self._mqtt_mirror_state_reset,)
         )
 
-        self.__initialised_mixins.append(ModemMQTT)
+        self.__initialised_mixins.append(MQTTMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None

@@ -31,12 +31,12 @@ _PSM_ACTIVE_UNIT_OPTIONS = (
     (0b000,       2),   # 2 s
 )
 
-class _ModemSleep(ModemCore):
+class SleepMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)
 
-        self.__initialised_mixins.append(_ModemSleep)
+        self.__initialised_mixins.append(SleepMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None

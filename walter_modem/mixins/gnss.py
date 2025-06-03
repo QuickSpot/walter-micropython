@@ -32,7 +32,7 @@ _UNICODE_COMMA = const(44)
 _UNICODE_BRACKET_OPEN = const(40)
 _UNICODE_BRACKET_CLOSE = const(41)
 
-class ModemGNSS(ModemCore):
+class GNSSMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)
@@ -52,7 +52,7 @@ class ModemGNSS(ModemCore):
             self.__mirror_state_reset_callables + (self._gnss_mirror_state_reset,)
         )
 
-        self.__initialised_mixins.append(ModemGNSS)
+        self.__initialised_mixins.append(GNSSMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None

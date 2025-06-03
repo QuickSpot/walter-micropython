@@ -28,7 +28,7 @@ _HTTP_MAX_CTX_ID = const(2)
 _TLS_MIN_CTX_ID = const(1)
 _TLS_MAX_CTX_ID = const(6)
 
-class ModemHTTP(ModemCore):
+class HTTPMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)
@@ -53,7 +53,7 @@ class ModemHTTP(ModemCore):
             self.__mirror_state_reset_callables + (self._http_mirror_state_reset,)
         )
 
-        self.__initialised_mixins.append(ModemHTTP)
+        self.__initialised_mixins.append(HTTPMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None

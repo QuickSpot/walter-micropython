@@ -7,7 +7,7 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
-from walter_modem.mixins.coap import ModemCoap
+from walter_modem.mixins.coap import CoapMixin
 from walter_modem.enums import (
     WalterModemState,
     WalterModemOpState,
@@ -26,7 +26,7 @@ from walter_modem.structs import (
     ModemCoapOption
 )
 
-modem = Modem(ModemCoap)
+modem = Modem(CoapMixin)
 
 class TestCoapContextCreate(
     AsyncTestCase,

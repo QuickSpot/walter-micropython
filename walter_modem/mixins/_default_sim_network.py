@@ -26,7 +26,7 @@ from ..utils import (
 _OPERATOR_MAX_SIZE = const(16)
 """The maximum number of characters of an operator name"""
 
-class _ModemSimNetwork(ModemCore):
+class SimNetworkMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)
@@ -42,7 +42,7 @@ class _ModemSimNetwork(ModemCore):
             )
         )
 
-        self.__initialised_mixins.append(_ModemSimNetwork)
+        self.__initialised_mixins.append(SimNetworkMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None

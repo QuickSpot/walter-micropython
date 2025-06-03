@@ -3,7 +3,7 @@ import network # type: ignore
 
 import minimal_unittest as unittest
 from walter_modem import Modem
-from walter_modem.mixins.socket import ModemSocket
+from walter_modem.mixins.socket import SocketMixin
 from walter_modem.enums import (
     WalterModemNetworkRegState,
     WalterModemOpState,
@@ -13,7 +13,7 @@ from walter_modem.structs import (
     ModemRsp
 )
 
-modem = Modem(ModemSocket)
+modem = Modem(SocketMixin)
 
 async def await_connection():
         print('\nShowing modem debug logs:')

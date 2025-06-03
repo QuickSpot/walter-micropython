@@ -47,7 +47,7 @@ _COAP_REPEATABLE_OPTIONS = (
     WalterModemCoapOption.LOCATION_QUERY
 )
 
-class ModemCoap(ModemCore):
+class CoapMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)

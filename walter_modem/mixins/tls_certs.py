@@ -18,12 +18,12 @@ from ..utils import (
 _TLS_MIN_CTX_ID = const(1)
 _TLS_MAX_CTX_ID = const(6)
 
-class ModemTLSCerts(ModemCore):
+class TLSCertsMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         if not hasattr(self, '__initialised_mixins'):
             super().__init__(*args, **kwargs)
 
-        self.__initialised_mixins.append(ModemTLSCerts)
+        self.__initialised_mixins.append(TLSCertsMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None

@@ -27,16 +27,16 @@ class Modem:
         # Practically often wanted by the end-user
 
         if load_default_pdp_mixin:
-            from .mixins._default_pdp import _ModemPDP
-            mixins = (mixins + (_ModemPDP,))
+            from .mixins._default_pdp import PDPMixin
+            mixins = (mixins + (PDPMixin,))
         
         if load_default_sim_network_mixin:
-            from .mixins._default_sim_network import _ModemSimNetwork
-            mixins = (mixins + (_ModemSimNetwork,))
+            from .mixins._default_sim_network import SimNetworkMixin
+            mixins = (mixins + (SimNetworkMixin,))
         
         if load_default_sleep_mixin:
-            from .mixins._default_sleep import _ModemSleep
-            mixins = (mixins + (_ModemSleep,))
+            from .mixins._default_sleep import SleepMixin
+            mixins = (mixins + (SleepMixin,))
         
         if not (
             load_default_pdp_mixin or
