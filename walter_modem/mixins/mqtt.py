@@ -107,23 +107,6 @@ class MQTTMixin(ModemCore):
         library_message_buffer: int = 16,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Configure the MQTT client without connecting.
-
-        :param client_id: MQTT client ID to use (defaults to the device MAC).
-        :param user_name: Optional username for authentication.
-        :param password: Optional password for authentication.
-        :param tls_profile_id: Optional TLS profile ID to use.
-        :param library_message_buffer: Size of the library's internal MQTT message buffer 
-            (defaults to 16).
-            This buffer stores metadata for received messages but does not hold their payloads.
-            The modem itself supports up to 100 messages, but increasing this buffer significantly
-            may consume excessive memory and is not recommended.
-        :param rsp: Reference to a modem response instance.
-
-        :return: True on success, False on failure.
-        """
-
         if library_message_buffer >= 50:
             log('WARNING',
                 'High lib message buffer '
@@ -149,16 +132,6 @@ class MQTTMixin(ModemCore):
         keep_alive: int = 60,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Initialize MQTT and establish a connection.
-
-        :param server_name: MQTT broker hostname
-        :param port: Port to connect to
-        :param keep_alive: Maximum keepalive time (in seconds), defaults to 60
-        :param rsp: Reference to a modem response instance
-
-        :return: True on success, False on failure
-        """
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+SQNSMQTTCONNECT=0,{modem_string(server_name)},{port},{keep_alive}',
@@ -166,13 +139,6 @@ class MQTTMixin(ModemCore):
         )
     
     async def mqtt_disconnect(self, rsp: ModemRsp = None) -> bool:
-        """
-        Disconnect from an MQTT broker
-
-        :param rsp: Reference to a modem response instance
-
-        :return: True on success, False on failure
-        """
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSMQTTDISCONNECT=0',
@@ -185,16 +151,6 @@ class MQTTMixin(ModemCore):
         qos: int,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Publish the passed data on the given MQTT topic using the earlier eastablished connection.
-
-        :param topic: The topic to publish on
-        :param payload: The data to publish
-        :param qos: Quality of Service (0: at least once, 1: at least once, 2: exactly once)
-        :param rsp: Reference to a modem response instance
-
-        :return: True on success, False on failure
-        """
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+SQNSMQTTPUBLISH=0,{modem_string(topic)},{qos},{len(data)}',
@@ -208,15 +164,6 @@ class MQTTMixin(ModemCore):
         qos: int = 1,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Subscribe to a given MQTT topic using the earlier established connection.
-
-        :param topic: The topic to subscribe to
-        :param qos: Quality of Service (0: at least once, 1: at least once, 2: exactly once)
-        :param rsp: Reference to a modem response instance
-
-        :return: True on success, False on failure
-        """
         async def complete_handler(result, rsp, complete_handler_arg):
             if result == WalterModemState.OK:
                 if complete_handler not in self.__mqtt_subscriptions:
@@ -235,20 +182,6 @@ class MQTTMixin(ModemCore):
         topic: str = None,
         rsp: ModemRsp = None
         ) -> bool:
-        """
-        Poll if the modem has reported any incoming MQTT messages received on topics
-        that we are subscribed on.
-
-        WARNING: No more than 1 message with QoS 0 are stored in the buffer,
-        every new message with QoS 0 overwrites the previous
-        (this only applies to messages with QoS 0)
-
-        :param msg_list: Refence to a list where the received messages will be put.
-        :param topic: The exact topic to filter on, leave as None for all topics
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         msg = None
         msg_index = -1
 

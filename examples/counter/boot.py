@@ -4,6 +4,7 @@ import sys
 import ubinascii # type: ignore
 
 from walter_modem import Modem
+from walter_modem.mixins.socket import SocketMixin
 
 from walter_modem.enums import (
     WalterModemNetworkRegState,
@@ -18,9 +19,12 @@ from walter_modem.structs import (
 
 import config # type: ignore
 
-modem = Modem()
+modem = Modem(SocketMixin, load_default_sleep_mixin=False)
 """
 The modem instance
+Loading the Socket mixin for socket functionality
+Specificying to not load the default sleep mixin,
+as we're not using it in this silple example.
 """
 
 counter = 0

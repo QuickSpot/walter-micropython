@@ -4,7 +4,7 @@ import time
 from ..core import ModemCore
 from ..enums import (
     WalterModemPSMMode,
-    WalterModemEDRXMODE,
+    WalterModemEDRXMode,
     WalterModemState
 )
 from ..structs import (
@@ -56,11 +56,9 @@ class SleepMixin(ModemCore):
     # Deprecated aliases, to be removed in a later release
 
     async def config_PSM(self, *args, **kwargs):
-        """DEPRECATED; use `config_psm()` instead"""
         return await self.config_psm(*args, **kwargs)
     
     async def config_EDRX(self, *args, **kwargs):
-        """DEPRECATED; use `config_edrx()` instead"""
         return await self.config_edrx(*args, **kwargs)
 
     # ---  
@@ -71,20 +69,6 @@ class SleepMixin(ModemCore):
         active_time_s: int = None,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Configure PSM on the modem; enable, disable or reset PSM.
-
-        "DISABLE_AND_DISCARD_ALL_PARAMS", sets manufacturer specific defaults if available.
-
-        :param mode: Enable, Disable or Disable & Reset.
-        :type mode: WalterModemPSMMode
-        :param periodic_TAU_s: Optional; specify the Periodic TAU in seconds
-        :param active_time_s: Optional; specify the Active Time in seconds
-
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure 
-        """
         T3412 = None
         T3324 = None
 
@@ -120,8 +104,8 @@ class SleepMixin(ModemCore):
     ) -> bool:
         cmd = f'AT+SQNEDRX={mode}'
 
-        if (mode == WalterModemEDRXMODE.ENABLE_EDRX or
-        mode == WalterModemEDRXMODE.ENABLE_EDRX_AND_UNSOLICITED_RESULT_CODE):
+        if (mode == WalterModemEDRXMode.ENABLE_EDRX or
+        mode == WalterModemEDRXMode.ENABLE_EDRX_AND_UNSOLICITED_RESULT_CODE):
             supported_act_type = None
 
             def cmd_handler(cmd, at_rsp):

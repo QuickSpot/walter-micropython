@@ -123,11 +123,11 @@ class ModemCore:
 #region PublicMethods
 
     async def begin(self,
-        uart_debug_logs: bool = False
+        uart_debug: bool = False
     ):
         if not self.__begun:
             if __debug__:
-                self.uart_debug = uart_debug_logs
+                self.uart_debug = uart_debug
             self.__uart = UART(2,
                 baudrate=_BAUD,
                 bits=8,
@@ -170,13 +170,6 @@ class ModemCore:
         self.__begun = True
 
     async def reset(self) -> bool:
-        """
-        Physically reset the modem and wait for it to start.
-        All connections will be lost when this function is called.
-        The function will fail when the modem doesn't start after the reset.
-
-        :return bool: True on success, False on failure
-        """
         self.__reset_pin.init(hold=False)
         self.__reset_pin.off()
         time.sleep(0.3)
@@ -192,12 +185,6 @@ class ModemCore:
         )
     
     async def soft_reset(self) -> bool:
-        """
-        Perform a soft reset on the modem, wait for it to complete.
-        The method will fail when the modem doesn't reset.
-
-        :return bool: True on success, False on failure
-        """
         cmd_result = await self._run_cmd(
             at_cmd='AT^RESET',
             at_rsp=b'+SYSSTART'
@@ -207,12 +194,6 @@ class ModemCore:
         return cmd_result
 
     async def check_comm(self) -> bool:
-        """
-        Sends the 'AT' command to check if the modem responds with 'OK',
-        verifying communication between the ESP32 and the modem.
-
-        :return bool: True on success, False on failure
-        """
         return await self._run_cmd(
             at_cmd='AT',
             at_rsp=b'OK'
@@ -220,13 +201,6 @@ class ModemCore:
     
     async def get_clock(self, rsp: ModemRsp = None
     ) -> bool:
-        """
-        Retrieves the current time and date from the modem.
-
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CCLK?',
@@ -237,17 +211,6 @@ class ModemCore:
         reports_type: int = WalterModemCMEErrorReportsType.NUMERIC,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Configures the CME error report type.
-        By default, errors are enabled and numeric.
-        Changing this may affect error reporting.
-
-        :param reports_type: The CME error report type.
-        :type reports_type: WalterModemCMEErrorReportsType
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+CMEE={reports_type}',
@@ -258,17 +221,6 @@ class ModemCore:
         reports_type: int = WalterModemCEREGReportsType.ENABLED,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Configures the CEREG status report type.
-        By default, reports are enabled with minimal operational info.
-        Changing this may affect library functionality.
-
-        :param reports_type: The CEREG status reports type.
-        :type reports_type: WalterModemCEREGReportsType
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+CEREG={reports_type}',
@@ -276,13 +228,6 @@ class ModemCore:
         )
 
     async def get_op_state(self, rsp: ModemRsp = None) -> bool:
-        """
-        Retrieves the modem's current operational state.
-
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CFUN?',
@@ -290,15 +235,6 @@ class ModemCore:
         )
     
     async def set_op_state(self, op_state: int, rsp: ModemRsp = None) -> bool:
-        """
-        Sets the operational state of the modem.
-
-        :param op_state: The new operational state of the modem.
-        :type op_state: WalterModemOpState
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+CFUN={op_state}',
@@ -306,12 +242,6 @@ class ModemCore:
         )
 
     def get_network_reg_state(self) -> int:
-        """
-        Get the network registration state.
-        This is buffered by the library and thus instantly available.
-
-        :return int: The current modem registration state
-        """
         return self._reg_state
 
     def sleep(self,

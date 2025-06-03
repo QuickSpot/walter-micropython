@@ -49,24 +49,6 @@ class TLSCertsMixin(ModemCore):
         client_private_key: int = None,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Configures TLS profiles in the modem,
-        including optional client authentication certificates, validation levels, and TLS version. 
-        This should be done in an initializer sketch, 
-        allowing later HTTP, MQTT, CoAP, or socket sessions to use the preconfigured profile IDs.
-
-        :param profile_id: Security profile id (1-6)
-        :param tls_version: TLS version
-        :type tls_version: WalterModemTlsVersion
-        :param tls_validation: TLS validation level: nothing, URL, CA+period or all
-        :type tls_validation: WalterModemTlsValidation
-        :param ca_certificate_id: CA certificate for certificate validation (0-19)
-        :param client_certificate_id: Client TLS certificate index (0-19)
-        :param client_private_key: Client TLS private key index (0-19)
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         if profile_id > _TLS_MAX_CTX_ID or profile_id <= 0:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -101,19 +83,6 @@ class TLSCertsMixin(ModemCore):
         credential,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Upload key or certificate to modem NVRAM.
-
-        It is recommended to save credentials in index 10-19 to avoid overwriting preinstalled
-        certificates and (if applicable) BlueCherry cloud platform credentials.
-
-        :param is_private_key: True if it's a private key, False if it's a certificate
-        :param slot_idx: Slot index within the modem NVRAM keystore
-        :param credential: NULL-terminated string containing the PEM key/cert data
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         key_type = 'privatekey' if is_private_key else 'certificate'
         return await self._run_cmd(
             rsp=rsp,

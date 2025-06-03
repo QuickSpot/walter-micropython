@@ -56,10 +56,6 @@ class CoapMixin(ModemCore):
             ModemCoapContextState()
             for _ in range(_COAP_MIN_CTX_ID, _COAP_MAX_CTX_ID + 1)
         )
-        """
-        State information about the CoAP contexts.
-        The tuple index maps to the context ID.
-        """
 
         self.__queue_rsp_rsp_handlers = (
             self.__queue_rsp_rsp_handlers + (
@@ -81,7 +77,7 @@ class CoapMixin(ModemCore):
             self.__mirror_state_reset_callables + (self._coap_mirror_state_reset,)
         )
 
-        self.__initialised_mixins.append(ModemCoap)
+        self.__initialised_mixins.append(CoapMixin)
         if len(self.__initialised_mixins) == len(self.__class__.__bases__):
             del self.__initialised_mixins
             next_base = None
@@ -108,28 +104,6 @@ class CoapMixin(ModemCore):
         secure_profile_id: int = None,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Create a CoAP context, required to send, receive & set CoAP options.
-
-        If the server_address & server_port are provided, a connection attempt is made.
-
-        If server_address & server_port are omitted and only local_port is provided,
-        the context is created in listen mode, waiting for an incoming connection.
-
-        :param ctx_id: Context profile identifier (0, 1, 2)
-        :param server_address: IP addr/hostname of the CoAP server.
-        :param server_port: The UDP remote port of the CoAP server;
-        :param local_port: The UDP local port, if omitted, a randomly available port is assigned
-        (recommended)
-        :param timeout: The time (in seconds) to wait for a response from the CoAP server
-        before aborting: 1-120. (independent of the ACK_TIMEOUT used for retransmission)
-        :param dtls: Whether or not to use DTLS encryption
-        :param secure_profile_id: The SSL/TLS security profile configuration (ID) to use.
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -162,15 +136,6 @@ class CoapMixin(ModemCore):
         ctx_id: int,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Close a CoAP context.
-
-        :param ctx_id: Context profile identifier (0, 1, 2)
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -188,25 +153,6 @@ class CoapMixin(ModemCore):
         value: str | WalterModemCoapContentType | tuple[str] = None,
         rsp: ModemRsp = None,
     ) -> bool:
-        """
-        Configure CoAP options for the next message to be sent.
-        Options are to be configured one at a time.
-        For repeatable options, up to 6 values can be provided (the order is respected).
-        The repeatable options are:
-        IF_MATCH, ETAG, LOCATION_PATH, LOCATION_PATH, URI_PATH, URI_QUERY, LOCATION_QUERY
-
-        The values are to be passed along as extra params.
-
-        :param ctx_id: Context profile identifier (0, 1, 2)
-        :param action: Action to perform
-        :type action: WalterModemCoapOptionAction
-        :param option: The option to perform the action on
-        :type option: WalterModemCoapOption
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -239,21 +185,6 @@ class CoapMixin(ModemCore):
         token: str = None,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Configure the coap header for the next message to be sent
-
-        If only msg_id is set, the CoAP client sets a random token value.
-        If only token is set, the CoAP client sets a random msg_id value.
-
-        :param ctx_id: Context profile identifier (0, 1, 2)
-        :param msg_id: Message ID of the CoAP header (0-65535)
-        :param token: hexidecimal format, token to be used in the CoAP header,
-        specify: "NO_TOKEN" for a header without token.
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -290,26 +221,6 @@ class CoapMixin(ModemCore):
         content_type: WalterModemCoapContentType = None,
         rsp: ModemRsp = None,
     ) -> bool:
-        """
-        Send data over CoAP, if no data is sent, length must be set to zero.
-
-        :param ctx_id: Context profile identifier (0, 1, 2)
-        :param m_type: CoAP message type
-        :type m_type: WalterModemCoapType
-        :param method: method (GET, POST, PUT, DELETE)
-        :type method: WalterModemCoapMethod
-        :param data: Binary data to send (bytes, bytearray) or string (will be UTF-8 encoded)
-        :param length: Length of the payload (optional, auto-calculated if not provided)
-        :param path: Optional, the URI_PATH to send on,
-        this will set the path in the CoAP options before sending
-        :param content_type: Optional, the content_type,
-        this will set the content type in the CoAP options before sending
-        :type content_type: WalterModemCoapContentType
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -366,18 +277,6 @@ class CoapMixin(ModemCore):
         max_bytes = 1024,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Read the contents of a CoAP message after it's ring has been received.
-
-        :param ctx_id: Context profile identifier (0, 1, 2)
-        :param msg_id: CoAP message id
-        :param length: The length of the payload to receive (the length of the ring)
-        :param max_bytes: How many bytes of the message to payload to read at once
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -404,17 +303,6 @@ class CoapMixin(ModemCore):
         max_options = 32,
         rsp: ModemRsp = None
     ) -> bool:
-        """
-        Read the options of a CoAP message after it's ring has been received.
-
-        :param ctx_id: Context profile identifier (0, 1, 2)
-        :param msg_id: CoAP message id
-        :param max_options: The maximum options that can be shown in the response (0-32)
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure     
-        """
-
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
