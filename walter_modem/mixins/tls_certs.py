@@ -123,41 +123,4 @@ class TLSCertsMixin(ModemCore):
             cmd_type=WalterModemCmdType.DATA_TX_WAIT
         )
 
-    async def tls_provision_keys(self,
-        walter_certificate,
-        walter_private_key,
-        ca_certificate,
-        rsp: ModemRsp = None
-        ) -> bool:
-        """
-        DEPRECATED: This method will be removed in future releases.
-        It is still present for backwards compatibility.
-        Use tls_write_credential() instead.
-        """
-        if walter_certificate:
-            if not await self.tls_write_credential(False, 5, walter_certificate, rsp):
-                if __debug__: log('DEBUG'
-                    'Failed to upload client certificate.')
-                return False
-            if __debug__: log('DEBUG',
-                'Certificate stored in NVRAM slot 5.')
-
-        if walter_private_key:
-            if not await self.tls_write_credential(True, 0, walter_private_key, rsp):
-                if __debug__: log('DEBUG',
-                    'Failed to upload private key.')
-                return False
-            if __debug__: log('DEBUG',
-                'Private key stored in NVRAM slot 0.')
-
-        if ca_certificate:
-            if not await self.tls_write_credential(False, 6, ca_certificate, rsp):
-                if __debug__: log('DEBUG',
-                    'Failed to upload CA certificate.')
-                return False
-            if __debug__: log('DEBUG',
-                'CA certificate stored in NVRAM slot 6.')
-
-        return True
-
 #endregion
