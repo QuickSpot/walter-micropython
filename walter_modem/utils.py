@@ -79,4 +79,4 @@ def modem_bool(b: bool) -> int:
     return 1 if b else 0
 
 def log(level, msg):
-    print(f'WalterModem [{level:<9}]: {msg}')
+    print(f'WalterModem [{level:<5}]: {msg}')

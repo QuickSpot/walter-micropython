@@ -7,6 +7,7 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
+from walter_modem.mixins.gnss import GNSSMixin
 from walter_modem.enums import (
     WalterModemRspType,
     WalterModemGNSSSensMode,
@@ -22,7 +23,7 @@ from walter_modem.structs import (
     ModemGNSSFix
 )
 
-modem = Modem()
+modem = Modem(GNSSMixin)
 
 class TestGNSSConfig(
     AsyncTestCase,

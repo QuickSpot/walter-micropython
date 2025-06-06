@@ -3,13 +3,14 @@ import network # type: ignore
 import sys
 
 from walter_modem import Modem
+from walter_modem.mixins.mqtt import MQTTMixin
+from walter_modem.mixins.tls_certs import TLSCertsMixin
 
 from walter_modem.enums import (
     WalterModemNetworkRegState,
     WalterModemState,
     WalterModemOpState,
     WalterModemNetworkSelMode,
-    WalterModemPDPAuthProtocol,
     WalterModemTlsValidation,
     WalterModemTlsVersion
 )
@@ -21,9 +22,13 @@ from walter_modem.structs import (
 
 import config # type: ignore
 
-modem = Modem()
+modem = Modem(MQTTMixin, TLSCertsMixin, load_default_sleep_mixin=False)
 """
 The modem instance
+Loading the MQTT mixin for MQTT functionality.
+Loading the TLSCertsMixin to work with tls profiles.
+Specifying to not load the default sleep mixin,
+as we're not using it in this simple example.
 """
 
 modem_rsp = ModemRsp()

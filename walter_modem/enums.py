@@ -418,7 +418,7 @@ class WalterModemPSMMode(Enum):
     ENABLE_PSM = 1
     DISABLE_AND_DISCARD_ALL_PARAMS = 2
 
-class WalterModemEDRXMODE(Enum):
+class WalterModemEDRXMode(Enum):
     """Indication to disable or enable the use of eDRX."""
     DISABLE_EDRX = 0
     ENABLE_EDRX = 1
