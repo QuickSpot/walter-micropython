@@ -1,3 +1,4 @@
+import gc
 import network # type: ignore
 import time
 import ubinascii # type: ignore
@@ -79,4 +80,44 @@ def modem_bool(b: bool) -> int:
     return 1 if b else 0
 
 def log(level, msg):
-    print(f'WalterModem [{level:<9}]: {msg}')
+    print(f'WalterModem [{level:<5}]: {msg}')
+
+def mro_chain_init(self, super, init: callable, mixin, *args, **kwargs):
+    """
+    Handles manual chaining of initialization logic across all base classes in a
+    multiple-inheritance hierarchy, as a workaround for MicroPython's lack of proper MRO.
+
+    Args:
+        self: The instance being initialized.
+        super: The immediate superclass of the current mixin or class (used to call its __init__).
+        init (callable): The initialization logic specific to the current mixin or class.
+        mixin: The mixin or class object whose initialization is being chained.
+        *args: Positional arguments to pass to base initializers.
+        **kwargs: Keyword arguments to pass to base initializers.
+
+    Important:
+        This function exists solely to work around MicroPython's current limitations with
+        complex multiple-inheritance. When MicroPython gains proper MRO support, this
+        workaround should be removed and standard __init__ chaining with super() should
+        be used instead.
+    """
+    if not hasattr(self, '__initialised_mixins'):
+        super.__init__(*args, **kwargs)
+    
+    init()
+
+    self.__initialised_mixins.append(mixin)
+    if len(self.__initialised_mixins) == len(self.__class__.__bases__):
+        del self.__initialised_mixins
+        next_base = None
+    else:
+        next_base: callable
+        for base in self.__class__.__bases__:
+            if base not in self.__initialised_mixins:
+                next_base = base
+                break
+    
+    gc.collect()
+    if __debug__: log('DEBUG', f'{mixin.__name__} loaded')
+
+    if next_base is not None: next_base.__init__(self, *args, **kwargs)
