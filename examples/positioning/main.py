@@ -1,3 +1,10 @@
+import micropython # type: ignore
+micropython.opt_level(1)
+"""
+Set the MicroPython opt level.
+See: https://docs.micropython.org/en/latest/library/micropython.html#micropython.opt_level
+"""
+
 import asyncio
 import esp32 # type: ignore
 import network # type: ignore
@@ -6,31 +13,30 @@ import struct
 import ubinascii # type: ignore
 
 from walter_modem import Modem
-from walter_modem.enums import (
-    WalterModemCMEError,
-    WalterModemGNSSAction,
-    WalterModemGNSSAssistanceType,
-    WalterModemNetworkRegState,
-    WalterModemNetworkSelMode,
-    WalterModemOpState,
-    WalterModemRai,
-    WalterModemRat,
-    WalterModemRspType
-)
-from walter_modem.structs import (
-    ModemRsp
-)
+from walter_modem.coreEnums import *
+from walter_modem.coreStructs import *
+from walter_modem.mixins._default_sim_network import *
+from walter_modem.mixins.socket import *
+from walter_modem.mixins.gnss import *
 
 import config # type: ignore
 
-modem = Modem()
+modem = Modem(SocketMixin, GNSSMixin, load_default_power_saving_mixin=False)
 """
 The modem instance
+
+Loading the socket mixin for socket functionality.
+Loading the GNSS mixin for GNSS functionality
+
+Specificying to not load the default power saving mixin,
+as we're not using it in this simple example.
+Although in most real-life scenarios it is advised to
+configure power-saving for reduced energy consumption
 """
 
 modem_rsp = ModemRsp()
 """
-The modem response object that's (re-)used 
+The modem response object that is (re-)used 
 when we need information from the modem.
 """
 

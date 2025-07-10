@@ -2,9 +2,10 @@
 
 ## Purpose
 
-This example will make Walter count and send the counter value to our demo
-[server](http://walterdemo.quickspot.io/) every 10 seconds. It allows you to
-test connectivity without creating a motherboard to plug Walter in.
+This example will make Walter count and send the counter value to our
+[demo server](https://walterdemo.quickspot.io/) every 10 seconds.
+It allows you to test connectivity without
+creating a motherboard to plug Walter in.
 
 ## Required hardware
 
@@ -20,7 +21,7 @@ To run this example you will need the following items:
 > [!TIP]
 > If you have not installed the modem library yet,
 > you can find the documentation
-> [here](https://www.quickspot.io/documentation.html#/walter-modem/setup/micropython).
+> [here](https://www.quickspot.io/documentation.html#/walter-modem/micropython/setup).
 
 ### 1. Configuration
 
@@ -45,12 +46,12 @@ you can run this example without copying it onto the board, using
 and the command is not interrupted.*
 
 ```shell
-mpremote run examples/counter/boot.py
+mpremote run examples/counter/main.py
 ```
 
 If you prefer to copy the example script onto the board,
 you can copy it like so:
 
 ```shell
-mpremote cp examples/counter/boot.py :boot.py
+mpremote cp examples/counter/main.py :main.py
 ```
