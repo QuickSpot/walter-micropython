@@ -1,20 +1,24 @@
 import asyncio
-import minimal_unittest as unittest
+import micropython # type: ignore
+micropython.opt_level(0)
 
+import minimal_unittest as unittest
 from walter_modem import Modem
-from walter_modem.enums import (
+from walter_modem.mixins._default_pdp import (
     WalterModemPDPAuthProtocol,
     WalterModemPDPType,
     WalterModemPDPIPv4AddrAllocMethod,
     WalterModemPDPRequestType,
     WalterModemPDPPCSCFDiscoveryMethod,
-    WalterModemNetworkRegState,
-    WalterModemRspType
 )
-from walter_modem.structs import (
-    ModemRsp,
+from walter_modem.coreEnums import (
+    WalterModemNetworkRegState,
+    WalterModemRspType,
     WalterModemCMEError,
     WalterModemOpState
+)
+from walter_modem.coreStructs import (
+    ModemRsp
 )
 
 PDP_CTX_ID = 2
@@ -26,18 +30,18 @@ AUTH_PASS = None
 modem = Modem()
 
 async def await_connection():
-        print('\nShowing modem debug logs:')
-        modem.debug_log = True
+        print('\nShowing uart debug logs:')
+        modem.uart_debug = True
 
         for _ in range(600):
             if modem.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem.debug_log = False
+                modem.uart_debug = False
                 return
             await asyncio.sleep(1)
-        modem.debug_log = False
+        modem.uart_debug = False
         raise OSError('Connection Timed-out')
 
 class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):

@@ -1,4 +1,6 @@
 import asyncio
+import micropython # type: ignore
+micropython.opt_level(1)
 
 from minimal_unittest import (
     AsyncTestCase,
@@ -7,28 +9,28 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
-from walter_modem.enums import (
-    WalterModemState,
-    WalterModemOpState,
+from walter_modem.mixins.coap import (
+    CoapMixin,
     WalterModemCoapCloseCause,
     WalterModemCoapMethod,
     WalterModemCoapType,
     WalterModemCoapResponseCode,
     WalterModemCoapOptionAction,
     WalterModemCoapOption,
-    WalterModemCoapContentType
-)
-from walter_modem.structs import (
-    ModemRsp,
+    WalterModemCoapContentType,
     ModemCoapContextState,
     ModemCoapResponse,
     ModemCoapOption
 )
+from walter_modem.coreEnums import (
+    WalterModemState,
+    WalterModemOpState
+)
+from walter_modem.coreStructs import (
+    ModemRsp
+)
 
-# To avoid disconnecting & reconnecting from the network too frequently;
-# A single modem library instance is re-used, keeping a network connection open
-# from the moment RequireNetworkConnection was first inheriteed.
-modem = Modem()
+modem = Modem(CoapMixin)
 
 class TestCoapContextCreate(
     AsyncTestCase,

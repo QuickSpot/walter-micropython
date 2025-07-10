@@ -1,4 +1,6 @@
 import asyncio
+import micropython # type: ignore
+micropython.opt_level(1)
 
 from minimal_unittest import (
     AsyncTestCase,
@@ -7,13 +9,13 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
-from walter_modem.enums import (
+from walter_modem.coreEnums import (
     WalterModemState,
     WalterModemOpState,
     WalterModemCEREGReportsType,
     WalterModemCMEErrorReportsType
 )
-from walter_modem.structs import (
+from walter_modem.coreStructs import (
     ModemRsp
 )
 from walter_modem.queue import (
@@ -57,7 +59,7 @@ class TestReset(
     
     async def test_keeps_internal_begun_flag(self):
         await modem.reset()
-        self.assert_true(modem._begun)
+        self.assert_true(modem.__begun)
 
 class TestSoftReset(
     AsyncTestCase,
@@ -89,7 +91,7 @@ class TestSoftReset(
     
     async def test_keeps_internal_begun_flag(self):
         await modem.soft_reset()
-        self.assert_true(modem._begun)
+        self.assert_true(modem.__begun)
 
 class TestCheckComm(
     AsyncTestCase,

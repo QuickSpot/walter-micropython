@@ -1,10 +1,10 @@
 import asyncio
-import time
 import sys
+import time # type: ignore
 
 from walter_modem import Modem
-from walter_modem.structs import ModemRsp
-from walter_modem.enums import (
+from walter_modem.coreStructs import ModemRsp
+from walter_modem.coreEnums import (
     WalterModemOpState,
     WalterModemNetworkRegState
 )
@@ -396,17 +396,13 @@ class WalterModemAsserts:
     
 class NetworkConnectivity:
     async def await_connection(self, modem_instance: Modem):
-        print('Showing modem debug logs:')
-        modem_instance.debug_log = True
         for _ in range(600):
             if modem_instance.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem_instance.debug_log = False
                 return
             await asyncio.sleep(1)
-        modem_instance.debug_log = False
         raise OSError('Connection Timed-out')
     
     async def ensure_network_connection(self, modem_instance: Modem):

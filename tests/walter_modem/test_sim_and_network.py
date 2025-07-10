@@ -1,36 +1,40 @@
 import asyncio
-import minimal_unittest as unittest
+import micropython # type: ignore
+micropython.opt_level(0)
 
+import minimal_unittest as unittest
 from walter_modem import Modem
-from walter_modem.enums import (
-    WalterModemOpState,
-    WalterModemNetworkRegState,
+from walter_modem.mixins._default_sim_network import (
     WalterModemRat,
     WalterModemNetworkSelMode,
-    WalterModemRspType
-)
-from walter_modem.structs import (
-    ModemRsp,
     ModemSignalQuality,
     ModemCellInformation,
     ModemBandSelection
+)
+from walter_modem.coreEnums import (
+    WalterModemOpState,
+    WalterModemNetworkRegState,
+    WalterModemRspType
+)
+from walter_modem.coreStructs import (
+    ModemRsp
 )
 
 modem = Modem()
 
 async def await_connection():
-        print('\nShowing modem debug logs:')
-        modem.debug_log = True
+        print('\nShowing uart debug logs:')
+        modem.uart_debug = True
 
         for _ in range(600):
             if modem.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem.debug_log = False
+                modem.uart_debug = False
                 return
             await asyncio.sleep(1)
-        modem.debug_log = False
+        modem.uart_debug = False
         raise OSError('Connection Timed-out')
 
 class TestSIMAndNetworkPreConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):

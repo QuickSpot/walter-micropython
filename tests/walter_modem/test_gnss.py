@@ -1,4 +1,6 @@
 import asyncio
+import micropython # type: ignore
+micropython.opt_level(1)
 
 from minimal_unittest import (
     AsyncTestCase,
@@ -7,22 +9,25 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
-from walter_modem.enums import (
-    WalterModemRspType,
+from walter_modem.mixins.gnss import (
+    GNSSMixin,
     WalterModemGNSSSensMode,
     WalterModemGNSSAcqMode,
     WalterModemGNSSLocMode,
     WalterModemGNSSAssistanceType,
     WalterModemGNSSAction,
-    WalterModemCMEError
-)
-from walter_modem.structs import (
-    ModemRsp,
     ModemGNSSAssistance,
     ModemGNSSFix
 )
+from walter_modem.coreEnums import (
+    WalterModemRspType,
+    WalterModemCMEError
+)
+from walter_modem.coreStructs import (
+    ModemRsp,
+)
 
-modem = Modem()
+modem = Modem(GNSSMixin)
 
 class TestGNSSConfig(
     AsyncTestCase,
