@@ -13,7 +13,7 @@ This makes debugging easier and mitigates unexpected out-of-memory situations.
 
 ## Documentation
 
-You can find the setup guide here: [Walter Modem; Micropython Setup](https://www.quickspot.io/documentation.html#/walter-modem/setup/micropython)
+You can find the setup guide here: [Walter Modem; Micropython Setup](https://quickspot.io/documentation.html#/walter-modem/micropython/setup)
 
 ## Contributions
 
