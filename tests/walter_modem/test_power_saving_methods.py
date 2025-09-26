@@ -4,9 +4,9 @@ micropython.opt_level(1)
 import minimal_unittest as unittest
 
 from walter_modem import Modem
-from walter_modem.mixins._default_power_saving import *
+from walter_modem.mixins.default_power_saving import *
 from walter_modem.coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 
 modem = Modem()
@@ -65,7 +65,7 @@ class TestSleepMethods(unittest.AsyncTestCase, unittest.WalterModemAsserts):
         )
 
     async def test_config_edrx_sends_correct_at_cmd_with_req_edrx_val_and_req_ptw(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.get_rat(modem_rsp)
         rat = modem_rsp.rat
 

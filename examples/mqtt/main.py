@@ -12,7 +12,7 @@ import sys
 from walter_modem import Modem
 from walter_modem.coreEnums import *
 from walter_modem.coreStructs import *
-from walter_modem.mixins._default_sim_network import *
+from walter_modem.mixins.default_sim_network import *
 from walter_modem.mixins.mqtt import *
 from walter_modem.mixins.tls_certs import *
 
@@ -31,7 +31,7 @@ Although in most real-life scenarios it is advised to
 configure power-saving for reduced energy consumption
 """
 
-modem_rsp = ModemRsp()
+modem_rsp = WalterModemRsp()
 """
 The modem response object that is (re-)used 
 when we need information from the modem.

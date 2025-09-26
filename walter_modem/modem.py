@@ -1,7 +1,7 @@
 import gc
 
 from .core import ModemCore
-from .coreStructs import ModemRsp
+from .coreStructs import WalterModemRsp
 from .utils import log
 
 class Modem:
@@ -26,15 +26,15 @@ class Modem:
         # Practically often wanted by the end-user
 
         if load_default_pdp_mixin:
-            from .mixins._default_pdp import PDPMixin
+            from .mixins.default_pdp import PDPMixin
             mixins = (mixins + (PDPMixin,))
 
         if load_default_sim_network_mixin:
-            from .mixins._default_sim_network import SimNetworkMixin
+            from .mixins.default_sim_network import SimNetworkMixin
             mixins = (mixins + (SimNetworkMixin,))
 
         if load_default_power_saving_mixin:
-            from .mixins._default_power_saving import PowerSavingMixin
+            from .mixins.default_power_saving import PowerSavingMixin
             mixins = (mixins + (PowerSavingMixin,))
 
         if not (
@@ -47,7 +47,7 @@ class Modem:
         # ---
 
         ModemClass = type('Modem', mixins, {})
-        ModemRsp(*(
+        WalterModemRsp(*(
             field
             for mixin in mixins if hasattr(mixin, 'MODEM_RSP_FIELDS')
             for field in mixin.MODEM_RSP_FIELDS

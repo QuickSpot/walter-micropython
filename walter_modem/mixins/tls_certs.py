@@ -9,7 +9,7 @@ from ..coreEnums import (
     WalterModemCmdType
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -53,7 +53,7 @@ class TLSCertsMixin(ModemCore):
         ca_certificate_id: int = None,
         client_certificate_id: int = None,
         client_private_key: int = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if profile_id > _TLS_MAX_CTX_ID or profile_id <= 0:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -87,7 +87,7 @@ class TLSCertsMixin(ModemCore):
         is_private_key: bool,
         slot_idx: int,
         credential,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         key_type = 'privatekey' if is_private_key else 'certificate'
         return await self._run_cmd(

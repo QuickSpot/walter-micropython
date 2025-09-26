@@ -8,7 +8,7 @@ from ..coreEnums import (
     WalterModemCmdType
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -118,17 +118,17 @@ class WalterModemCoapContentType(Enum):
 #endregion
 #region Structs
 
-class ModemCoapContextState:
+class WalterModemCoapContextState:
     def __init__(self):
         self.connected: bool = False
         self.cause: None | WalterModemCoapCloseCause = None
-        self.rings: list[ModemCoapRing] = []
+        self.rings: list[WalterModemCoapRing] = []
 
     @property
     def configured(self):
         return self.connected
 
-class ModemCoapRing:
+class WalterModemCoapRing:
     def __init__(self, ctx_id, msg_id, req_resp, m_type, method, rsp_code, length):
         self.ctx_id: int = ctx_id
         self.msg_id: int = msg_id
@@ -138,7 +138,7 @@ class ModemCoapRing:
         self.rsp_code: WalterModemCoapResponseCode | None = rsp_code
         self.length: int = length
 
-class ModemCoapResponse:
+class WalterModemCoapResponse:
     def __init__(self, ctx_id, msg_id, token, req_resp, m_type, method, rsp_code, length, payload):
         self.ctx_id: int = ctx_id
         self.msg_id: int = msg_id
@@ -150,7 +150,7 @@ class ModemCoapResponse:
         self.length: int = length
         self.payload: bytearray = payload
 
-class ModemCoapOption:
+class WalterModemCoapOption:
     def __init__(self, ctx_id, option, value):
         self.ctx_id: int = ctx_id,
         self.option: WalterModemCoapOption = option,
@@ -192,7 +192,7 @@ class CoapMixin(ModemCore):
     def __init__(self, *args, **kwargs):
         def init():
             self.coap_context_states = tuple(
-                ModemCoapContextState()
+                WalterModemCoapContextState()
                 for _ in range(_COAP_MIN_CTX_ID, _COAP_MAX_CTX_ID + 1)
             )
 
@@ -228,7 +228,7 @@ class CoapMixin(ModemCore):
         timeout: int = 20,
         dtls: bool = False,
         secure_profile_id: int = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -260,7 +260,7 @@ class CoapMixin(ModemCore):
 
     async def coap_context_close(self,
         ctx_id: int,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -277,7 +277,7 @@ class CoapMixin(ModemCore):
         action: WalterModemCoapOptionAction,
         option: WalterModemCoapOption,
         value: str | WalterModemCoapContentType | tuple[str] = None,
-        rsp: ModemRsp = None,
+        rsp: WalterModemRsp = None,
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -309,7 +309,7 @@ class CoapMixin(ModemCore):
         ctx_id: int,
         msg_id: int = None,
         token: str = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -345,7 +345,7 @@ class CoapMixin(ModemCore):
         length: int = None,
         path: str = None,
         content_type: WalterModemCoapContentType = None,
-        rsp: ModemRsp = None,
+        rsp: WalterModemRsp = None,
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -401,7 +401,7 @@ class CoapMixin(ModemCore):
         msg_id: int,
         length: int,
         max_bytes = 1024,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -427,7 +427,7 @@ class CoapMixin(ModemCore):
         ctx_id: int,
         msg_id: int,
         max_options = 32,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -447,7 +447,7 @@ class CoapMixin(ModemCore):
 
     def _coap_mirror_state_reset(self):
         self.coap_context_states = tuple(
-            ModemCoapContextState()
+            WalterModemCoapContextState()
             for _ in range(_COAP_MIN_CTX_ID, _COAP_MAX_CTX_ID + 1)
         )
 
@@ -470,7 +470,7 @@ class CoapMixin(ModemCore):
         parts = at_rsp.split(b': ')[1].split(b',')
         ctx_id, msg_id, req_resp, m_type, method_or_rsp_code, length = [int(p.decode()) for p in parts]
 
-        self.coap_context_states[ctx_id].rings.append(ModemCoapRing(
+        self.coap_context_states[ctx_id].rings.append(WalterModemCoapRing(
             ctx_id=ctx_id,
             msg_id=msg_id,
             req_resp=req_resp,
@@ -491,7 +491,7 @@ class CoapMixin(ModemCore):
         req_resp, m_type, method_or_rsp_code, length = [int(p.decode()) for p in header[3:]]
 
         cmd.rsp.type = WalterModemRspType.COAP
-        cmd.rsp.coap_rcv_response = ModemCoapResponse(
+        cmd.rsp.coap_rcv_response = WalterModemCoapResponse(
             ctx_id=ctx_id,
             msg_id=msg_id,
             token=token,
@@ -518,7 +518,7 @@ class CoapMixin(ModemCore):
             if (cmd.at_cmd.startswith('AT+SQNCOAPOPT=')
             and cmd.at_cmd.split('=')[1].split(',')[1] == '2'):
                 ctx_id_str, option_str, value = at_rsp[13:].decode().split(',', 2)
-                cmd.rsp.coap_options = ModemCoapOption(
+                cmd.rsp.coap_options = WalterModemCoapOption(
                     ctx_id=int(ctx_id_str),
                     option=int(option_str),
                     value=value
@@ -526,7 +526,7 @@ class CoapMixin(ModemCore):
     
     async def __handle_coap_rcvo(self, tx_stream, cmd, at_rsp):
         ctx_id_str, option_str, value = at_rsp[14:].decode().split(',', 2)
-        coap_option = ModemCoapOption(
+        coap_option = WalterModemCoapOption(
             ctx_id=int(ctx_id_str),
             option=int(option_str),
             value=value

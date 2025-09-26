@@ -2,9 +2,9 @@ from walter_modem.coreStructs import *
 from walter_modem.coreEnums import *
 from walter_modem.utils import *
 
-from walter_modem.mixins._default_pdp import *
-from walter_modem.mixins._default_sim_network import *
-from walter_modem.mixins._default_power_saving import *
+from walter_modem.mixins.default_pdp import *
+from walter_modem.mixins.default_sim_network import *
+from walter_modem.mixins.default_power_saving import *
 from walter_modem.mixins.coap import *
 from walter_modem.mixins.gnss import *
 from walter_modem.mixins.http import *
@@ -129,7 +129,7 @@ class Modem():
             bool: True on success, False on failure
         """
 
-    async def get_clock(self, rsp: ModemRsp | None = None) -> bool:
+    async def get_clock(self, rsp: WalterModemRsp | None = None) -> bool:
         """Inlcuded in Core
 
         ---
@@ -147,7 +147,7 @@ class Modem():
     
     async def config_cme_error_reports(self,
         reports_type: WalterModemCMEErrorReportsType = WalterModemCMEErrorReportsType.NUMERIC,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Inlcuded in Core
 
@@ -172,7 +172,7 @@ class Modem():
     
     async def config_cereg_reports(self,
         reports_type: WalterModemCEREGReportsType = WalterModemCEREGReportsType.ENABLED,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Inlcuded in Core
 
@@ -195,7 +195,7 @@ class Modem():
             bool: True on success, False on failure
         """
 
-    async def get_op_state(self, rsp: ModemRsp | None = None) -> bool:
+    async def get_op_state(self, rsp: WalterModemRsp | None = None) -> bool:
         """Inlcuded in Core
 
         ---
@@ -213,7 +213,7 @@ class Modem():
 
     async def set_op_state(self,
         op_state: WalterModemOpState,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Inlcuded in Core
 
@@ -337,7 +337,7 @@ class Modem():
         use_NAS_ipv4_MTU_discovery: bool = False,
         use_local_addr_ind: bool = False,
         use_NAS_on_IPMTU_discovery: bool = False,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
 
         """Provided by the PDPMixin (loaded by default)
@@ -405,7 +405,7 @@ class Modem():
         protocol: WalterModemPDPAuthProtocol = WalterModemPDPAuthProtocol.NONE,
         user_id: str | None = None,
         password: str | None = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         """Provided by the PDPMixin (loaded by default)
 
@@ -437,7 +437,7 @@ class Modem():
     async def pdp_context_set_active(self,
         active: bool = True,
         context_id: int = 0,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the PDPMixin (loaded by default)
 
@@ -462,7 +462,7 @@ class Modem():
 
     async def pdp_set_attach_state(self,
         attach: bool = True,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the PDPMixin (loaded by default)
 
@@ -489,7 +489,7 @@ class Modem():
 
     async def pdp_get_addressess(self,
         context_id: int = 0,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the PDPMixin (loaded by default)
 
@@ -523,7 +523,7 @@ class Modem():
         mode: int,
         periodic_TAU_s: int | None = None,
         active_time_s: int | None = None,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the PowerSavingMixin (loaded by default)
 
@@ -556,7 +556,7 @@ class Modem():
         mode: int,
         req_edrx_val: str | None = None,
         req_ptw: str | None = None,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the PowerSavingMixin (loaded by default)
 
@@ -589,7 +589,7 @@ class Modem():
 # SimNetworkMixin
 # ---
 
-    async def get_rssi(self, rsp: ModemRsp | None = None) -> bool:
+    async def get_rssi(self, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the SimNetworkMixin (loaded by default)
 
         ---
@@ -605,7 +605,7 @@ class Modem():
             bool: True on success, False on failure 
         """
 
-    async def get_signal_quality(self, rsp: ModemRsp | None = None) -> bool:
+    async def get_signal_quality(self, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the SimNetworkMixin (loaded by default)
 
         ---
@@ -624,7 +624,7 @@ class Modem():
 
     async def get_cell_information(self,
         reports_type: WalterModemSQNMONIReportsType = WalterModemSQNMONIReportsType.SERVING_CELL,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the SimNetworkMixin (loaded by default)
 
@@ -644,7 +644,7 @@ class Modem():
             bool: True on success, False on failure 
         """
 
-    async def get_rat(self, rsp: ModemRsp | None = None) -> bool:
+    async def get_rat(self, rsp: WalterModemRsp | None = None) -> bool:
         """
         Provided by the SimNetworkMixin (loaded by default)
 
@@ -661,7 +661,7 @@ class Modem():
             bool: True on success, False on failure 
         """
 
-    async def set_rat(self, rat: int, rsp: ModemRsp | None = None) -> bool:
+    async def set_rat(self, rat: int, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the SimNetworkMixin (loaded by default)
 
         ---
@@ -679,7 +679,7 @@ class Modem():
             bool: True on success, False on failure 
         """
 
-    async def get_radio_bands(self, rsp: ModemRsp | None = None) -> bool:
+    async def get_radio_bands(self, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the SimNetworkMixin (loaded by default)
 
         ---
@@ -695,7 +695,7 @@ class Modem():
             bool: True on success, False on failure 
         """
 
-    async def get_sim_state(self, rsp: ModemRsp | None = None) -> bool:
+    async def get_sim_state(self, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the SimNetworkMixin (loaded by default)
 
         ---
@@ -711,7 +711,7 @@ class Modem():
             bool: True on success, False on failure 
         """
 
-    async def unlock_sim(self, pin: str | None = None, rsp: ModemRsp | None = None) -> bool:
+    async def unlock_sim(self, pin: str | None = None, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the SimNetworkMixin (loaded by default)
 
         ---
@@ -736,7 +736,7 @@ class Modem():
         mode: WalterModemNetworkSelMode = WalterModemNetworkSelMode.AUTOMATIC,
         operator_name: str = '',
         operator_format: WalterModemOperatorFormat = WalterModemOperatorFormat.LONG_ALPHANUMERIC,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the SimNetworkMixin (loaded by default)
 
@@ -768,7 +768,7 @@ class Modem():
 # COAPMixin
 # ---
 
-    coap_context_states: tuple[ModemCoapContextState]
+    coap_context_states: tuple[WalterModemCoapContextState]
     """Provided by the CoapMixin
 
     ---
@@ -786,7 +786,7 @@ class Modem():
         timeout: int = 20,
         dtls: bool = False,
         secure_profile_id: int | None = None,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the CoapMixin
 
@@ -832,7 +832,7 @@ class Modem():
 
     async def coap_context_close(self,
         ctx_id: int,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the CoapMixin
 
@@ -856,7 +856,7 @@ class Modem():
         action: WalterModemCoapOptionAction,
         option: WalterModemCoapOption,
         value: str | WalterModemCoapContentType | tuple[str] | None = None,
-        rsp: ModemRsp | None = None,
+        rsp: WalterModemRsp | None = None,
     ) -> bool:
         """Provided by the CoapMixin
 
@@ -894,7 +894,7 @@ class Modem():
         ctx_id: int,
         msg_id: int | None = None,
         token: str | None = None,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the CoapMixin
 
@@ -931,7 +931,7 @@ class Modem():
         length: int | None = None,
         path: str | None = None,
         content_type: WalterModemCoapContentType | None = None,
-        rsp: ModemRsp | None = None,
+        rsp: WalterModemRsp | None = None,
     ) -> bool:
         """Provided by the CoapMixin
 
@@ -971,7 +971,7 @@ class Modem():
         msg_id: int,
         length: int,
         max_bytes: int = 1024,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         """Provided by the CoapMixin
 
@@ -1001,7 +1001,7 @@ class Modem():
         ctx_id: int,
         msg_id: int,
         max_options: int = 32,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         """Provided by the CoapMixin
 
@@ -1046,7 +1046,7 @@ class Modem():
         sens_mode: WalterModemGNSSSensMode = WalterModemGNSSSensMode.HIGH,
         acq_mode: WalterModemGNSSAcqMode = WalterModemGNSSAcqMode.COLD_WARM_START,
         loc_mode: WalterModemGNSSLocMode = WalterModemGNSSLocMode.ON_DEVICE_LOCATION,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the GNSSMixin
 
@@ -1077,7 +1077,7 @@ class Modem():
         """
 
     async def gnss_assistance_get_status(self,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the GNSSMixin
 
@@ -1096,7 +1096,7 @@ class Modem():
 
     async def gnss_assistance_update(self,
         type: WalterModemGNSSAssistanceType = WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS, 
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """
         Provided by the GNSSMixin
@@ -1122,7 +1122,7 @@ class Modem():
 
     async def gnss_perform_action(self,
         action: WalterModemGNSSAction = WalterModemGNSSAction.GET_SINGLE_FIX,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the GNSSMixin
 
@@ -1142,7 +1142,7 @@ class Modem():
             bool: True on success, False on failure
         """
 
-    async def gnss_wait_for_fix(self) -> ModemGNSSFix:
+    async def gnss_wait_for_fix(self) -> WalterModemGNSSFix:
         """Provided by the GNSSMixin
 
         ---
@@ -1157,7 +1157,7 @@ class Modem():
 # HTTPMixin
 # ---
 
-    async def http_did_ring(self, profile_id: int, rsp: ModemRsp | None = None
+    async def http_did_ring(self, profile_id: int, rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the HTTPMixin
 
@@ -1184,7 +1184,7 @@ class Modem():
         auth_user: str = '',
         auth_pass: str = '',
         tls_profile_id: int | None = None,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the HTTPMixin
 
@@ -1225,7 +1225,7 @@ class Modem():
             bool: True on success, False on failure
         """
 
-    async def http_connect(self, profile_id: int, rsp: ModemRsp | None = None) -> bool:
+    async def http_connect(self, profile_id: int, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the HTTPMixin
 
         ---
@@ -1247,7 +1247,7 @@ class Modem():
             bool: True on success, False on failure
         """
 
-    async def http_close(self, profile_id: int, rsp: ModemRsp | None = None) -> bool:
+    async def http_close(self, profile_id: int, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the HTTPMixin
 
         ---
@@ -1265,7 +1265,7 @@ class Modem():
             bool: True on success, False on failure
         """
 
-    def http_get_context_status(self, profile_id: int, rsp: ModemRsp | None = None) -> bool:
+    def http_get_context_status(self, profile_id: int, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the HTTPMixin
 
         ---
@@ -1290,7 +1290,7 @@ class Modem():
         uri: str,
         query_cmd: WalterModemHttpQueryCmd = WalterModemHttpQueryCmd.GET,
         extra_header_line: str | None = None,
-        rsp: ModemRsp  | None = None
+        rsp: WalterModemRsp  | None = None
     ) -> bool:
         """Provided by the HTTPMixin
 
@@ -1326,7 +1326,7 @@ class Modem():
         data,
         send_cmd: WalterModemHttpSendCmd = WalterModemHttpSendCmd.POST,
         post_param: WalterModemHttpPostParam = WalterModemHttpPostParam.UNSPECIFIED,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the HTTPMixin
 
@@ -1371,7 +1371,7 @@ class Modem():
         password: str = '',
         tls_profile_id: int | None = None,
         library_message_buffer: int = 16,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the MQTTMixin
 
@@ -1410,7 +1410,7 @@ class Modem():
         server_name: str,
         port: int,
         keep_alive: int = 60,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the MQTTMixin
 
@@ -1434,7 +1434,7 @@ class Modem():
             bool: True on success, False on failure
         """
 
-    async def mqtt_disconnect(self, rsp: ModemRsp | None = None) -> bool:
+    async def mqtt_disconnect(self, rsp: WalterModemRsp | None = None) -> bool:
         """Provided by the MQTTMixin
 
         ---
@@ -1454,7 +1454,7 @@ class Modem():
         topic: str,
         data,
         qos: int,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the MQTTMixin
 
@@ -1480,7 +1480,7 @@ class Modem():
     async def mqtt_subscribe(self,
         topic: str,
         qos: int = 1,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the MQTTMixin
 
@@ -1505,7 +1505,7 @@ class Modem():
     async def mqtt_did_ring(self,
         msg_list: list,
         topic: str | None = None,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
         ) -> bool:
         """Provided by the MQTTMixin
 
@@ -1551,7 +1551,7 @@ class Modem():
         exchange_timeout: int = 90,
         conn_timeout: int = 60,
         send_delay_ms: int = 5000,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the SocketMixin
 
@@ -1593,7 +1593,7 @@ class Modem():
         socket_id: int = -1,
         protocol: WalterModemSocketProto = WalterModemSocketProto.UDP,
         accept_any_remote: WalterModemSocketAcceptAnyRemote = WalterModemSocketAcceptAnyRemote.DISABLED,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the SocketMixin
 
@@ -1629,7 +1629,7 @@ class Modem():
 
     async def socket_close(self,
         socket_id: int = -1,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the SocketMixin
 
@@ -1654,7 +1654,7 @@ class Modem():
         data,
         socket_id: int = -1,
         rai: WalterModemRai = WalterModemRai.NO_INFO,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the SocketMixin
 
@@ -1689,7 +1689,7 @@ class Modem():
         ca_certificate_id: int | None = None,
         client_certificate_id: int | None = None,
         client_private_key: int | None = None,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the TLSCertsMixin
 
@@ -1729,7 +1729,7 @@ class Modem():
         is_private_key: bool,
         slot_idx: int,
         credential: str,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         """Provided by the TLSCertsMixin
 

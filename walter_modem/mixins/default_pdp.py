@@ -7,7 +7,7 @@ from ..coreEnums import (
     WalterModemRspType
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -123,7 +123,7 @@ class PDPMixin(ModemCore):
         use_NAS_ipv4_MTU_discovery: bool = False,
         use_local_addr_ind: bool = False,
         use_NAS_on_IPMTU_discovery: bool = False,
-        rsp: ModemRsp | None = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         if context_id < _PDP_MIN_CTX_ID or context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
@@ -149,7 +149,7 @@ class PDPMixin(ModemCore):
         protocol: int = WalterModemPDPAuthProtocol.NONE,
         user_id: str = None,
         password: str = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if context_id < _PDP_MIN_CTX_ID or context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
@@ -168,7 +168,7 @@ class PDPMixin(ModemCore):
     async def pdp_context_set_active(self,
         active: bool = True,
         context_id: int = _PDP_DEFAULT_CTX_ID,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if context_id < _PDP_MIN_CTX_ID or context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
@@ -182,7 +182,7 @@ class PDPMixin(ModemCore):
         
     async def pdp_set_attach_state(self,
         attach: bool = True,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -192,7 +192,7 @@ class PDPMixin(ModemCore):
     
     async def pdp_get_addressess(self,
         context_id: int = _PDP_DEFAULT_CTX_ID,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if context_id < _PDP_MIN_CTX_ID or context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT

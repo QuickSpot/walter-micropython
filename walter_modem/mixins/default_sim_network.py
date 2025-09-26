@@ -7,7 +7,7 @@ from ..coreEnums import (
     WalterModemState
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -129,14 +129,14 @@ class SimNetworkMixin(ModemCore):
 
     #region PublicMethods
 
-    async def get_rssi(self, rsp: ModemRsp = None) -> bool:
+    async def get_rssi(self, rsp: WalterModemRsp = None) -> bool:
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CSQ',
             at_rsp=b'OK'
         )
     
-    async def get_signal_quality(self, rsp: ModemRsp = None) -> bool:
+    async def get_signal_quality(self, rsp: WalterModemRsp = None) -> bool:
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CESQ',
@@ -145,7 +145,7 @@ class SimNetworkMixin(ModemCore):
     
     async def get_cell_information(self,
         reports_type: int = WalterModemSQNMONIReportsType.SERVING_CELL,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -153,14 +153,14 @@ class SimNetworkMixin(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def get_rat(self, rsp: ModemRsp = None) -> bool:
+    async def get_rat(self, rsp: WalterModemRsp = None) -> bool:
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNMODEACTIVE?',
             at_rsp=b'OK'
         )
     
-    async def set_rat(self, rat: int, rsp: ModemRsp = None) -> bool:
+    async def set_rat(self, rat: int, rsp: WalterModemRsp = None) -> bool:
         rat_cmd_result = await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+SQNMODEACTIVE={rat}',
@@ -170,21 +170,21 @@ class SimNetworkMixin(ModemCore):
         return rat_cmd_result and await self.soft_reset()
         
 
-    async def get_radio_bands(self, rsp: ModemRsp = None) -> bool:
+    async def get_radio_bands(self, rsp: WalterModemRsp = None) -> bool:
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNBANDSEL?',
             at_rsp=b'OK'
         )
     
-    async def get_sim_state(self, rsp: ModemRsp = None) -> bool:
+    async def get_sim_state(self, rsp: WalterModemRsp = None) -> bool:
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CPIN?',
             at_rsp=b'OK'
         )
 
-    async def unlock_sim(self, pin: str = None, rsp: ModemRsp = None) -> bool:
+    async def unlock_sim(self, pin: str = None, rsp: WalterModemRsp = None) -> bool:
         if pin is None:
             return await self.get_sim_state()
 
@@ -198,7 +198,7 @@ class SimNetworkMixin(ModemCore):
         mode: int = WalterModemNetworkSelMode.AUTOMATIC,
         operator_name: str = '',
         operator_format: int = WalterModemOperatorFormat.LONG_ALPHANUMERIC,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if mode == WalterModemNetworkSelMode.AUTOMATIC:
             return await self._run_cmd(

@@ -8,7 +8,7 @@ from ..coreEnums import (
     WalterModemCmdType
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -43,7 +43,7 @@ class WalterModemRai(Enum):
 #endregion
 #region Structs
 
-class ModemSocket:
+class WalterModemSocket:
     def __init__(self, id):
         self.state = WalterModemSocketState.FREE
         self.id = id
@@ -77,7 +77,7 @@ class SocketMixin(ModemCore):
 
     def __init__(self, *args, **kwargs):
         def init():
-            self._socket_list = [ModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
+            self._socket_list = [WalterModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
             """The list of sockets"""
 
             self._socket = None
@@ -120,7 +120,7 @@ class SocketMixin(ModemCore):
         exchange_timeout: int = 90,
         conn_timeout: int = 60,
         send_delay_ms: int = 5000,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if pdp_context_id < _PDP_MIN_CTX_ID or pdp_context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
@@ -171,7 +171,7 @@ class SocketMixin(ModemCore):
         socket_id: int = -1,
         protocol: int = WalterModemSocketProto.UDP,
         accept_any_remote: int = WalterModemSocketAcceptAnyRemote.DISABLED,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         try:
             socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
@@ -206,7 +206,7 @@ class SocketMixin(ModemCore):
     
     async def socket_close(self,
         socket_id: int = -1,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         try:
             socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
@@ -233,7 +233,7 @@ class SocketMixin(ModemCore):
         data,
         socket_id: int = -1,
         rai: int = WalterModemRai.NO_INFO,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         try:
             _socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
@@ -255,7 +255,7 @@ class SocketMixin(ModemCore):
     #region PrivateMethods
 
     def _socket_mirror_state_reset(self):
-        self._socket_list = [ModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
+        self._socket_list = [WalterModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
         self._socket = None
 
     #endregion

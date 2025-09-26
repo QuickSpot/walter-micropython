@@ -15,8 +15,8 @@ __all__ = [
     'WalterModemCmdType',
     'WalterModemCmdState',
     'WalterModemRspType',
-    'ModemRsp',
-    'ModemCmd',
-    'ModemATParserData',
-    'ModemTaskQueueItem'
+    'WalterModemRsp',
+    'WalterModemCmd',
+    'WalterModemATParserData',
+    'WalterModemTaskQueueItem'
 ]

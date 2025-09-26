@@ -4,7 +4,7 @@ from asyncio import Event
 from .coreEnums import *
 from .utils import *
 
-class ModemRsp:
+class WalterModemRsp:
     CORE_ATTR = (
         ('result', WalterModemState.OK),
         ('type', WalterModemRspType.NO_DATA),
@@ -26,7 +26,7 @@ class ModemRsp:
         cls._classType = type('ModemRsp', (), dict(cls.CORE_ATTR + attributes))
         gc.collect()
 
-class ModemCmd:
+class WalterModemCmd:
     def __init__(self):
         self.state = WalterModemCmdState.NEW
         self.type = WalterModemCmdType.TX_WAIT
@@ -42,13 +42,13 @@ class ModemCmd:
         self.complete_handler_arg = None
         self.event = Event()
 
-class ModemATParserData:
+class WalterModemATParserData:
     def __init__(self):
         self.state = WalterModemRspParserState.START_CR
         self.line = b''
         self.raw_chunk_size = 0
 
-class ModemTaskQueueItem:
+class WalterModemTaskQueueItem:
     def __init__(self):
         self.rsp = None 
         self.cmd = None

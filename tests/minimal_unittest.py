@@ -3,7 +3,7 @@ import sys
 import time # type: ignore
 
 from walter_modem import Modem
-from walter_modem.coreStructs import ModemRsp
+from walter_modem.coreStructs import WalterModemRsp
 from walter_modem.coreEnums import (
     WalterModemOpState,
     WalterModemNetworkRegState
@@ -406,7 +406,7 @@ class NetworkConnectivity:
         raise OSError('Connection Timed-out')
     
     async def ensure_network_connection(self, modem_instance: Modem):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem_instance.get_op_state(rsp=modem_rsp)
         if modem_rsp.op_state is not WalterModemOpState.FULL:
             print('Establishing network connection...')

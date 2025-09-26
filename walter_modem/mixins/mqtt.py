@@ -13,7 +13,7 @@ from ..coreEnums import (
     WalterModemCmdType
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -51,12 +51,12 @@ class WalterModemMqttResultCode(Enum):
 #endregion
 #region Structs
 
-class ModemMQTTResponse:
+class WalterModemMQTTResponse:
     def __init__(self, topic, qos):
         self.topic = topic
         self.qos = qos
 
-class ModemMqttMessage:
+class WalterModemMqttMessage:
     def __init__(self, topic, length, qos, message_id = None, payload = None):
         self.topic = topic
         self.length = length
@@ -88,7 +88,7 @@ class MQTTMixin(ModemCore):
             self.mqtt_status = WalterModemMqttState.DISCONNECTED
             """Status of the MQTT connection"""
 
-            self.__mqtt_msg_buffer: list[ModemMqttMessage] = [] # type: ignore
+            self.__mqtt_msg_buffer: list[WalterModemMqttMessage] = [] # type: ignore
             """Inbox for MQTT messages"""
 
             self.__mqtt_subscriptions: list[tuple[str, int]] = [] # type: ignore
@@ -132,7 +132,7 @@ class MQTTMixin(ModemCore):
         password: str = '',
         tls_profile_id: int = None,
         library_message_buffer: int = 16,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if library_message_buffer >= 50:
             log('WARNING',
@@ -140,7 +140,7 @@ class MQTTMixin(ModemCore):
                 'Setting the MQTT Message Buffer too high may consume excessive memory')
 
         for _ in range(library_message_buffer):
-            self.__mqtt_msg_buffer.append(ModemMqttMessage('', 0, 0, None))
+            self.__mqtt_msg_buffer.append(WalterModemMqttMessage('', 0, 0, None))
 
         return await self._run_cmd(
             rsp=rsp,
@@ -157,7 +157,7 @@ class MQTTMixin(ModemCore):
         server_name: str,
         port: int,
         keep_alive: int = 60,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -165,7 +165,7 @@ class MQTTMixin(ModemCore):
             at_rsp=b'+SQNSMQTTONCONNECT:0,'
         )
     
-    async def mqtt_disconnect(self, rsp: ModemRsp = None) -> bool:
+    async def mqtt_disconnect(self, rsp: WalterModemRsp = None) -> bool:
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSMQTTDISCONNECT=0',
@@ -176,7 +176,7 @@ class MQTTMixin(ModemCore):
         topic: str,
         data,
         qos: int,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -189,7 +189,7 @@ class MQTTMixin(ModemCore):
     async def mqtt_subscribe(self,
         topic: str,
         qos: int = 1,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         async def complete_handler(result, rsp, complete_handler_arg):
             if result == WalterModemState.OK:
@@ -207,7 +207,7 @@ class MQTTMixin(ModemCore):
     async def mqtt_did_ring(self,
         msg_list: list,
         topic: str = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         msg = None
         msg_index = -1
@@ -240,7 +240,7 @@ class MQTTMixin(ModemCore):
             at_cmd=at_cmd,
             at_rsp=b'OK',
             complete_handler=complete_handler,
-            complete_handler_arg=ModemMQTTResponse(msg.topic, msg.qos)
+            complete_handler_arg=WalterModemMQTTResponse(msg.topic, msg.qos)
         )
 
     #region PrivateMethods
@@ -278,7 +278,7 @@ class MQTTMixin(ModemCore):
     
     def _mqtt_mirror_state_reset(self):
         self.mqtt_status = WalterModemMqttState.DISCONNECTED
-        self.__mqtt_msg_buffer: list[ModemMqttMessage] = []
+        self.__mqtt_msg_buffer: list[WalterModemMqttMessage] = []
         self.__mqtt_subscriptions: list[tuple[str, int]] = []
 
     #endregion

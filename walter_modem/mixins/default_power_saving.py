@@ -6,7 +6,7 @@ from ..coreEnums import (
     WalterModemState
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -69,7 +69,7 @@ class PowerSavingMixin(ModemCore):
         mode: int,
         periodic_TAU_s: int = None,
         active_time_s: int = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         T3412 = None
         T3324 = None
@@ -102,7 +102,7 @@ class PowerSavingMixin(ModemCore):
         mode: int,
         req_edrx_val: str = None,
         req_ptw: str = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         cmd = f'AT+SQNEDRX={mode}'
 

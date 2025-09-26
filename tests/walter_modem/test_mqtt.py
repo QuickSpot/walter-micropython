@@ -11,7 +11,7 @@ from walter_modem.coreEnums import (
     WalterModemOpState
 )
 from walter_modem.coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from walter_modem.utils import (
     get_mac
@@ -36,7 +36,7 @@ async def await_connection():
 
 class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.begin()
 
         await modem.pdp_context_create()
@@ -72,12 +72,12 @@ class TestMQTT(unittest.AsyncTestCase, unittest.WalterModemAsserts):
         self.assert_false(await modem.mqtt_connect(server_name='totally.valid.server', port=1234))
     
     async def test_mqtt_connect_to_invalid_server_sets_mqtt_rc_in_response(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.mqtt_connect(server_name='totally.valid.server', port=1234, rsp=modem_rsp)
         self.assert_is_instance(modem_rsp.mqtt_rc, int)
     
     async def test_mqtt_connect_sets_correct_modem_response_type(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.mqtt_connect(server_name='totally.valid.server', port=1234, rsp=modem_rsp)
         self.assert_equal(WalterModemRspType.MQTT, modem_rsp.type)
     

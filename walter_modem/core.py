@@ -1,36 +1,14 @@
 import asyncio
 import gc
+import machine # type: ignore
 import time
 
-from machine import ( # type: ignore
-    UART,
-    Pin,
-    lightsleep,
-    deepsleep,
-    reset_cause,
-    DEEPSLEEP_RESET
-)
-from micropython import const # type: ignore
 from esp32 import gpio_deep_sleep_hold # type: ignore
+from micropython import const # type: ignore
 from .queue import Queue
 
-from .coreEnums import (
-    WalterModemOpState,
-    WalterModemNetworkRegState,
-    WalterModemRspParserState,
-    WalterModemCmdState,
-    WalterModemState,
-    WalterModemCmdType,
-    WalterModemRspType,
-    WalterModemCMEErrorReportsType,
-    WalterModemCEREGReportsType
-)
-from .coreStructs import (
-    ModemTaskQueueItem,
-    ModemCmd,
-    ModemRsp,
-    ModemATParserData
-)
+from .coreEnums import *
+from .coreStructs import *
 from .utils import (
     parse_cclk_time,
     log
@@ -116,7 +94,7 @@ class ModemCore:
         self._reg_state = WalterModemNetworkRegState.NOT_SEARCHING
         """The current network registration state of the modem."""
 
-        self.default_modem_rsp = ModemRsp()
+        self.default_modem_rsp = WalterModemRsp(_id=ModemCore.__name__)
         """ModemRsp used when none is provided by the user."""
 
         gc.collect()
@@ -131,12 +109,12 @@ class ModemCore:
         if not self.__begun:
             if __debug__:
                 self.uart_debug = uart_debug
-            self.__uart = UART(2,
+            self.__uart = machine.UART(2,
                 baudrate=_BAUD,
                 bits=8,
                 parity=None,
                 stop=1,
-                flow=UART.RTS|UART.CTS,
+                flow=machine.UART.RTS|machine.UART.CTS,
                 tx=_PIN_TX,
                 rx=_PIN_RX,
                 cts=_PIN_CTS,
@@ -147,17 +125,17 @@ class ModemCore:
                 rxbuf=2048
             )
 
-            self.__reset_pin = Pin(_PIN_RESET, Pin.OUT, value=1, hold=True)
+            self.__reset_pin = machine.Pin(_PIN_RESET, machine.Pin.OUT, value=1, hold=True)
 
             self.__task_queue = Queue()
             self.__command_queue = Queue()
-            self.__parser_data = ModemATParserData()
+            self.__parser_data = WalterModemATParserData()
 
             self.__uart_reader_task = asyncio.create_task(self._uart_reader())
             self.__queue_worker_task = asyncio.create_task(self._queue_worker())
 
             
-            if reset_cause() == DEEPSLEEP_RESET:
+            if machine.reset_cause() == machine.DEEPSLEEP_RESET:
                 await self._deep_sleep_wakeup()
             else:
                 if not await self.reset():
@@ -202,7 +180,7 @@ class ModemCore:
             at_rsp=b'OK'
         )
     
-    async def get_clock(self, rsp: ModemRsp = None
+    async def get_clock(self, rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -212,7 +190,7 @@ class ModemCore:
 
     async def config_cme_error_reports(self,
         reports_type: int = WalterModemCMEErrorReportsType.NUMERIC,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -222,7 +200,7 @@ class ModemCore:
     
     async def config_cereg_reports(self,
         reports_type: int = WalterModemCEREGReportsType.ENABLED,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -230,14 +208,14 @@ class ModemCore:
             at_rsp=b'OK'
         )
 
-    async def get_op_state(self, rsp: ModemRsp = None) -> bool:
+    async def get_op_state(self, rsp: WalterModemRsp = None) -> bool:
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+CFUN?',
             at_rsp=b'OK'
         )
     
-    async def set_op_state(self, op_state: int, rsp: ModemRsp = None) -> bool:
+    async def set_op_state(self, op_state: int, rsp: WalterModemRsp = None) -> bool:
         return await self._run_cmd(
             rsp=rsp,
             at_cmd=f'AT+CFUN={op_state}',
@@ -254,8 +232,8 @@ class ModemCore:
     ):
         if light_sleep:
             self.__uart.init(flow=0)
-            rts_pin = Pin(_PIN_RTS, value=1, hold=True)
-            lightsleep(sleep_time_ms)
+            rts_pin = machine.Pin(_PIN_RTS, value=1, hold=True)
+            machine.lightsleep(sleep_time_ms)
             rts_pin.init(hold=False)
         else:
             self.__uart_reader_task.cancel()
@@ -264,7 +242,7 @@ class ModemCore:
 
             self._deep_sleep_prepare(persist_mqtt_subs=persist_mqtt_subs)
             time.sleep(1)
-            deepsleep(sleep_time_ms)
+            machine.deepsleep(sleep_time_ms)
 
     def register_application_queue_rsp_handler(self, start_pattern: bytes, handler: callable):
         if isinstance(start_pattern, bytes) and callable(handler):
@@ -356,7 +334,7 @@ class ModemCore:
         
         :returns: None.
         """
-        qitem = ModemTaskQueueItem()
+        qitem = WalterModemTaskQueueItem()
         qitem.rsp = self.__parser_data.line
         
         if __debug__:
@@ -501,11 +479,11 @@ class ModemCore:
 
         while True:
             if not cur_cmd and not self.__command_queue.empty():
-                qitem = ModemTaskQueueItem()
+                qitem = WalterModemTaskQueueItem()
                 qitem.cmd = await self.__command_queue.get()
             else:
                 qitem = await self.__task_queue.get()
-                if not isinstance(qitem, ModemTaskQueueItem):
+                if not isinstance(qitem, WalterModemTaskQueueItem):
                     log('ERROR',
                         f'Invalid task queue item: {type(qitem)}, {str(qitem)}')
 
@@ -657,7 +635,7 @@ class ModemCore:
     async def _run_cmd(self,
         at_cmd: str,
         at_rsp: str | tuple[str], 
-        rsp: ModemRsp | None = None,
+        rsp: WalterModemRsp | None = None,
         ring_return: list | None = None,
         cmd_type: int = WalterModemCmdType.TX_WAIT,
         data = None,
@@ -665,7 +643,7 @@ class ModemCore:
         complete_handler_arg = None,
         max_attempts = _CMD_DEFAULT_ATTEMPTS
     ) -> bool:
-        cmd = ModemCmd()
+        cmd = WalterModemCmd()
 
         cmd.at_cmd = at_cmd
         cmd.at_rsp = at_rsp
@@ -680,7 +658,7 @@ class ModemCore:
         cmd.attempt = 0
         cmd.attempt_start = 0
 
-        qitem = ModemTaskQueueItem()
+        qitem = WalterModemTaskQueueItem()
         qitem.cmd = cmd
         await self.__task_queue.put(qitem)
 

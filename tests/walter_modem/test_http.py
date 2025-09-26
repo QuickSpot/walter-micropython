@@ -13,7 +13,7 @@ from walter_modem.coreEnums import (
     WalterModemOpState
 )
 from walter_modem.coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 
 HTTP_PROFILE_ID = 2
@@ -38,7 +38,7 @@ async def await_connection():
 
 class TestHTTP(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.begin()
 
         await modem.pdp_context_create(context_id=1)
@@ -49,7 +49,7 @@ class TestHTTP(unittest.AsyncTestCase, unittest.WalterModemAsserts):
 
         await await_connection()
 
-        self.did_ring_modem_rsp = ModemRsp()
+        self.did_ring_modem_rsp = WalterModemRsp()
     
     # ---
     # http_config_profile()

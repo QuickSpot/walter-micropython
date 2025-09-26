@@ -12,7 +12,7 @@ from walter_modem.coreEnums import (
     WalterModemRspType,
 )
 from walter_modem.coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 
 modem = Modem(SocketMixin)
@@ -34,7 +34,7 @@ async def await_connection():
 
 class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.begin()
 
         await modem.pdp_context_create(context_id=1)
@@ -45,7 +45,7 @@ class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):
 
         await await_connection()
 
-        self.socket_create_modem_rsp = ModemRsp()
+        self.socket_create_modem_rsp = WalterModemRsp()
 
     # ---
     # socket_create()

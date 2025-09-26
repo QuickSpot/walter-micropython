@@ -16,11 +16,11 @@ from walter_modem.coreEnums import (
 )
 
 from walter_modem.coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 
 modem = Modem(MQTTMixin)
-modem_rsp = ModemRsp()
+modem_rsp = WalterModemRsp()
 
 async def await_connection():
         print('\nShowing modem debug logs:')

@@ -8,7 +8,7 @@ from ..coreEnums import (
     WalterModemState
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -43,14 +43,14 @@ class WalterModemHttpPostParam(Enum):
 #endregion
 #region Structs
 
-class ModemHttpResponse:
+class WalterModemHttpResponse:
     def __init__(self):
         self.http_status = 0
         self.content_length = 0
         self.data = b''
         self.content_type = ''
 
-class ModemHttpContext:
+class WalterModemHttpContext:
     def __init__(self):
         self.connected = False
         self.state = WalterModemHttpContextState.IDLE
@@ -76,7 +76,7 @@ class HTTPMixin(ModemCore):
 
     def __init__(self, *args, **kwargs):
         def init():
-            self._http_context_list = [ModemHttpContext() for _ in range(_HTTP_MAX_CTX_ID + 1)]
+            self._http_context_list = [WalterModemHttpContext() for _ in range(_HTTP_MAX_CTX_ID + 1)]
             """The list of http contexts in the modem"""
 
             self._http_current_profile = 0xff
@@ -100,7 +100,7 @@ class HTTPMixin(ModemCore):
     
     #region PublicMethods
 
-    async def http_did_ring(self, profile_id: int, rsp: ModemRsp = None
+    async def http_did_ring(self, profile_id: int, rsp: WalterModemRsp = None
     ) -> bool:
         if self._http_current_profile != 0xff:
             if rsp: rsp.result = WalterModemState.ERROR
@@ -133,7 +133,7 @@ class HTTPMixin(ModemCore):
             self._http_context_list[profile_id].state = WalterModemHttpContextState.IDLE
 
             rsp.type = WalterModemRspType.HTTP
-            rsp.http_response = ModemHttpResponse()
+            rsp.http_response = WalterModemHttpResponse()
             rsp.http_response.http_status = self._http_context_list[profile_id].http_status
             rsp.http_response.content_length = 0
             rsp.result = WalterModemState.NO_DATA
@@ -162,7 +162,7 @@ class HTTPMixin(ModemCore):
         auth_user: str = '',
         auth_pass: str = '',
         tls_profile_id: int = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID or profile_id < 0:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -186,7 +186,7 @@ class HTTPMixin(ModemCore):
             at_rsp=b'OK'
         )
     
-    async def http_connect(self, profile_id: int, rsp: ModemRsp = None) -> bool:
+    async def http_connect(self, profile_id: int, rsp: WalterModemRsp = None) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -197,7 +197,7 @@ class HTTPMixin(ModemCore):
             at_rsp=b'OK'
         )
 
-    async def http_close(self, profile_id: int, rsp: ModemRsp = None) -> bool:
+    async def http_close(self, profile_id: int, rsp: WalterModemRsp = None) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -208,7 +208,7 @@ class HTTPMixin(ModemCore):
             at_rsp=b'OK'
         )
 
-    def http_get_context_status(self, profile_id: int, rsp: ModemRsp = None) -> bool:
+    def http_get_context_status(self, profile_id: int, rsp: WalterModemRsp = None) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
@@ -230,7 +230,7 @@ class HTTPMixin(ModemCore):
         uri: str,
         query_cmd: int = WalterModemHttpQueryCmd.GET,
         extra_header_line: str = None,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -263,7 +263,7 @@ class HTTPMixin(ModemCore):
         data,
         send_cmd = WalterModemHttpSendCmd.POST,
         post_param = WalterModemHttpPostParam.UNSPECIFIED,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -308,7 +308,7 @@ class HTTPMixin(ModemCore):
     #region PrivateMethods
 
     def _http_mirror_state_reset(self):
-        self._http_context_list = [ModemHttpContext() for _ in range(_HTTP_MAX_CTX_ID + 1)]
+        self._http_context_list = [WalterModemHttpContext() for _ in range(_HTTP_MAX_CTX_ID + 1)]
         self._http_current_profile = 0xff
 
     #endregion
@@ -322,7 +322,7 @@ class HTTPMixin(ModemCore):
                 return
 
             cmd.rsp.type = WalterModemRspType.HTTP
-            cmd.rsp.http_response = ModemHttpResponse()
+            cmd.rsp.http_response = WalterModemHttpResponse()
             cmd.rsp.http_response.http_status = self._http_context_list[self._http_current_profile].http_status
             cmd.rsp.http_response.data = at_rsp[3:-len(b'\r\nOK\r\n')] # 3 skips: <<<
             cmd.rsp.http_response.content_type = self._http_context_list[self._http_current_profile].content_type

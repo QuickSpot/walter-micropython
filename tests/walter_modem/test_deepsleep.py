@@ -9,12 +9,12 @@ from walter_modem.coreEnums import (
 )
 
 from walter_modem.coreStructs import (
-    ModemRsp,
+    WalterModemRsp,
     WalterModemOpState,
 )
 
 modem = Modem()
-modem_rsp = ModemRsp()
+modem_rsp = WalterModemRsp()
 
 # NOTE: Minimal deepsleep testing
 # ===============================

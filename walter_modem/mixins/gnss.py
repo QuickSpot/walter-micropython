@@ -9,7 +9,7 @@ from ..coreEnums import (
     WalterModemRspType
 )
 from ..coreStructs import (
-    ModemRsp
+    WalterModemRsp
 )
 from ..utils import (
     mro_chain_init,
@@ -51,12 +51,12 @@ class WalterModemGNSSAssistanceType(Enum):
 #endregion
 #region Structs
 
-class ModemGNSSSat:
+class WalterModemGNSSSat:
     def __init__(self, sat_no, signal_strength):
         self.sat_no = sat_no
         self.signal_strength = signal_strength
 
-class ModemGNSSFix:
+class WalterModemGNSSFix:
     def __init__(self):
         self.status = WalterModemGNSSFixStatus.READY
         self.fix_id = 0
@@ -71,20 +71,20 @@ class ModemGNSSFix:
         self.down_speed = 0.0
         self.sats = []
 
-class ModemGNSSAssistanceTypeDetails:
+class WalterModemGNSSAssistanceTypeDetails:
     def __init__(self):
         self.available = False
         self.last_update = 0
         self.time_to_update = 0
         self.time_to_expire = 0
 
-class ModemGNSSAssistance:
+class WalterModemGNSSAssistance:
     def __init__(self):
-        self.almanac = ModemGNSSAssistanceTypeDetails()
-        self.realtime_ephemeris = ModemGNSSAssistanceTypeDetails() 
-        self.predicted_ephemeris = ModemGNSSAssistanceTypeDetails() 
+        self.almanac = WalterModemGNSSAssistanceTypeDetails()
+        self.realtime_ephemeris = WalterModemGNSSAssistanceTypeDetails() 
+        self.predicted_ephemeris = WalterModemGNSSAssistanceTypeDetails() 
 
-class ModemGnssFixWaiter:
+class WalterModemGnssFixWaiter:
     def __init__(self):
         self.event = asyncio.Event()
         self.gnss_fix = None
@@ -150,7 +150,7 @@ class GNSSMixin(ModemCore):
         sens_mode: int = WalterModemGNSSSensMode.HIGH,
         acq_mode: int = WalterModemGNSSAcqMode.COLD_WARM_START,
         loc_mode: int = WalterModemGNSSLocMode.ON_DEVICE_LOCATION,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -159,7 +159,7 @@ class GNSSMixin(ModemCore):
         )
 
     async def gnss_assistance_get_status(self,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -169,7 +169,7 @@ class GNSSMixin(ModemCore):
     
     async def gnss_assistance_update(self,
         type: int = WalterModemGNSSAssistanceType.REALTIME_EPHEMERIS, 
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         return await self._run_cmd(
             rsp=rsp,
@@ -179,7 +179,7 @@ class GNSSMixin(ModemCore):
     
     async def gnss_perform_action(self,
         action: int = WalterModemGNSSAction.GET_SINGLE_FIX,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
         if action == WalterModemGNSSAction.GET_SINGLE_FIX:
             action_str = 'single'
@@ -194,8 +194,8 @@ class GNSSMixin(ModemCore):
             at_rsp=b'OK'
         )
 
-    async def gnss_wait_for_fix(self) -> ModemGNSSFix:
-        gnss_fix_waiter = ModemGnssFixWaiter()
+    async def gnss_wait_for_fix(self) -> WalterModemGNSSFix:
+        gnss_fix_waiter = WalterModemGnssFixWaiter()
 
         async with self.__gnss_fix_lock:
             self.__gnss_fix_waiters.append(gnss_fix_waiter)
@@ -221,7 +221,7 @@ class GNSSMixin(ModemCore):
         part_no = 0
         start_pos = 0
         part = ''
-        gnss_fix = ModemGNSSFix()
+        gnss_fix = WalterModemGNSSFix()
 
         for character_pos in range(len(data)):
             character = data[character_pos]
@@ -278,7 +278,7 @@ class GNSSMixin(ModemCore):
                         sat_no_str = satellite_data[i]
                         sat_sig_str = satellite_data[i + 1]
 
-                        gnss_fix.sats.append(ModemGNSSSat(int(sat_no_str[1:]), int(sat_sig_str[:-1])))
+                        gnss_fix.sats.append(WalterModemGNSSSat(int(sat_no_str[1:]), int(sat_sig_str[:-1])))
 
                 # +1 for the comma
                 part_no += 1
@@ -301,7 +301,7 @@ class GNSSMixin(ModemCore):
 
         if cmd.rsp.type != WalterModemRspType.GNSS_ASSISTANCE_DATA:
             cmd.rsp.type = WalterModemRspType.GNSS_ASSISTANCE_DATA
-            cmd.rsp.gnss_assistance = ModemGNSSAssistance()
+            cmd.rsp.gnss_assistance = WalterModemGNSSAssistance()
 
         data = at_rsp[len("+LPGNSSASSISTANCE: "):]
         part_no = 0
