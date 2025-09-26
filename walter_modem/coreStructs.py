@@ -14,14 +14,15 @@ class WalterModemRsp:
     )
     _classType = None
 
-    def __new__(cls, *attributes):
+    def __new__(cls, *attributes, _id='Application Logic'):
         if cls._classType is not None:
-            if __debug__: log('DEBUG', 'New ModemRsp instance created')
+            if __debug__: log('DEBUG', 'New ModemRsp instance created by: ' + _id)
             return cls._classType()
         
         if __debug__:
             log('DEBUG', 'Creating ModemRsp classType with:\n' + 
-            '\n'.join(str(item) for item in (cls.CORE_ATTR + attributes)))
+            '\n'.join(f'  {item[0]:<20} = {item[1]}' for item in (cls.CORE_ATTR + attributes)) +
+            '\n')
 
         cls._classType = type('ModemRsp', (), dict(cls.CORE_ATTR + attributes))
         gc.collect()

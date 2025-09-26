@@ -13,6 +13,10 @@ class Modem:
         load_default_sim_network_mixin=True,
         load_default_power_saving_mixin=True
     ):
+        if __debug__:
+            import time
+            start_time = time.ticks_ms()
+
         if cls._instance is not None:
             if __debug__: log('DEBUG', 'Returning exisiting Modem instance')
             return cls._instance
@@ -51,12 +55,19 @@ class Modem:
             field
             for mixin in mixins if hasattr(mixin, 'MODEM_RSP_FIELDS')
             for field in mixin.MODEM_RSP_FIELDS
-        ))
+        ), _id=cls.__name__)
 
         if __debug__:
-            log('DEBUG', 'Creating Modem with: '
-            + ', '.join(b.__name__ for b in ModemClass.__bases__))
+            log('DEBUG', 'Creating ModemClass with:\n' +
+            '\n'.join(f'  {b.__name__}' for b in ModemClass.__bases__) +
+            '\n')
 
         cls._instance = ModemClass()
         gc.collect()
+
+        if __debug__:
+            end_time = time.ticks_ms()
+            elapsed_ms = time.ticks_diff(end_time, start_time   )
+            log('DEBUG', f'ModemClass Created in {elapsed_ms:.2f}ms')
+
         return cls._instance
