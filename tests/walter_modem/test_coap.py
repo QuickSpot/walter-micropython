@@ -1,4 +1,6 @@
 import asyncio
+import micropython # type: ignore
+micropython.opt_level(1)
 
 from minimal_unittest import (
     AsyncTestCase,
@@ -7,28 +9,28 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
-from walter_modem.enums import (
-    WalterModemState,
-    WalterModemOpState,
+from walter_modem.mixins.coap import (
+    CoapMixin,
     WalterModemCoapCloseCause,
     WalterModemCoapMethod,
     WalterModemCoapType,
     WalterModemCoapResponseCode,
     WalterModemCoapOptionAction,
     WalterModemCoapOption,
-    WalterModemCoapContentType
+    WalterModemCoapContentType,
+    WalterModemCoapContextState,
+    WalterModemCoapResponse,
+    WalterModemCoapOption
 )
-from walter_modem.structs import (
-    ModemRsp,
-    ModemCoapContextState,
-    ModemCoapResponse,
-    ModemCoapOption
+from walter_modem.coreEnums import (
+    WalterModemState,
+    WalterModemOpState
+)
+from walter_modem.coreStructs import (
+    WalterModemRsp
 )
 
-# To avoid disconnecting & reconnecting from the network too frequently;
-# A single modem library instance is re-used, keeping a network connection open
-# from the moment RequireNetworkConnection was first inheriteed.
-modem = Modem()
+modem = Modem(CoapMixin)
 
 class TestCoapContextCreate(
     AsyncTestCase,
@@ -68,7 +70,7 @@ class TestCoapContextCreate(
         self.assert_false(await modem.coap_context_create(ctx_id=3))
 
     async def test_rsp_result_no_such_profile_on_invalid_ctx_id(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_context_create(ctx_id=7, rsp=modem_rsp)
         self.assert_equal(WalterModemState.NO_SUCH_PROFILE, modem_rsp.result)
 
@@ -81,7 +83,7 @@ class TestCoapContextCreate(
         self.assert_false(await modem.coap_context_create(ctx_id=0, timeout=121))
 
     async def test_rsp_result_error_on_invalid_timeout(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_context_create(ctx_id=0, timeout=142, rsp=modem_rsp)
         self.assert_equal(WalterModemState.ERROR, modem_rsp.result)
 
@@ -126,13 +128,13 @@ class TestCoapContextCreate(
     # Mirror state
 
     async def test_ctx_0_mirror_state_set(self):
-        self.assert_is_instance(modem.coap_context_states[0], ModemCoapContextState)
+        self.assert_is_instance(modem.coap_context_states[0], WalterModemCoapContextState)
     
     async def test_ctx_1_mirror_state_set(self):
-        self.assert_is_instance(modem.coap_context_states[1], ModemCoapContextState)
+        self.assert_is_instance(modem.coap_context_states[1], WalterModemCoapContextState)
     
     async def test_ctx_2_mirror_state_set(self):
-        self.assert_is_instance(modem.coap_context_states[2], ModemCoapContextState)
+        self.assert_is_instance(modem.coap_context_states[2], WalterModemCoapContextState)
     
     async def test_ctx_state_not_configured_after_failed_run(self):
         await modem.coap_context_create(
@@ -187,7 +189,7 @@ class TestCoapContextClose(
         self.assert_false(await modem.coap_context_close(ctx_id=3))
 
     async def test_rsp_result_no_such_profile_on_invalid_ctx_id(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_context_close(ctx_id=7, rsp=modem_rsp)
         self.assert_equal(WalterModemState.NO_SUCH_PROFILE, modem_rsp.result)
 
@@ -251,7 +253,7 @@ class TestCoapSetOptions(
         ))
     
     async def test_rsp_result_no_such_profile_on_invalid_ctx_id(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_set_options(
             ctx_id=7,
             action=WalterModemCoapOptionAction.READ,
@@ -334,7 +336,7 @@ class TestCoapSetOptions(
     async def test_action_read_sets_option_value_in_rsp(self):
         await modem._run_cmd('AT+SQNCOAPOPT=0,0,11,".well-known","core"', b'OK')
 
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_set_options(
             ctx_id=0,
             action=WalterModemCoapOptionAction.READ,
@@ -342,7 +344,7 @@ class TestCoapSetOptions(
             rsp=modem_rsp
         )
         
-        expected = ModemCoapOption(0, 11, '".well-known","core"')
+        expected = WalterModemCoapOption(0, 11, '".well-known","core"')
         reality = modem_rsp.coap_options
         self.assert_equal(
             (expected.ctx_id, expected.option, expected.value),
@@ -402,7 +404,7 @@ class TestCoapSetHeader(
         ))
     
     async def test_rsp_result_no_such_profile_on_invalid_ctx_id(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_set_header(
             ctx_id=7,
             msg_id=19,
@@ -426,7 +428,7 @@ class TestCoapSetHeader(
         ))
 
     async def test_rsp_result_error_on_invalid_msg_id(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_set_header(
             ctx_id=0,
             msg_id=75454,
@@ -450,7 +452,7 @@ class TestCoapSetHeader(
         ))
     
     async def test_rsp_result_error_on_invalid_token(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_set_header(
             ctx_id=0,
             token='NCC-1701-D',
@@ -516,7 +518,7 @@ class TestCoapSend(
         ))
 
     async def test_rsp_result_no_such_profile_on_invalid_ctx_id(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_send(
             ctx_id=7,
             m_type=WalterModemCoapType.CON,
@@ -548,7 +550,7 @@ class TestCoapSend(
         ))
 
     async def test_rsp_result_error_on_invalid_length(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_send(
             ctx_id=0,
             m_type=WalterModemCoapType.CON,
@@ -753,7 +755,7 @@ class TestCoapReceiveData(
     # Context ID range validation
 
     async def test_fails_below_min_ctx_id(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_data(
             ctx_id=-1,
             msg_id=1,
@@ -761,7 +763,7 @@ class TestCoapReceiveData(
         ))
 
     async def test_fails_above_max_ctx_id(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_data(
             ctx_id=3,
             msg_id=1,
@@ -769,14 +771,14 @@ class TestCoapReceiveData(
         ))
 
     async def test_rsp_result_no_such_profile_on_invalid_ctx_id(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         await modem.coap_receive_data(ctx_id=7, msg_id=1, length=10, rsp=rsp)
         self.assert_equal(WalterModemState.NO_SUCH_PROFILE, rsp.result)
 
     # max_bytes range validation
 
     async def test_fails_below_min_max_bytes(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_data(
             ctx_id=0,
             msg_id=1,
@@ -785,7 +787,7 @@ class TestCoapReceiveData(
         ))
 
     async def test_fails_above_max_max_bytes(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_data(
             ctx_id=0,
             msg_id=1,
@@ -794,14 +796,14 @@ class TestCoapReceiveData(
         ))
 
     async def test_rsp_result_error_on_invalid_max_bytes(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         await modem.coap_receive_data(ctx_id=0, msg_id=1, length=10, max_bytes=-1, rsp=rsp)
         self.assert_equal(WalterModemState.ERROR, rsp.result)
 
     # Length validation
 
     async def test_fails_with_negative_length(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_data(
             ctx_id=0,
             msg_id=1,
@@ -809,7 +811,7 @@ class TestCoapReceiveData(
         ))
 
     async def test_rsp_result_error_on_negative_length(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         await modem.coap_receive_data(ctx_id=0, msg_id=1, length=-1, rsp=rsp)
         self.assert_equal(WalterModemState.ERROR, rsp.result)
 
@@ -844,14 +846,14 @@ class TestCoapReceiveData(
             await asyncio.sleep(3)
         ring = modem.coap_context_states[0].rings.pop()
 
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_receive_data(
             ctx_id=ring.ctx_id,
             msg_id=ring.msg_id,
             length=ring.length,
             rsp=modem_rsp
         )
-        self.assert_is_instance(modem_rsp.coap_rcv_response, ModemCoapResponse)
+        self.assert_is_instance(modem_rsp.coap_rcv_response, WalterModemCoapResponse)
         print(f'\n  payload: {modem_rsp.coap_rcv_response.payload}')
 
 class TestCoapReceiveOptions(
@@ -879,28 +881,28 @@ class TestCoapReceiveOptions(
     # Context ID range validation
 
     async def test_fails_below_min_ctx_id(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_options(
             ctx_id=-1,
             msg_id=1
         ))
 
     async def test_fails_above_max_ctx_id(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_options(
             ctx_id=3,
             msg_id=1
         ))
 
     async def test_rsp_result_no_such_profile_on_invalid_ctx_id(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         await modem.coap_receive_options(ctx_id=7, msg_id=1, rsp=rsp)
         self.assert_equal(WalterModemState.NO_SUCH_PROFILE, rsp.result)
 
     # max_options range validation
 
     async def test_fails_below_min_max_options(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_options(
             ctx_id=0,
             msg_id=1,
@@ -908,7 +910,7 @@ class TestCoapReceiveOptions(
         ))
 
     async def test_fails_above_max_max_options(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         self.assert_false(await modem.coap_receive_options(
             ctx_id=0,
             msg_id=1,
@@ -916,7 +918,7 @@ class TestCoapReceiveOptions(
         ))
 
     async def test_rsp_result_error_on_invalid_max_options(self):
-        rsp = ModemRsp()
+        rsp = WalterModemRsp()
         await modem.coap_receive_options(ctx_id=0, msg_id=1, max_options=-1, rsp=rsp)
         self.assert_equal(WalterModemState.ERROR, rsp.result)
 
@@ -950,13 +952,13 @@ class TestCoapReceiveOptions(
             await asyncio.sleep(3)
         ring = modem.coap_context_states[0].rings.pop()
 
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.coap_receive_options(
             ctx_id=ring.ctx_id,
             msg_id=ring.msg_id,
             rsp=modem_rsp
         )
-        self.assert_is_instance(modem_rsp.coap_options[0], ModemCoapOption)
+        self.assert_is_instance(modem_rsp.coap_options[0], WalterModemCoapOption)
 
 testcases = [testcase() for testcase in (
     TestCoapContextCreate,

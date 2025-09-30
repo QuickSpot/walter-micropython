@@ -1,4 +1,6 @@
 import asyncio
+import micropython # type: ignore
+micropython.opt_level(1)
 
 from minimal_unittest import (
     AsyncTestCase,
@@ -7,14 +9,14 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
-from walter_modem.enums import (
+from walter_modem.coreEnums import (
     WalterModemState,
     WalterModemOpState,
     WalterModemCEREGReportsType,
     WalterModemCMEErrorReportsType
 )
-from walter_modem.structs import (
-    ModemRsp
+from walter_modem.coreStructs import (
+    WalterModemRsp
 )
 from walter_modem.queue import (
     QueueFull
@@ -57,7 +59,7 @@ class TestReset(
     
     async def test_keeps_internal_begun_flag(self):
         await modem.reset()
-        self.assert_true(modem._begun)
+        self.assert_true(modem.__begun)
 
 class TestSoftReset(
     AsyncTestCase,
@@ -89,7 +91,7 @@ class TestSoftReset(
     
     async def test_keeps_internal_begun_flag(self):
         await modem.soft_reset()
-        self.assert_true(modem._begun)
+        self.assert_true(modem.__begun)
 
 class TestCheckComm(
     AsyncTestCase,
@@ -128,7 +130,7 @@ class TestGetClock(
         )
     
     async def test_clock_is_set_in_modem_rsp(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.get_clock(rsp=modem_rsp)
 
         self.assert_is_not_none(modem_rsp.clock)
@@ -146,7 +148,7 @@ class TestConfigCMEErrorReports(
         self.assert_false(await modem.config_cme_error_reports(reports_type=70))
     
     async def test_result_error_set_in_modem_rsp_on_invalid_reports_type(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.config_cme_error_reports(reports_type=-10, rsp=modem_rsp)
 
         self.assert_equal(WalterModemState.ERROR, modem_rsp.result)
@@ -183,7 +185,7 @@ class TestConfigCeregReports(
         self.assert_false(await modem.config_cereg_reports(reports_type=70))
     
     async def test_result_error_set_in_modem_rsp_on_invalid_reports_type(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.config_cereg_reports(reports_type=-10, rsp=modem_rsp)
 
         self.assert_equal(WalterModemState.ERROR, modem_rsp.result)

@@ -1,39 +1,44 @@
 import asyncio
+import micropython # type: ignore
+micropython.opt_level(0)
 
 import minimal_unittest as unittest
 from walter_modem import Modem
-from walter_modem.enums import (
-    WalterModemNetworkRegState,
-    WalterModemOpState,
+from walter_modem.mixins.http import (
+    HTTPMixin,
     WalterModemHttpQueryCmd
 )
-from walter_modem.structs import (
-    ModemRsp
+from walter_modem.coreEnums import (
+    WalterModemNetworkRegState,
+    WalterModemOpState
+)
+from walter_modem.coreStructs import (
+    WalterModemRsp
 )
 
 HTTP_PROFILE_ID = 2
 """CAREFUL; The tests will overwrite this profile"""
 
-modem = Modem()
+modem = Modem(HTTPMixin)
 
 async def await_connection():
-        print('\nShowing modem debug logs:')
-        modem.debug_log = True
+        print('\nShowing uart debug logs:')
+        modem.uart_debug = True
 
         for _ in range(600):
             if modem.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem.debug_log = False
+                modem.uart_debug = False
                 return
             await asyncio.sleep(1)
-        modem.debug_log = False
+        modem.uart_debug = False
         raise OSError('Connection Timed-out')
 
 class TestHTTP(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.begin()
 
         await modem.pdp_context_create(context_id=1)
@@ -44,7 +49,7 @@ class TestHTTP(unittest.AsyncTestCase, unittest.WalterModemAsserts):
 
         await await_connection()
 
-        self.did_ring_modem_rsp = ModemRsp()
+        self.did_ring_modem_rsp = WalterModemRsp()
     
     # ---
     # http_config_profile()

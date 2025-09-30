@@ -1,20 +1,24 @@
 import asyncio
-import minimal_unittest as unittest
+import micropython # type: ignore
+micropython.opt_level(0)
 
+import minimal_unittest as unittest
 from walter_modem import Modem
-from walter_modem.enums import (
+from walter_modem.mixins.default_pdp import (
     WalterModemPDPAuthProtocol,
     WalterModemPDPType,
     WalterModemPDPIPv4AddrAllocMethod,
     WalterModemPDPRequestType,
     WalterModemPDPPCSCFDiscoveryMethod,
-    WalterModemNetworkRegState,
-    WalterModemRspType
 )
-from walter_modem.structs import (
-    ModemRsp,
+from walter_modem.coreEnums import (
+    WalterModemNetworkRegState,
+    WalterModemRspType,
     WalterModemCMEError,
     WalterModemOpState
+)
+from walter_modem.coreStructs import (
+    WalterModemRsp
 )
 
 PDP_CTX_ID = 2
@@ -26,18 +30,18 @@ AUTH_PASS = None
 modem = Modem()
 
 async def await_connection():
-        print('\nShowing modem debug logs:')
-        modem.debug_log = True
+        print('\nShowing uart debug logs:')
+        modem.uart_debug = True
 
         for _ in range(600):
             if modem.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem.debug_log = False
+                modem.uart_debug = False
                 return
             await asyncio.sleep(1)
-        modem.debug_log = False
+        modem.uart_debug = False
         raise OSError('Connection Timed-out')
 
 class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
@@ -57,7 +61,7 @@ class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.Wal
         self.assert_true(await modem.pdp_context_create())
 
     async def test_pdp_context_create_correctly_creates_context_in_modem(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         if not await modem.pdp_context_create(
             context_id=PDP_CTX_ID,
             apn=APN,
@@ -117,7 +121,7 @@ class TestPDPContextManagementPreConnection(unittest.AsyncTestCase, unittest.Wal
 
 class TestPDPContextManagementPostConnection(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.begin()
 
         await modem.pdp_context_create(context_id=PDP_CTX_ID)
@@ -156,16 +160,16 @@ class TestPDPContextManagementPostConnection(unittest.AsyncTestCase, unittest.Wa
     # pdp_get_addressess()
     
     async def test_pdp_get_addressess_runs(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         self.assert_true(await modem.pdp_get_addressess(context_id=PDP_CTX_ID, rsp=modem_rsp))
     
     async def test_pdp_get_addressess_sets_correct_response_type(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.pdp_get_addressess(context_id=PDP_CTX_ID, rsp=modem_rsp)
         self.assert_equal(WalterModemRspType.PDP_ADDR, modem_rsp.type)
     
     async def test_pdp_get_addressess_sets_pdp_address_list_in_response(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.pdp_get_addressess(context_id=PDP_CTX_ID, rsp=modem_rsp)
         self.assert_is_instance(modem_rsp.pdp_address_list, list)
     

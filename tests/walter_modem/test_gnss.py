@@ -1,4 +1,6 @@
 import asyncio
+import micropython # type: ignore
+micropython.opt_level(1)
 
 from minimal_unittest import (
     AsyncTestCase,
@@ -7,22 +9,25 @@ from minimal_unittest import (
 )
 
 from walter_modem import Modem
-from walter_modem.enums import (
-    WalterModemRspType,
+from walter_modem.mixins.gnss import (
+    GNSSMixin,
     WalterModemGNSSSensMode,
     WalterModemGNSSAcqMode,
     WalterModemGNSSLocMode,
     WalterModemGNSSAssistanceType,
     WalterModemGNSSAction,
+    WalterModemGNSSAssistance,
+    WalterModemGNSSFix
+)
+from walter_modem.coreEnums import (
+    WalterModemRspType,
     WalterModemCMEError
 )
-from walter_modem.structs import (
-    ModemRsp,
-    ModemGNSSAssistance,
-    ModemGNSSFix
+from walter_modem.coreStructs import (
+    WalterModemRsp,
 )
 
-modem = Modem()
+modem = Modem(GNSSMixin)
 
 class TestGNSSConfig(
     AsyncTestCase,
@@ -46,7 +51,7 @@ class TestGNSSConfig(
         self.assert_false(await modem.gnss_config(acq_mode=-70))
     
     async def test_cme_50_set_in_modem_rsp_on_invalid_param(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.gnss_config(-70, -60, -50, modem_rsp)
 
         self.assert_equal(WalterModemCMEError.INCORRECT_PARAMETERS, modem_rsp.cme_error)
@@ -96,13 +101,13 @@ class TestGNSSAssistanceGetStatus(
         )
 
     async def test_gnss_assistance_set_in_modem_rsp(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.gnss_assistance_get_status(rsp=modem_rsp)
         
-        self.assert_is_instance(modem_rsp.gnss_assistance, ModemGNSSAssistance)
+        self.assert_is_instance(modem_rsp.gnss_assistance, WalterModemGNSSAssistance)
     
     async def test_type_set_to_gnss_assistance_data_in_modem_rsp(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.gnss_assistance_get_status(rsp=modem_rsp)
 
         self.assert_equal(WalterModemRspType.GNSS_ASSISTANCE_DATA, modem_rsp.type)
@@ -122,7 +127,7 @@ class TestGNSSAssistanceUpdate(
         self.assert_false(await modem.gnss_assistance_update(type=-3))
 
     async def test_cme_50_set_in_modem_rsp_on_invalid_param(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.gnss_assistance_update(type=-3, rsp=modem_rsp)
 
         self.assert_equal(WalterModemCMEError.INCORRECT_PARAMETERS, modem_rsp.cme_error)
@@ -156,7 +161,7 @@ class TestGNSSPerformAction(
 
         print('NOTE: This TestCase uses get_clock() and might fail if get_clock() is broken.')
 
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.get_clock(rsp=modem_rsp)
 
         if not modem_rsp.clock:
@@ -179,7 +184,7 @@ class TestGNSSPerformAction(
         self.assert_false(await modem.gnss_perform_action(action=-10))
     
     async def test_cme_4_set_in_modem_rsp_on_invalid_param(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.gnss_perform_action(action=-10, rsp=modem_rsp)
 
         self.assert_equal(WalterModemCMEError.OPERATION_NOT_SUPPORTED, modem_rsp.cme_error)
@@ -212,7 +217,7 @@ class TestGNSSWaitForFix(
         await modem._run_cmd('AT+LPGNSSFIXPROG="single"', b'OK')
         try:
             result = await asyncio.wait_for(modem.gnss_wait_for_fix(), timeout=180)
-            self.assert_is_instance(result, ModemGNSSFix)
+            self.assert_is_instance(result, WalterModemGNSSFix)
         except asyncio.TimeoutError:
             raise OSError('Runtime Error, timeout whilst waiting for "gnss_wait_for_fix"')
 

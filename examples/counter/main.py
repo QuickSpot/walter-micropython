@@ -1,26 +1,47 @@
+import micropython # type: ignore
+micropython.opt_level(1)
+"""
+Set the MicroPython opt level.
+See: https://docs.micropython.org/en/latest/library/micropython.html#micropython.opt_level
+"""
+
 import asyncio
 import network # type: ignore
 import sys
 import ubinascii # type: ignore
 
 from walter_modem import Modem
+from walter_modem.mixins.default_sim_network import *
+from walter_modem.mixins.default_pdp import *
+from walter_modem.mixins.socket import *
 
-from walter_modem.enums import (
+from walter_modem.coreEnums import (
     WalterModemNetworkRegState,
-    WalterModemOpState,
-    WalterModemNetworkSelMode,
+    WalterModemOpState
 )
 
-from walter_modem.structs import (
-    ModemRsp,
-    WalterModemRat
+from walter_modem.coreStructs import (
+    WalterModemRsp
 )
 
 import config # type: ignore
 
-modem = Modem()
+modem = Modem(SocketMixin, load_default_power_saving_mixin=False)
 """
 The modem instance
+
+Loading the Socket mixin for socket functionality.
+
+Specificying to not load the default power saving mixin,
+as we're not using it in this simple example.
+Although in most real-life scenarios it is advised to
+configure power-saving for reduced energy consumption
+"""
+
+modem_rsp = WalterModemRsp()
+"""
+The modem response object that is (re-)used 
+when we need information from the modem.
 """
 
 counter = 0
@@ -31,12 +52,6 @@ The counter used in the ping packets
 socket_id = None
 """
 The id of the socket
-"""
-
-modem_rsp = ModemRsp()
-"""
-The modem response object.
-We re-use this single one, for memory efficiency.
 """
 
 async def wait_for_network_reg_state(timeout: int, *states: WalterModemNetworkRegState) -> bool:

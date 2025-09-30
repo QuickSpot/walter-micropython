@@ -1,37 +1,40 @@
 import asyncio
 import network # type: ignore
+import micropython # type: ignore
+micropython.opt_level(0)
 
 import minimal_unittest as unittest
 from walter_modem import Modem
-from walter_modem.enums import (
+from walter_modem.mixins.socket import SocketMixin
+from walter_modem.coreEnums import (
     WalterModemNetworkRegState,
     WalterModemOpState,
     WalterModemRspType,
 )
-from walter_modem.structs import (
-    ModemRsp
+from walter_modem.coreStructs import (
+    WalterModemRsp
 )
 
-modem = Modem()
+modem = Modem(SocketMixin)
 
 async def await_connection():
-        print('\nShowing modem debug logs:')
-        modem.debug_log = True
+        print('\nShowing uart debug logs:')
+        modem.uart_debug = True
 
         for _ in range(600):
             if modem.get_network_reg_state() in (
                 WalterModemNetworkRegState.REGISTERED_HOME,
                 WalterModemNetworkRegState.REGISTERED_ROAMING
             ):
-                modem.debug_log = False
+                modem.uart_debug = False
                 return
             await asyncio.sleep(1)
-        modem.debug_log = False
+        modem.uart_debug = False
         raise OSError('Connection Timed-out')
 
 class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):
     async def async_setup(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.begin()
 
         await modem.pdp_context_create(context_id=1)
@@ -42,7 +45,7 @@ class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):
 
         await await_connection()
 
-        self.socket_create_modem_rsp = ModemRsp()
+        self.socket_create_modem_rsp = WalterModemRsp()
 
     # ---
     # socket_create()

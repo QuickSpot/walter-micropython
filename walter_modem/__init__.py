@@ -1,5 +1,22 @@
 from .modem import Modem
-from . import enums
-from . import structs
+from .coreStructs import *
+from .coreEnums import *
 
-__all__ = ['Modem', 'enums', 'structs']
+__all__ = [
+    'Modem',
+    'Enum',
+    'WalterModemState',
+    'WalterModemOpState',
+    'WalterModemNetworkRegState',
+    'WalterModemCMEErrorReportsType',
+    'WalterModemCEREGReportsType',
+    'WalterModemCMEError',
+    'WalterModemRspParserState',
+    'WalterModemCmdType',
+    'WalterModemCmdState',
+    'WalterModemRspType',
+    'WalterModemRsp',
+    'WalterModemCmd',
+    'WalterModemATParserData',
+    'WalterModemTaskQueueItem'
+]

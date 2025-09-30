@@ -1,12 +1,12 @@
+import micropython # type: ignore
+micropython.opt_level(1)
+
 import minimal_unittest as unittest
 
 from walter_modem import Modem
-from walter_modem.enums import (
-    WalterModemPSMMode,
-    WalterModemEDRXMODE
-)
-from walter_modem.structs import (
-    ModemRsp
+from walter_modem.mixins.default_power_saving import *
+from walter_modem.coreStructs import (
+    WalterModemRsp
 )
 
 modem = Modem()
@@ -17,7 +17,7 @@ class TestSleepMethods(unittest.AsyncTestCase, unittest.WalterModemAsserts):
 
     async def async_teardown(self):
         await modem.config_psm(WalterModemPSMMode.DISABLE_AND_DISCARD_ALL_PARAMS)
-        await modem.config_edrx(WalterModemEDRXMODE.DISABLE_AND_DISCARD_ALL_PARAMS)
+        await modem.config_edrx(WalterModemEDRXMode.DISABLE_AND_DISCARD_ALL_PARAMS)
 
     async def test_config_psm_sends_correct_at_cmd(self):
         await self.assert_sends_at_command(
@@ -61,11 +61,11 @@ class TestSleepMethods(unittest.AsyncTestCase, unittest.WalterModemAsserts):
         await self.assert_sends_at_command(
             modem,
             f'AT+SQNEDRX=0',
-            lambda: modem.config_edrx(WalterModemEDRXMODE.DISABLE_EDRX)
+            lambda: modem.config_edrx(WalterModemEDRXMode.DISABLE_EDRX)
         )
 
     async def test_config_edrx_sends_correct_at_cmd_with_req_edrx_val_and_req_ptw(self):
-        modem_rsp = ModemRsp()
+        modem_rsp = WalterModemRsp()
         await modem.get_rat(modem_rsp)
         rat = modem_rsp.rat
 
@@ -73,7 +73,7 @@ class TestSleepMethods(unittest.AsyncTestCase, unittest.WalterModemAsserts):
             modem,
             f'AT+SQNEDRX=1,{rat + 3},"0101","0001"',
             lambda: modem.config_edrx(
-                mode=WalterModemEDRXMODE.ENABLE_EDRX,
+                mode=WalterModemEDRXMode.ENABLE_EDRX,
                 req_edrx_val='0101',
                 req_ptw='0001'
             )

@@ -1,35 +1,40 @@
+import micropython # type: ignore
+micropython.opt_level(1)
+"""
+Set the MicroPython opt level.
+See: https://docs.micropython.org/en/latest/library/micropython.html#micropython.opt_level
+"""
+
 import asyncio
 import network # type: ignore
 import sys
 
 from walter_modem import Modem
-
-from walter_modem.enums import (
-    WalterModemNetworkRegState,
-    WalterModemState,
-    WalterModemOpState,
-    WalterModemNetworkSelMode,
-    WalterModemPDPAuthProtocol,
-    WalterModemTlsValidation,
-    WalterModemTlsVersion
-)
-
-from walter_modem.structs import (
-    ModemRsp,
-    WalterModemRat
-)
+from walter_modem.coreEnums import *
+from walter_modem.coreStructs import *
+from walter_modem.mixins.default_sim_network import *
+from walter_modem.mixins.mqtt import *
+from walter_modem.mixins.tls_certs import *
 
 import config # type: ignore
 
-modem = Modem()
+modem = Modem(MQTTMixin, TLSCertsMixin, load_default_power_saving_mixin=False)
 """
 The modem instance
+
+Loading the MQTT mixin for MQTT functionality.
+Loading the TLSCertsMixin to work with tls profiles.
+
+Specificying to not load the default power saving mixin,
+as we're not using it in this simple example.
+Although in most real-life scenarios it is advised to
+configure power-saving for reduced energy consumption
 """
 
-modem_rsp = ModemRsp()
+modem_rsp = WalterModemRsp()
 """
-The modem response object.
-We re-use this single one, for memory efficiency.
+The modem response object that is (re-)used 
+when we need information from the modem.
 """
 
 def get_unique_topic():

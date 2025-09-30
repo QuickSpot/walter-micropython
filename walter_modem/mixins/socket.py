@@ -1,21 +1,102 @@
+from micropython import const # type: ignore
+
 from ..core import ModemCore
-from ..enums import (
+from ..coreEnums import (
+    Enum,
     WalterModemState,
     WalterModemRspType,
-    WalterModemSocketState,
-    WalterModemSocketProto,
-    WalterModemSocketAcceptAnyRemote,
-    WalterModemRai,
     WalterModemCmdType
 )
-from ..structs import (
-    ModemRsp,
+from ..coreStructs import (
+    WalterModemRsp
 )
 from ..utils import (
+    mro_chain_init,
     modem_string
 )
 
-class ModemSocket(ModemCore):
+#region Enums
+
+class WalterModemSocketState(Enum):
+    FREE = 0
+    RESERVED = 1
+    CREATED = 2
+    CONFIGURED = 3
+    OPENED = 4
+    LISTENING = 5
+    CLOSED = 6
+
+class WalterModemSocketProto(Enum):
+    TCP = 0
+    UDP = 1
+
+class WalterModemSocketAcceptAnyRemote(Enum):
+    DISABLED = 0
+    REMOTE_RX_ONLY = 1
+    REMOTE_RX_AND_TX = 2
+
+class WalterModemRai(Enum):
+    NO_INFO = 0
+    NO_FURTHER_RXTX_EXPECTED = 1
+    ONLY_SINGLE_RXTX_EXPECTED = 2
+
+#endregion
+#region Structs
+
+class WalterModemSocket:
+    def __init__(self, id):
+        self.state = WalterModemSocketState.FREE
+        self.id = id
+        self.pdp_context_id = 1
+        self.mtu = 300
+        self.exchange_timeout = 90
+        self.conn_timeout = 60
+        self.send_delay_ms = 5000
+        self.protocol = WalterModemSocketProto.UDP
+        self.accept_any_remote = WalterModemSocketAcceptAnyRemote.DISABLED
+        self.remote_host = ""
+        self.remote_port = 0
+        self.local_port = 0
+
+#endregion
+#region Constants
+
+_SOCKET_MIN_CTX_ID = const(1)
+_SOCKET_MAX_CTX_ID = const(6)
+_PDP_DEFAULT_CTX_ID = const(1)
+_PDP_MIN_CTX_ID = const(1)
+_PDP_MAX_CTX_ID = const(8)
+
+#endregion
+#region MixinClass
+
+class SocketMixin(ModemCore):
+    MODEM_RSP_FIELDS = (
+        ('socket_id', None),
+    )
+
+    def __init__(self, *args, **kwargs):
+        def init():
+            self._socket_list = [WalterModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
+            """The list of sockets"""
+
+            self._socket = None
+            """The socket which is currently in use by the library or None when no socket is in use."""
+
+            self.__queue_rsp_rsp_handlers = (
+                self.__queue_rsp_rsp_handlers + (
+                    (b'+SQNSH: ', self.__handle_sh),
+                    (b'+SQNSCFG: ', self.__handle_sqnscfg),
+                )
+            )
+
+            self.__mirror_state_reset_callables = (
+                self.__mirror_state_reset_callables + (self._socket_mirror_state_reset,)
+            )
+        
+        mro_chain_init(self, super(), init, SocketMixin, *args, **kwargs)
+
+    #region PublicMethods
 
     # Deprecated aliases, to be removed in a later release
 
@@ -34,28 +115,14 @@ class ModemSocket(ModemCore):
     # ---
 
     async def socket_create(self,
-        pdp_context_id: int = ModemCore.DEFAULT_PDP_CTX_ID,
+        pdp_context_id: int = _PDP_DEFAULT_CTX_ID,
         mtu: int = 300,
         exchange_timeout: int = 90,
         conn_timeout: int = 60,
         send_delay_ms: int = 5000,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
-        """
-        Creates a new socket in a specified PDP context.
-        Additional socket settings can be applied.
-        The socket can be used for communication.
-
-        :param pdp_context_id: The PDP context id.
-        :param: mtu: The Maximum Transmission Unit used by the socket.
-        :param exchange_timeout: The maximum number of seconds this socket can be inactive.
-        :param conn_timeout: The maximum number of seconds this socket is allowed to try to connect.
-        :param send_delay_ms: The number of milliseconds send delay.
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
-        if pdp_context_id < ModemCore.MIN_PDP_CTX_ID or pdp_context_id > ModemCore.MAX_PDP_CTX_ID:
+        if pdp_context_id < _PDP_MIN_CTX_ID or pdp_context_id > _PDP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
 
@@ -104,24 +171,8 @@ class ModemSocket(ModemCore):
         socket_id: int = -1,
         protocol: int = WalterModemSocketProto.UDP,
         accept_any_remote: int = WalterModemSocketAcceptAnyRemote.DISABLED,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
-        """
-        Connects a socket to a remote host,
-        allowing data exchange once the connection is successful.
-
-        :param remote_host: The remote IPv4/IPv6 or hostname to connect to.
-        :param remote_port: The remote port to connect on.
-        :param local_port: The local port in case of an UDP socket.
-        :param socket_id: The id of the socket to connect or -1 to re-use the last one.
-        :param protocol: The protocol to use, UDP by default.
-        :type protocol: WalterModemSocketProto
-        :param accept_any_remote: How to accept remote UDP packets.
-        :type accept_any_remote: WalterModemSocketAcceptAnyRemote
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         try:
             socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
         except Exception:
@@ -155,17 +206,8 @@ class ModemSocket(ModemCore):
     
     async def socket_close(self,
         socket_id: int = -1,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
-        """
-        Closes a socket. Sockets can only be closed when suspended; 
-        active connections cannot be closed.        
-
-        :param socket_id: The id of the socket to close or -1 to re-use the last one.
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         try:
             socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
         except Exception:
@@ -191,19 +233,8 @@ class ModemSocket(ModemCore):
         data,
         socket_id: int = -1,
         rai: int = WalterModemRai.NO_INFO,
-        rsp: ModemRsp = None
+        rsp: WalterModemRsp = None
     ) -> bool:
-        """
-        Sends data over a socket.
-
-        :param data: The data to send.
-        :param socket_id: The id of the socket to close or -1 to re-use the last one.
-        :param rai: The release assistance information.
-        :type rai: WalterModemRai
-        :param rsp: Reference to a modem response instance
-
-        :return bool: True on success, False on failure
-        """
         try:
             _socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
         except Exception:
@@ -219,3 +250,39 @@ class ModemSocket(ModemCore):
             cmd_type=WalterModemCmdType.DATA_TX_WAIT,
             data=data
         )
+
+    #endregion
+    #region PrivateMethods
+
+    def _socket_mirror_state_reset(self):
+        self._socket_list = [WalterModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
+        self._socket = None
+
+    #endregion
+    #region QueueResponseHandlers
+
+    async def __handle_sh(self, tx_stream, cmd, at_rsp):
+        socket_id = int(at_rsp[len('+SQNSH: '):].decode())
+        try:
+            _socket = self._socket_list[socket_id - 1]
+        except Exception:
+            return None
+
+        self._socket = _socket
+        _socket.state = WalterModemSocketState.FREE
+
+        return WalterModemState.OK
+
+    async def __handle_sqnscfg(self, tx_stream, cmd, at_rsp):
+        conn_id, cid, pkt_sz, max_to, conn_to, tx_to = map(int, at_rsp.split(b': ')[1].split(b','))
+
+        socket = self._socket_list[conn_id - 1]
+        socket.id = conn_id
+        socket.pdp_context_id = cid
+        socket.mtu = pkt_sz
+        socket.exchange_timeout = max_to
+        socket.conn_timeout = conn_to / 10
+        socket.send_delay_ms = tx_to * 100
+
+    #endregion
+#endregion

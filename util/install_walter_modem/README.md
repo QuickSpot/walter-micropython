@@ -10,10 +10,9 @@ of the modem library itself or should there be any issues with
 
 ## How to use
 
-- Run `install_walter_modem.ps1` when on Windows
 - Run `install_walter_modem.sh` when on Linux
+- There currently is no windows version of this utility script
 
 You can optionally pass the device name along,
 in that case that you have multiple devices connected.
-_(eg. `./util/install_walter_modem.sh ttyACM0` or
-`.\util\install_walter_modem.ps1 COM3`)_
+_(eg. `./util/install_walter_modem.sh ttyACM0`)_

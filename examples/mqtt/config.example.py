@@ -1,4 +1,4 @@
-from walter_modem.enums import WalterModemPDPAuthProtocol
+from walter_modem.mixins.default_pdp import WalterModemPDPAuthProtocol
 
 CELL_APN = ''
 """
