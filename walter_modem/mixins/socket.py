@@ -128,9 +128,16 @@ class SocketMixin(ModemCore):
 
             self.__queue_rsp_rsp_handlers = (
                 self.__queue_rsp_rsp_handlers + (
-                    (b'+SQNSH: ', self.__handle_sh),
-                    (b'+SQNSCFG: ', self.__handle_sqnscfg),
+                    (b'+SQNSH: ', self.__handle_socket_closed),
+                    (b'+SQNSRING: ', self.__handle_socket_ring),
+                    (b'+SQNSRECV: ', self.__handle_socket_rcv),
+                    (b'+SQNSI: ', self.__handle_socket_information),
+                    (b'+SQNSO: ', self.__handle_scoket_status)
                 )
+            )
+
+            self.__deep_sleep_wakeup_callables = (
+                self.__deep_sleep_prepare_callables + (self.__socket_deep_sleep_wake,)
             )
 
             self.__mirror_state_reset_callables = (
@@ -314,28 +321,83 @@ class SocketMixin(ModemCore):
     #endregion
     #region QueueResponseHandlers
 
-    async def __handle_sh(self, tx_stream, cmd, at_rsp):
-        socket_id = int(at_rsp[len('+SQNSH: '):].decode())
-        try:
-            _socket = self._socket_list[socket_id - 1]
-        except Exception:
-            return None
-
-        self._socket = _socket
-        _socket.state = WalterModemSocketState.FREE
+    async def __handle_socket_closed(self, tx_stream, cmd, at_rsp):
+        ctx_id = int(at_rsp.split(b':').decode())
+        self.socket_context_states[ctx_id].connected = False
 
         return WalterModemState.OK
+    
+    async def __handle_socket_ring(self, tx_stream, cmd, at_rsp):
+        parts = at_rsp.split(b': ', 1)[1].split(b',')
+        ctx_id = int(parts[0].decode())
 
-    async def __handle_sqnscfg(self, tx_stream, cmd, at_rsp):
-        conn_id, cid, pkt_sz, max_to, conn_to, tx_to = map(int, at_rsp.split(b': ')[1].split(b','))
+        self.socket_context_states[ctx_id].rings.append(ModemSocketRing(
+            ctx_id=ctx_id,
+            length=int(parts[1].decode()) if len(parts) >= 2 else None,
+            data=parts[2] if len(parts) == 3 else None
+        ))
 
-        socket = self._socket_list[conn_id - 1]
-        socket.id = conn_id
-        socket.pdp_context_id = cid
-        socket.mtu = pkt_sz
-        socket.exchange_timeout = max_to
-        socket.conn_timeout = conn_to / 10
-        socket.send_delay_ms = tx_to * 100
+        return WalterModemState.OK
+    
+    async def __handle_socket_rcv(self, tx_stream, cmd, at_rsp):
+        header, payload = at_rsp.split(b': ', 1)[1].split(b'\r')
+        header = header.split(b',')
+
+        ctx_id, max_bytes = int(header[0].decode()), int(header[1].decode())
+        addr = None
+        port = None
+        if len(header) == 4:
+            addr = header[2].decode()
+            port = int(header[3].decode())
+        
+        cmd.rsp.type = WalterModemRspType.SOCKET
+        cmd.rsp.socket_rcv_response = ModemSocketResponse(
+            ctx_id=ctx_id,
+            max_bytes=max_bytes,
+            payload=payload,
+            addr=addr,
+            port=port
+        )
+
+        return WalterModemState.OK
+    
+    async def __handle_socket_information(self, tx_stream, cmd, at_rsp):
+        parts = at_rsp.split(b': ')[1].split(b',')
+        ctx_id, sent, received, buff_in, ack_waiting = [int(p.decode()) for p in parts]
+
+        cmd.rsp.tye = WalterModemRspType.SOCKET
+        cmd.rsp.socket_information = ModemSocketInformation(
+            ctx_id=ctx_id,
+            sent=sent,
+            received=received,
+            buff_in=buff_in,
+            ack_waiting=ack_waiting
+        )
+    
+    async def __handle_scoket_status(self, tx_stream, cmd, at_rsp):
+        parts = at_rsp.split(b': ', 1)[1].split(b',')
+        ctx_id, state, locIP, locPort, remIP, remPort, txProt = [p.decode() for p in parts]
+
+        self.socket_context_states[int(ctx_id)].connected = (
+            state == '1' or state == '4' or state == '5'
+        )
+
+        cmd.rsp.typ = WalterModemRspType.SOCKET
+        cmd.response.socket_status = ModemSocketStatus(
+            ctx_id=int(ctx_id),
+            state=int(state),
+            local_addr=locIP,
+            local_port=int(locPort),
+            remote_addr=remIP,
+            remote_port=int(remPort),
+            protocol=int(txProt)
+        )
+
+    #endregion
+    #region Sleep
+
+    async def __socket_deep_sleep_wake(self):
+        await self._run_cmd(at_cmd='AT+SQNSS', at_rsp=b'OK')
 
     #endregion
 #endregion
