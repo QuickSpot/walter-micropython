@@ -7,16 +7,7 @@ from ..utils import *
 
 #region Enums
 
-class WalterModemSocketState(Enum):
-    FREE = 0
-    RESERVED = 1
-    CREATED = 2
-    CONFIGURED = 3
-    OPENED = 4
-    LISTENING = 5
-    CLOSED = 6
-
-class WalterModemSocketProto(Enum):
+class WalterModemSocketProtocol(Enum):
     TCP = 0
     UDP = 1
 
@@ -30,32 +21,93 @@ class WalterModemRai(Enum):
     NO_FURTHER_RXTX_EXPECTED = 1
     ONLY_SINGLE_RXTX_EXPECTED = 2
 
+class WalterModemSocketRingMode(Enum):
+    NORMAL = 0
+    """Only ctx_id"""
+    DATA_AMOUNT = 1
+    """ctx_id & data length"""
+    DATA_VIEW = 2
+    """ctx_id, data length & data"""
+
+class WalterModemSocketRecvMode(Enum):
+    TEXT_OR_RAW = 0
+    HEX_BYTES_SEQUENCE = 1
+
+class WalterModemSocketSendMode(Enum):
+    TEXT_OR_RAW = 0
+    HEX_BYTES_SEQUENCE = 1
+
+class WalterModemSocketListenState(Enum):
+    CLOSE = 0
+    IPV4 = 1
+    IPV6 = 2
+
+class WalterModemSocketState(Enum):
+    CLOSED = 0
+    ACTIVE_DATA = 1
+    SUSPENDED = 2
+    SUSPENDED_PENDING_DATA = 3
+    LISTENING = 4
+    INCOMING_CONNECTION = 5
+    OPENING = 6
+
 #endregion
 #region Structs
 
-class WalterModemSocket:
-    def __init__(self, id):
-        self.state = WalterModemSocketState.FREE
-        self.id = id
-        self.pdp_context_id = 1
-        self.mtu = 300
-        self.exchange_timeout = 90
-        self.conn_timeout = 60
-        self.send_delay_ms = 5000
-        self.protocol = WalterModemSocketProto.UDP
+class ModemSocketContextState:
+    def __init__(self):
+        self.connected = False
+        self.rings: list[ModemSocketRing] = []
         self.accept_any_remote = WalterModemSocketAcceptAnyRemote.DISABLED
-        self.remote_host = ""
-        self.remote_port = 0
-        self.local_port = 0
+        self.listen_auto_rsp: bool = False
+
+class ModemSocketRing:
+    def __init__(self, ctx_id, length = None, data = None):
+        self.ctx_id: int = ctx_id
+        self.length: int | None = length
+        self.data = data
+
+class ModemSocketResponse:
+    def __init__(self, ctx_id, max_bytes, payload, addr = None, port = None):
+        self.ctx_id: int = ctx_id
+        self.max_bytes: int = max_bytes
+        self.addr: str | None = addr
+        self.port: int | None = port
+        self.payload: bytearray = payload
+
+class ModemSocketInformation:
+    def __init__(self, ctx_id, sent, received, buff_in, ack_waiting):
+        self.ctx_id: int = ctx_id
+        self.sent: int = sent
+        self.received: int = received
+        self.buff_in: int = buff_in
+        self.ack_waiting: int = ack_waiting
+
+class ModemSocketStatus:
+    def __init__(self, ctx_id, state, local_addr, local_port, remote_addr, remote_port, protocol):
+        self.ctx_id: int = ctx_id
+        self.state: WalterModemSocketState = state,
+        self.local_addr: str = local_addr,
+        self.local_port: int = local_port,
+        self.remote_addr: str = remote_addr,
+        self.remote_port: int = remote_port,
+        self.protocol: WalterModemSocketProtocol = protocol
 
 #endregion
 #region Constants
 
 _SOCKET_MIN_CTX_ID = const(1)
 _SOCKET_MAX_CTX_ID = const(6)
-_PDP_DEFAULT_CTX_ID = const(1)
-_PDP_MIN_CTX_ID = const(1)
-_PDP_MAX_CTX_ID = const(8)
+_SOCKET_SEND_MIN_BYTES_LEN = const(1)
+_SOCKET_SEND_MAX_BYTES_LEN = const(16777216)
+_SOCKET_RECV_MIN_BYTES_LEN = const(1)
+_SOCKET_RECV_MAX_BYTES_LEN = const(1500)
+
+_TLS_MIN_CTX_ID = const(1)
+_TLS_MAX_CTX_ID = const(6)
+
+_PDP_MIN_CTX_ID = const(0)
+_PDP_MAC_CTX_ID = const(6)
 
 #endregion
 #region MixinClass
@@ -67,11 +119,10 @@ class SocketMixin(ModemCore):
 
     def __init__(self, *args, **kwargs):
         def init():
-            self._socket_list = [WalterModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
-            """The list of sockets"""
-
-            self._socket = None
-            """The socket which is currently in use by the library or None when no socket is in use."""
+            self.socket_context_states = tuple(
+                ModemSocketContextState()
+                for _ in range(_SOCKET_MIN_CTX_ID, _SOCKET_MAX_CTX_ID + 1)
+            )
 
             self.__queue_rsp_rsp_handlers = (
                 self.__queue_rsp_rsp_handlers + (
