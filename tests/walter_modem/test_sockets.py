@@ -67,7 +67,7 @@ class TestSockets(unittest.AsyncTestCase, unittest.WalterModemAsserts):
         )
     
     async def test_socket_create_sets_correct_response_type(self):
-        self.assert_equal(WalterModemRspType.SOCKET_ID, self.socket_create_modem_rsp.type)
+        self.assert_equal(WalterModemRspType.SOCKET, self.socket_create_modem_rsp.type)
     
     async def test_socket_create_sets_socket_id_in_response(self):
         self.assert_is_instance(self.socket_create_modem_rsp.socket_id, int)

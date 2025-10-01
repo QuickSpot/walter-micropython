@@ -146,7 +146,7 @@ class WalterModemRspType(Enum):
     CME_ERROR = 6
     BANDSET_CFG_SET = 7
     PDP_ADDR = 8
-    SOCKET_ID = 9
+    SOCKET = 9
     GNSS_ASSISTANCE_DATA = 10
     CLOCK = 11
     MQTT = 12

@@ -1536,14 +1536,161 @@ class Modem():
 # SocketMixin
 # ---
 
-    async def create_socket(self, *args, **kwargs):
-        """DEPRECATED; use `socket_create()` instead"""
+    async def socket_config(self,
+        ctx_id: int,
+        pdp_ctx_id: int,
+        mtu: int = 300,
+        exchange_timeout: int = 90,
+        connection_timeout: int = 60,
+        send_delay_ms: int = 5000,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        """Provided by the SocketMixin
+
+        ---
+
+        Configure a socket, socket configuration is reboot persistent.
+
+        Args:
+            ctx_id (int):
+                Context identifier (1-6)
+            pdp_ctx_id (int):
+                PDP Context identifier (0-6)
+            mtu (int, optional):
+                The maximum transmission unit used by the socket.
+                Defaults to 300.
+            exchange_timeout (int, optional):
+                The maximum number of seconds this socket can be inactive.
+                Defaults to 90.
+            connection_timeout (int, optional):
+                The maximum number of seconds this socket can try to connect.
+                Defaults to 60.
+            send_delay_ms (int, optional):
+                The number of milliseconds send delay.
+                Defaults to 5000.
+            rsp (ModemRsp, optional):
+                Reference to a modem response instance.
+                Defaults to None.
+
+        Returns:
+            bool: True on success, False on failure
+        """
+
+    async def socket_config_extended(self,
+        ctx_id: int,
+        ring_mode: WalterModemSocketRingMode = WalterModemSocketRingMode.DATA_AMOUNT,
+        recv_mode: WalterModemSocketRecvMode = WalterModemSocketRecvMode.TEXT_OR_RAW,
+        keepalive: int = 60,
+        listen_auto_resp: bool = False,
+        send_mode: WalterModemSocketSendMode = WalterModemSocketSendMode.TEXT_OR_RAW,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        """Provided by the SocketMixin
+
+        ---
+
+        Configure a socket's extended parameters.
+
+        Args:
+            ctx_id (int):
+                Context identifier (1-6)
+            ring_mode (int, optional):
+                Format of the ring notification.
+                Defaults to WalterModemSocketRingMode.DATA_AMOUNT.
+            recv_mode (int, optional):
+                Data recv mode of the socket.
+                Defaults to WalterModemSocketRecvMode.TEXT_OR_RAW.
+            keepalive (int, optional):
+                KeepAlive time (currently unused).
+                Defaults to 60.
+            listen_auto_resp (bool, optional):
+                Whether to auto accept incoming connections.
+                Defaults to False.
+            send_mode (int, optional):
+                Data format when sending data.
+                Defaults to WalterModemSocketSendMode.TEXT_OR_RAW.
+            rsp (ModemRsp, optional):
+                Reference to a modem response instance.
+                Defaults to None.
+
+        Returns:
+            bool: True on success, False on failure
+        """
+
+    async def socket_close(self,
+        ctx_id: int,
+        rsp: WalterModemRsp | None = None
+    ) -> bool:
+        """Provided by the SocketMixin
+
+        ---    
     
-    async def connect_socket(self, *args, **kwargs):
-        """DEPRECATED; use `socket_connect()` instead"""
-    
-    async def close_socket(self, *args, **kwargs):
-        """DEPRECATED; use `socket_close()` instead"""
+        Closes a socket connection.
+
+        Socket connection can only be closed in suspended mode.
+        Attempting to close an active socket will result in an error.      
+
+        Args:
+            ctx_id (int):
+                Context profile identifier (1-6).
+            rsp (ModemRsp, optional):
+                Reference to a modem response instance.
+                Defaults to None.
+
+        Returns:
+            bool: True on success, False on failure
+        """
+
+    async def socket_send(self,
+        ctx_id: int,
+        data: bytes | bytearray | str | None,
+        length: int = None,
+        rai: int = WalterModemRai.NO_INFO,
+        remote_addr: str = None,
+        remote_port: int = None,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        """Provided by the SocketMixin
+
+        ---
+
+        Sends data over a socket connection.
+
+        If the socket is configured with WalterModemSocketAcceptAnyRemote
+        set to REMOTE_RX_AND_TX it is possible to set remote_addr & remote_port.
+        Whilst technically possible it is still recommended to set these values
+        using `socket_dial` instead.
+
+        Args:
+            ctx_id (int):
+                Context profile identifier (1-6).
+            data (bytes | bytearray | str):
+                The data to send
+            length (int, optional):
+                Length of the payload (auto-calculated if not provided).
+                Defaults to None.
+            rai (int, optional):
+                The release assistance informatio.
+                Defaults to WalterModemRai.NO_INFO.
+            remote_addr (str, optional):
+                Address of the remote host.
+                If not set, its value is inferred from `socket_dial`.
+                Can only be set if the socket is configured with WalterModemSocketAcceptAnyRemote
+                set to REMOTE_RX_AND_TX.
+                Defaults to None.
+            remote_port (int, optional):
+                Port of the remote host.
+                If not set, its value is inferred from `socket_dial`.
+                Can only be set if the socket is configured with WalterModemSocketAcceptAnyRemote
+                set to REMOTE_RX_AND_TX.
+                Defaults to None
+            rsp (ModemRsp, optional):
+                Reference to a modem response instance.
+                Defaults to None.
+
+        Returns:
+            bool: True on success, False on failure
+        """
 
     async def socket_create(self,
         pdp_context_id: int = 1,
@@ -1591,7 +1738,7 @@ class Modem():
         remote_port: int,
         local_port: int = 0,
         socket_id: int = -1,
-        protocol: WalterModemSocketProto = WalterModemSocketProto.UDP,
+        protocol: WalterModemSocketProtocol = WalterModemSocketProtocol.UDP,
         accept_any_remote: WalterModemSocketAcceptAnyRemote = WalterModemSocketAcceptAnyRemote.DISABLED,
         rsp: WalterModemRsp | None = None
     ) -> bool:
@@ -1627,57 +1774,6 @@ class Modem():
             bool: True on success, False on failure
         """
 
-    async def socket_close(self,
-        socket_id: int = -1,
-        rsp: WalterModemRsp | None = None
-    ) -> bool:
-        """Provided by the SocketMixin
-
-        ---    
-    
-        Closes a socket. Sockets can only be closed when suspended; 
-        active connections cannot be closed.        
-
-        Args:
-            socket_id (int, optional):
-                The id of the socket to close or -1 to re-use the last one.
-                Defaults to -1.
-            rsp (ModemRsp, optional):
-                Reference to a modem response instance.
-                Defaults to None.
-
-        Returns:
-            bool: True on success, False on failure
-        """
-
-    async def socket_send(self,
-        data,
-        socket_id: int = -1,
-        rai: WalterModemRai = WalterModemRai.NO_INFO,
-        rsp: WalterModemRsp | None = None
-    ) -> bool:
-        """Provided by the SocketMixin
-
-        ---
-
-        Sends data over a socket.
-
-        Args:
-            data (bytes | bytearray | str):
-                The data to send
-            socket_id (int, optional):
-                The id of the socket to close or -1 to re-use the last one.
-                Defaults to -1.
-            rai (int, optional):
-                The release assistance informatio.
-                Defaults to WalterModemRai.NO_INFO.
-            rsp (ModemRsp, optional):
-                Reference to a modem response instance.
-                Defaults to None.
-
-        Returns:
-            bool: True on success, False on failure
-        """
 # ---
 # TLSCertsMixin
 # ---
