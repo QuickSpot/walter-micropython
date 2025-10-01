@@ -114,7 +114,9 @@ _PDP_MAC_CTX_ID = const(6)
 
 class SocketMixin(ModemCore):
     MODEM_RSP_FIELDS = (
-        ('socket_id', None),
+        ('socket_rcv_response', None),
+        ('socket_information', None),
+        ('socket_status', None)
     )
 
     def __init__(self, *args, **kwargs):
@@ -139,154 +141,162 @@ class SocketMixin(ModemCore):
 
     #region PublicMethods
 
-    # Deprecated aliases, to be removed in a later release
-
-    async def create_socket(self, *args, **kwargs):
-        """DEPRECATED; use `socket_create()` instead"""
-        return await self.socket_create(*args, **kwargs)
-    
-    async def connect_socket(self, *args, **kwargs):
-        """DEPRECATED; use `socket_connect()` instead"""
-        return await self.socket_connect(*args, **kwargs)
-    
-    async def close_socket(self, *args, **kwargs):
-        """DEPRECATED; use `socket_close()` instead"""
-        return await self.socket_close(*args, **kwargs)
-
-    # ---
-
-    async def socket_create(self,
-        pdp_context_id: int = _PDP_DEFAULT_CTX_ID,
+    async def socket_config(self,
+        ctx_id: int,
+        pdp_ctx_id: int,
         mtu: int = 300,
         exchange_timeout: int = 90,
-        conn_timeout: int = 60,
+        connection_timeout: int = 60,
         send_delay_ms: int = 5000,
         rsp: WalterModemRsp = None
     ) -> bool:
-        if pdp_context_id < _PDP_MIN_CTX_ID or pdp_context_id > _PDP_MAX_CTX_ID:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+
+        if pdp_ctx_id < _PDP_MIN_CTX_ID or _PDP_MAC_CTX_ID < pdp_ctx_id:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PDP_CONTEXT
             return False
-
-        socket = None
-        for _socket in self._socket_list:
-            if _socket.state == WalterModemSocketState.FREE:
-                _socket.state = WalterModemSocketState.RESERVED
-                socket = _socket
-                break
-
-        if socket == None:
-            if rsp: rsp.result = WalterModemState.NO_FREE_SOCKET
-            return False
-
-        self._socket = socket
-
-        socket.pdp_context_id = pdp_context_id
-        socket.mtu = mtu
-        socket.exchange_timeout = exchange_timeout
-        socket.conn_timeout = conn_timeout
-        socket.send_delay_ms = send_delay_ms
-
-        async def complete_handler(result, rsp, complete_handler_arg):
-            sock = complete_handler_arg
-            rsp.type = WalterModemRspType.SOCKET_ID
-            rsp.socket_id = sock.id
-
-            if result == WalterModemState.OK:
-                sock.state = WalterModemSocketState.CREATED
         
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSCFG={},{},{},{},{},{}'.format(
-                socket.id, socket.pdp_context_id, socket.mtu, socket.exchange_timeout,
-                socket.conn_timeout * 10, socket.send_delay_ms // 100
+                ctx_id, pdp_ctx_id, mtu, exchange_timeout,
+                connection_timeout * 10, send_delay_ms // 100
+            ),
+            at_rsp=b'OK'
+        )
+
+    async def socket_config_extended(self,
+        ctx_id: int,
+        ring_mode: int = WalterModemSocketRingMode.DATA_AMOUNT,
+        recv_mode: int = WalterModemSocketRecvMode.TEXT_OR_RAW,
+        keepalive: int = 60,
+        listen_auto_resp: bool = False,
+        send_mode: int = WalterModemSocketSendMode.TEXT_OR_RAW,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+        
+        async def complete_handler(result, rsp, complete_handler_arg):
+            if result == WalterModemState.OK:
+                self.socket_context_states[ctx_id].listen_auto_rsp = listen_auto_resp
+        
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd='AT+SQNSCFGEXT={},{},{},{},{},{}'.format(
+                ctx_id, ring_mode, recv_mode, keepalive, modem_bool(listen_auto_resp), send_mode
             ),
             at_rsp=b'OK',
-            complete_handler=complete_handler,
-            complete_handler_arg=socket
+            complete_handler=complete_handler
         )
-    
-    async def socket_connect(self,
-        remote_host: str,
+
+    async def socket_config_secure(self,
+        ctx_id: int,
+        enable: bool,
+        secure_profile_id: int,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+        
+        if secure_profile_id < _TLS_MIN_CTX_ID or _TLS_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.ERROR
+            return False
+        
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+SQNSSCFG={ctx_id},{modem_bool(enable)},{secure_profile_id}',
+            at_rsp=b'OK'
+        )
+
+    async def socket_dial(self,
+        ctx_id: int,
+        remote_addr: str,
         remote_port: int,
         local_port: int = 0,
-        socket_id: int = -1,
-        protocol: int = WalterModemSocketProto.UDP,
+        protocol: int = WalterModemSocketProtocol.UDP,
         accept_any_remote: int = WalterModemSocketAcceptAnyRemote.DISABLED,
         rsp: WalterModemRsp = None
     ) -> bool:
-        try:
-            socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
-        except Exception:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
-        
-        self._socket = socket
-
-        socket.protocol = protocol
-        socket.accept_any_remote = accept_any_remote
-        socket.remote_host = remote_host
-        socket.remote_port = remote_port
-        socket.local_port = local_port
 
         async def complete_handler(result, rsp, complete_handler_arg):
-            sock = complete_handler_arg
             if result == WalterModemState.OK:
-                sock.state = WalterModemSocketState.OPENED
-
+                self.socket_context_states[ctx_id].connected = True
+                self.socket_context_states[ctx_id].accept_any_remote = accept_any_remote
+        
         return await self._run_cmd(
             rsp=rsp,
             at_cmd='AT+SQNSD={},{},{},{},0,{},1,{},0'.format(
-                socket.id, socket.protocol, socket.remote_port,
-                modem_string(socket.remote_host), socket.local_port,
-                socket.accept_any_remote
+                ctx_id, protocol, remote_port, modem_string(remote_addr),
+                local_port, accept_any_remote
             ),
-            at_rsp=b'OK',
-            complete_handler=complete_handler,
-            complete_handler_arg=socket
+            at_rsp=b'OK', # TODO: test if I always get okay, or if I get an URC, ... ... 
+            complete_handler=complete_handler
         )
-    
+
     async def socket_close(self,
-        socket_id: int = -1,
+        ctx_id: int,
         rsp: WalterModemRsp = None
     ) -> bool:
-        try:
-            socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
-        except Exception:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
-        
-        self._socket = socket
 
         async def complete_handler(result, rsp, complete_handler_arg):
-            sock = complete_handler_arg
             if result == WalterModemState.OK:
-                sock.state = WalterModemSocketState.FREE
+                self.socket_context_states[ctx_id].connected = False
 
         return await self._run_cmd(
             rsp=rsp,
-            at_cmd=f'AT+SQNSH={socket.id}',
+            at_cmd=f'AT+SQNSH={ctx_id}',
             at_rsp=b'OK',
-            complete_handler=complete_handler,
-            complete_handler_arg=socket
+            complete_handler=complete_handler
         )
-    
+
     async def socket_send(self,
-        data,
-        socket_id: int = -1,
+        ctx_id: int,
+        data: bytes | bytearray | str | None,
+        length: int = None,
         rai: int = WalterModemRai.NO_INFO,
+        remote_addr: str = None,
+        remote_port: int = None,
         rsp: WalterModemRsp = None
     ) -> bool:
-        try:
-            _socket = self._socket if socket_id == -1 else self._socket_list[socket_id - 1]
-        except Exception:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_SOCKET
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
             return False
         
-        self._socket = _socket
+        if self.socket_context_states[ctx_id].accept_any_remote != WalterModemSocketAcceptAnyRemote.REMOTE_RX_AND_TX:
+            if remote_addr is not None or remote_port is not None:
+                if rsp: rsp.result = WalterModemState.ERROR
+                return False
+        
+        if isinstance(data, str):
+            data = data.encode('utf-8')
+        elif data is not None and not isinstance(data, (bytes, bytearray)):
+            if rsp: rsp.result = WalterModemState.ERROR
+            return False
+        
+        if length is None:
+            length = 0 if data is None else len(data)
+        
+        if length < _SOCKET_SEND_MIN_BYTES_LEN or _SOCKET_SEND_MAX_BYTES_LEN < length:
+            if rsp: rsp.result = WalterModemState.ERROR
+            return False
 
         return await self._run_cmd(
             rsp=rsp,
-            at_cmd=f'AT+SQNSSENDEXT={_socket.id},{len(data)},{rai}',
+            at_cmd='AT+SQNSSENDEXT={},{},{}{}'.format(
+                ctx_id, length, rai,
+                f',{remote_addr},{remote_port}' if remote_addr is not None and remote_port is not None else ''
+            ),
             at_rsp=b'OK',
             cmd_type=WalterModemCmdType.DATA_TX_WAIT,
             data=data
@@ -296,8 +306,10 @@ class SocketMixin(ModemCore):
     #region PrivateMethods
 
     def _socket_mirror_state_reset(self):
-        self._socket_list = [WalterModemSocket(idx + 1) for idx in range(_SOCKET_MAX_CTX_ID + 1)]
-        self._socket = None
+        self.socket_context_states = tuple(
+            ModemSocketContextState()
+            for _ in range(_SOCKET_MIN_CTX_ID, _SOCKET_MAX_CTX_ID + 1)
+        )
 
     #endregion
     #region QueueResponseHandlers
