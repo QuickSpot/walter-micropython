@@ -309,6 +309,124 @@ class SocketMixin(ModemCore):
             data=data
         )
 
+    async def socket_accept(self,
+        ctx_id: int,
+        command_mode: bool = True,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+        
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+SQNSA={ctx_id},{modem_bool(command_mode)}',
+            at_rsp=b'OK',
+            cmd_type=WalterModemCmdType.DATA_TX_WAIT
+        )
+
+    async def socket_listen(self,
+        ctx_id: int,
+        protocol: int = WalterModemSocketProtocol.TCP,
+        listen_state: int = WalterModemSocketListenState.IPV4,
+        listen_port: int = 0,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+        
+        if protocol == WalterModemSocketProtocol.TCP:
+            return await self._run_cmd(
+                rsp=rsp,
+                at_cmd=f'AT+SQNSL={ctx_id},{listen_state},{listen_port}',
+                at_rsp=b'OK',
+                cmd_type=WalterModemCmdType.DATA_TX_WAIT
+            )
+        elif protocol == WalterModemSocketProtocol.UDP:
+            return await self._run_cmd(
+                rsp=rsp,
+                at_cmd=f'AT+SQNSLUDP={ctx_id},{listen_state},{listen_port}',
+                at_rsp=b'OK',
+                cmd_type=WalterModemCmdType.DATA_TX_WAIT
+            )
+        else:
+            if rsp: rsp.result = WalterModemState.ERROR
+            return False
+
+    async def socket_receive_data(self,
+        ctx_id: int,
+        length: int,
+        max_bytes: int,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+        
+        if max_bytes < _SOCKET_RECV_MIN_BYTES_LEN or _SOCKET_RECV_MAX_BYTES_LEN < max_bytes:
+            if rsp: rsp.result = WalterModemState.ERROR
+            return False
+        
+        if length < 0:
+            if rsp: rsp.result = WalterModemState.ERROR
+            return False
+        
+        self.__parser_data.raw_chunk_size = min(length, max_bytes)
+
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+SQNSRECV={ctx_id},{max_bytes}',
+            at_rsp=b'OK'
+        )
+
+    async def socket_restore(self,
+        ctx_id: int,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+        
+        async def complete_handler(result, rsp, complete_handler_arg):
+            if result == WalterModemState.OK:
+                self.socket_context_states[ctx_id].connected = True
+        
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+SQNSO={ctx_id}',
+            at_rsp=b'OK',
+            complete_handler=complete_handler
+        )
+    
+    async def socket_information(self,
+        ctx_id: int,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+        
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+SQNSI={ctx_id}',
+            at_rsp=(b'OK', b'CONNECT')
+        )
+    
+    async def socket_status(self,
+        ctx_id: int,
+        rsp: WalterModemRsp = None
+    ) -> bool:
+        if ctx_id < _SOCKET_MIN_CTX_ID or _SOCKET_MAX_CTX_ID < ctx_id:
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            return False
+        
+        return await self._run_cmd(
+            rsp=rsp,
+            at_cmd=f'AT+SQNSS={ctx_id}',
+            at_rsp=b'OK'
+        )
+
     #endregion
     #region PrivateMethods
 
