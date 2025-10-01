@@ -1,19 +1,9 @@
 from micropython import const # type: ignore
 
-from ..core import ModemCore
-from ..coreEnums import (
-    Enum,
-    WalterModemState,
-    WalterModemRspType,
-    WalterModemCmdType
-)
-from ..coreStructs import (
-    WalterModemRsp
-)
-from ..utils import (
-    mro_chain_init,
-    modem_string
-)
+from ..core import *
+from ..coreEnums import *
+from ..coreStructs import *
+from ..utils import *
 
 #region Enums
 
