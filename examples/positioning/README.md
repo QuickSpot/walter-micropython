@@ -49,7 +49,7 @@ mpremote cp examples/positioning/config.py :config.py
 Copy the boot.py script onto the board:
 
 ```shell
-mpremote cp examples/positioning/boot.py :boot.py
+mpremote cp examples/positioning/main.py :main.py
 ```
 
 ## Running the Example
@@ -59,5 +59,5 @@ mpremote cp examples/positioning/boot.py :boot.py
    , this could damage the modem's radio frontend.
 3. Insert the SIM card before starting the script.
 
-Micropython automatically runs `boot.py` on startup\
+Micropython automatically runs `main.py` on startup\
 *(unless the device is in safe-boot mode)*.
