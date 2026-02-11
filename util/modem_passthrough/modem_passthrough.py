@@ -81,6 +81,7 @@ class ModemGUI:
         self.output_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         for tag, opts in self.output_tags.items():
             self.output_text.tag_config(tag, **opts)
+        self.output_text.tag_config('command', foreground='cyan')
 
         self.command_status_label = tk.Label(
             self.root,
@@ -162,7 +163,9 @@ class ModemGUI:
         self.output_text.config(state=tk.NORMAL)
         self.output_text.delete('1.0', tk.END)
         for line in display:
-            if 'ERROR' in line:
+            if line.startswith('>> '):
+                tag = 'command'
+            elif 'ERROR' in line:
                 tag = 'error'
             elif 'OK' in line:
                 tag = 'ok'
@@ -189,6 +192,18 @@ class ModemGUI:
         else:
             cs_fg = 'black'
         self.command_status_label.config(text=self.command_result, fg=cs_fg)
+
+    def _attempt_reconnect(self, delay=3):
+        """Schedule a reconnection attempt without recursion."""
+        if not self.running:
+            return
+        time.sleep(delay)
+        self.output_lines = []
+        self.output_queue.put('[i] >> Retrying device connection...')
+        self.schedule_refresh()
+        # Use a new thread to avoid stack buildup from recursion
+        reconnect_thread = threading.Thread(target=self.start_modem_process, daemon=True)
+        reconnect_thread.start()
 
     def start_modem_process(self):
         try:
@@ -227,57 +242,54 @@ class ModemGUI:
                 if 'Local directory .' not in line:
                     self.output_queue.put(line.strip())
                 self.schedule_refresh()
-            
-            def attempt_reconnect():
-                time.sleep(3)
-                self.output_lines = []
-                self.output_queue.put(f'[i] >> Retrying device connection...')
-                self.schedule_refresh()
-                self.start_modem_process()
 
-            proc.stdout.close(); proc.wait()
+            proc.stdout.close()
+            proc.wait()
             self.output_queue.put('[i] >> Modem process terminated.')
             self.passthrough_state = 'NO COMM'
             self.schedule_refresh()
-            attempt_reconnect()
+            self._attempt_reconnect(delay=3)
         except FileNotFoundError as e:
             if self.logging: self.log(line='===== PROGRAM CRASHED =====\n', raw=True)
             self.output_queue.put(f'[i] >> Error: {e}')
             self.passthrough_state = 'ERROR'
             self.schedule_refresh()
-            attempt_reconnect()
+            self._attempt_reconnect(delay=3)
         except Exception as e:
             if self.logging: self.log(line='===== PROGRAM CRASHED (Device disconnect?) =====\n', raw=True)
             self.output_queue.put(f'[i] >> Error in modem process: {e}')
             self.passthrough_state = 'NO COMM'
             self.schedule_refresh()
-            time.sleep(7)
-            self.start_modem_process()
+            self._attempt_reconnect(delay=7)
 
     def log(self, line, meta=None, raw=False):
         try:
-            with open(LOG_FILE, 'a+') as f:
+            with open(LOG_FILE, 'a') as f:
                 if raw:
                     f.write(line)
                 else:
                     ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                     f.write(f"[{ts}] {meta:>9}: {line.strip()}\n")
-        except:
+        except OSError:
             pass
 
     def read_cmd_file(self):
         try:
-            return open(CMD_FILE,'r').read().strip()
-        except:
+            with open(CMD_FILE, 'r') as f:
+                return f.read().strip()
+        except OSError:
             return 'TUI-ERROR'
 
     def write_cmd_file(self, command):
         try:
-            with open(CMD_FILE,'r+') as f:
-                if f.read().strip() != 'READ': return False
-                f.seek(0); f.write(command); f.truncate()
+            with open(CMD_FILE, 'r+') as f:
+                if f.read().strip() != 'READ':
+                    return False
+                f.seek(0)
+                f.write(command)
+                f.truncate()
             return True
-        except:
+        except OSError:
             return False
 
     def send_interrupt_and_exit(self):
@@ -302,6 +314,8 @@ class ModemGUI:
             self.command_result = f'Reserved: {cmd}'
         elif self.passthrough_state == 'READY' and self.read_cmd_file()=='READ':
             if self.write_cmd_file(cmd):
+                self.output_queue.put('')
+                self.output_queue.put(f'>> {cmd}')
                 self.command_result = f'Sent: {cmd}'
                 self.passthrough_state = f'WAITING ({cmd})'
                 self.history.append(cmd); self.history_index=None
