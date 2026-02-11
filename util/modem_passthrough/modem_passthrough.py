@@ -16,11 +16,37 @@ CMD_FILE = os.path.join(SCRIPT_DIR, 'cmd')
 LOG_FILE = os.path.join(SCRIPT_DIR, 'passthrough.log')
 WATCH_INTERVAL_MS = 200
 
+def parse_args():
+    """Parse command line arguments."""
+    logging = '--log' in sys.argv
+    device = None
+    # Look for --device or -d argument
+    args = sys.argv[1:]
+    for i, arg in enumerate(args):
+        if arg in ('--device', '-d') and i + 1 < len(args):
+            device = args[i + 1]
+            break
+        elif arg.startswith('--device='):
+            device = arg.split('=', 1)[1]
+            break
+    # Also accept positional device (first arg that's not a flag)
+    if device is None:
+        for arg in args:
+            if not arg.startswith('-') and arg != '--log':
+                device = arg
+                break
+    return logging, device
+
+
 class ModemGUI:
-    def __init__(self, root):
-        self.logging = '--log' in sys.argv
+    def __init__(self, root, logging=False, device=None):
+        self.logging = logging
+        self.device = device
         self.root = root
-        self.root.title('Walter Modem Passthrough')
+        title = 'Walter Modem Passthrough'
+        if device:
+            title += f' ({device})'
+        self.root.title(title)
         self.root.configure(bg='gray10')
 
         # Queues & state
@@ -215,8 +241,14 @@ class ModemGUI:
             if not cmd:
                 raise FileNotFoundError('mpremote not found')
 
+            # Build command with optional device connection
+            full_cmd = cmd[:]
+            if self.device:
+                full_cmd += ['connect', self.device]
+            full_cmd += ['mount', '.', '+', 'run', 'esp-script.py']
+
             proc = subprocess.Popen(
-                cmd + ['mount','.','+','run','esp-script.py'],
+                full_cmd,
                 stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                 text=True, bufsize=1, cwd=SCRIPT_DIR
             )
@@ -354,5 +386,7 @@ class ModemGUI:
         if self.logging: self.log(line='===== PROGRAM STARTED =====\n', raw=True)
         self.root.mainloop()
 
-if __name__=='__main__':
-    root=tk.Tk(); ModemGUI(root).run()
+if __name__ == '__main__':
+    logging, device = parse_args()
+    root = tk.Tk()
+    ModemGUI(root, logging=logging, device=device).run()
