@@ -127,10 +127,11 @@ when we need information from the modem.
 
 def get_unique_topic():
     mac = network.WLAN().config('mac')
-    return f'walter/mqtt-example/{''.join('{:02X}'.format(byte) for byte in mac[-3:])}'
+    suffix = ''.join('{:02X}'.format(byte) for byte in mac[-3:])
+    return f'walter/mqtt-example/{suffix}'
 
 
-topic = config.MQTT_TOPIC if config.MQTT_TOPIC is not None else get_unique_topic()
+topic = MQTT_TOPIC if MQTT_TOPIC is not None else get_unique_topic()
 
 async def wait_for_network_reg_state(timeout: int, *states: WalterModemNetworkRegState) -> bool:
     """
@@ -225,7 +226,7 @@ async def unlock_sim() -> bool:
 
     # Give the modem time to detect the SIM
     await asyncio.sleep(2)
-    if await modem.unlock_sim(pin=config.SIM_PIN):
+    if await modem.unlock_sim(pin=SIM_PIN):
         print('  - SIM unlocked')
     else:
         print('  - Failed to unlock SIM card')
@@ -235,10 +236,11 @@ async def unlock_sim() -> bool:
 
 async def setup():
     global modem_rsp
+    use_tls = int(MQTT_PORT) == 8883
 
     print('Walter MQTT Example')
     print('---------------')
-    print(f'Configured broker: {config.MQTT_SERVER_ADDRESS}:{config.MQTT_PORT}')
+    print(f'Configured broker: {MQTT_SERVER_ADDRESS}:{MQTT_PORT}')
     print(f'Topic: {topic}')
 
     await modem.begin()
@@ -247,20 +249,20 @@ async def setup():
         print('Modem communication error')
         return False
     
-    if config.SIM_PIN != None and not await unlock_sim():
+    if SIM_PIN != None and not await unlock_sim():
         return False
     
     if not await modem.pdp_context_create(
-        apn=config.CELL_APN,
+        apn=CELL_APN,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.pdp_set_auth_params(
-        protocol=config.AUTHENTICATION_PROTOCOL,
-        user_id=config.APN_USERNAME,
-        password=config.APN_PASSWORD
+    if APN_USERNAME and not await modem.pdp_set_auth_params(
+        protocol=AUTHENTICATION_PROTOCOL,
+        user_id=APN_USERNAME,
+        password=APN_PASSWORD
     ):
         print('Failed to set PDP context authentication protocol')
 
@@ -268,27 +270,28 @@ async def setup():
     if not await lte_connect():
         return False
     
-    if not await modem.tls_config_profile(
-        profile_id=1,
-        tls_validation=WalterModemTlsValidation.NONE,
-        tls_version=WalterModemTlsVersion.TLS_VERSION_13
-    ):
-        print('Failed to configure TLS profile')
-        return False
+    if use_tls:
+        if not await modem.tls_config_profile(
+            profile_id=1,
+            tls_validation=WalterModemTlsValidation.NONE,
+            tls_version=WalterModemTlsVersion.TLS_VERSION_13
+        ):
+            print('Failed to configure TLS profile')
+            return False
     
     print('Configurng MQTT')
     if not await modem.mqtt_config(
-        user_name=config.MQTT_USERNAME,
-        password=config.MQTT_PASSWORD,
-        tls_profile_id=1
+        user_name=MQTT_USERNAME,
+        password=MQTT_PASSWORD,
+        tls_profile_id=1 if use_tls else None
     ):
         print('Failed to configure MQTT')
         return False
     
     print('Connecting to MQTT server')
     if not await modem.mqtt_connect(
-        server_name=config.MQTT_SERVER_ADDRESS,
-        port=int(config.MQTT_PORT),
+        server_name=MQTT_SERVER_ADDRESS,
+        port=int(MQTT_PORT),
     ):
         print('Failed to connect to MQTT server')
         return False
@@ -314,22 +317,26 @@ async def main():
         if not await setup():
             print('Failed to complete setup, raising runtime error to stop the script')
             raise RuntimeError()
+
+        payload = MESSAGE.encode() if isinstance(MESSAGE, str) else MESSAGE
         
         if not await modem.mqtt_publish(
             topic=topic,
-            data=config.MESSAGE,
-            qos=config.PUBLISH_QOS
+            data=payload,
+            qos=PUBLISH_QOS
         ):
             print('Failed to publish message')
-        print('Message Published')
+            raise RuntimeError()
+        print('Message published')
 
         if await modem.mqtt_subscribe(
             topic=topic,
-            qos=config.SUBSCRIBE_QOS
+            qos=SUBSCRIBE_QOS
         ):
             print(f'Subscribed to topic: "{topic}"')
         else:
             print('Failed to subscribe to topic, raising runtime error to stop the script')
+            raise RuntimeError()
 
         while True:
             await loop()
