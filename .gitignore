@@ -27,8 +27,5 @@ out/
 
 .idea/$CACHE_FILE$
 
-# Ignore config.py files from examples
-examples/**/config.py
-
 # Ignore log files from modem_passthrough utility
 util/modem_passthrough/*.log

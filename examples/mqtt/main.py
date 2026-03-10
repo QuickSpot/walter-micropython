@@ -13,10 +13,98 @@ from walter_modem import Modem
 from walter_modem.coreEnums import *
 from walter_modem.coreStructs import *
 from walter_modem.mixins.default_sim_network import *
+from walter_modem.mixins.default_pdp import *
 from walter_modem.mixins.mqtt import *
 from walter_modem.mixins.tls_certs import *
 
-import config # type: ignore
+# region CONFIG VARIABLES
+
+# IMPORTANT
+# This is an example sketch with verbose comments and logging,
+# in production codde such verbose comments could be left out to reduce codesize.
+
+CELL_APN = ''
+"""
+The cellular Access Point Name (APN).
+Leave blank to enable automatic APN detection, which is sufficient for most networks.
+Manually set this only if your network provider specifies a particular APN.
+"""
+
+APN_USERNAME = ''
+"""
+The username for APN authentication.
+Typically, this is not required and should be left blank.
+Only provide a username if your network provider explicitly mandates it.
+"""
+
+APN_PASSWORD = ''
+"""
+The password for APN authentication.
+This is generally unnecessary and should remain blank.
+Set a password only if it is specifically required by your network provider.
+"""
+
+AUTHENTICATION_PROTOCOL = WalterModemPDPAuthProtocol.NONE
+"""
+The authentication protocol to use if requiren.
+Leave as none when no username/password is set.
+"""
+
+SIM_PIN = None
+"""
+Optional: Set this only if your SIM card requires a PIN for activation. 
+Most IoT SIMs do not need this.
+"""
+
+MQTT_SERVER_ADDRESS = 'test.mosquitto.org'
+"""
+The address of the MQTT server.
+"""
+
+MQTT_PORT = '1883'
+"""
+The port of the MQTT server to use.
+8883 is the startard port for MQTT with TLS
+"""
+
+MQTT_USERNAME = ''
+"""
+If requruired,
+The username used to authenticate with the MQTT broker
+"""
+
+MQTT_PASSWORD = ''
+"""
+If required,
+The password used to authenticate with the MQTT broker
+"""
+
+MQTT_TOPIC = None
+"""
+MQTT topic to use.  
+Set to None to auto-generate: 'walter/mqtt-example/' + last 6 hex chars of the MAC address.
+"""
+
+PUBLISH_QOS = 0
+SUBSCRIBE_QOS = 0
+"""
+The Quality of Service (QoS) levels for sent (published) and received (subscribed) MQTT messages.
+
+0: At most once  - No acknowledgment, message may be lost.
+1: At least once - Acknowledged, but may be delivered multiple times.
+2: Exactly once  - Guaranteed delivery without duplicates, highest overhead.
+
+Note: The higher the QoS, the more overhead and latency.
+"""
+
+
+MESSAGE = 'Hi from walter'
+"""
+Custom message to publish to the broker.
+(the topic it publishes & subscribes to will be printed)
+"""
+
+#endregion
 
 modem = Modem(MQTTMixin, TLSCertsMixin, load_default_power_saving_mixin=False)
 """
@@ -39,10 +127,11 @@ when we need information from the modem.
 
 def get_unique_topic():
     mac = network.WLAN().config('mac')
-    return f'walter/mqtt-example/{''.join('{:02X}'.format(byte) for byte in mac[-3:])}'
+    suffix = ''.join('{:02X}'.format(byte) for byte in mac[-3:])
+    return f'walter/mqtt-example/{suffix}'
 
 
-topic = config.MQTT_TOPIC if config.MQTT_TOPIC is not None else get_unique_topic()
+topic = MQTT_TOPIC if MQTT_TOPIC is not None else get_unique_topic()
 
 async def wait_for_network_reg_state(timeout: int, *states: WalterModemNetworkRegState) -> bool:
     """
@@ -137,7 +226,7 @@ async def unlock_sim() -> bool:
 
     # Give the modem time to detect the SIM
     await asyncio.sleep(2)
-    if await modem.unlock_sim(pin=config.SIM_PIN):
+    if await modem.unlock_sim(pin=SIM_PIN):
         print('  - SIM unlocked')
     else:
         print('  - Failed to unlock SIM card')
@@ -147,10 +236,11 @@ async def unlock_sim() -> bool:
 
 async def setup():
     global modem_rsp
+    use_tls = int(MQTT_PORT) == 8883
 
     print('Walter MQTT Example')
     print('---------------')
-    print(f'Configured broker: {config.MQTT_SERVER_ADDRESS}:{config.MQTT_PORT}')
+    print(f'Configured broker: {MQTT_SERVER_ADDRESS}:{MQTT_PORT}')
     print(f'Topic: {topic}')
 
     await modem.begin()
@@ -159,20 +249,20 @@ async def setup():
         print('Modem communication error')
         return False
     
-    if config.SIM_PIN != None and not await unlock_sim():
+    if SIM_PIN != None and not await unlock_sim():
         return False
     
     if not await modem.pdp_context_create(
-        apn=config.CELL_APN,
+        apn=CELL_APN,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.pdp_set_auth_params(
-        protocol=config.AUTHENTICATION_PROTOCOL,
-        user_id=config.APN_USERNAME,
-        password=config.APN_PASSWORD
+    if APN_USERNAME and not await modem.pdp_set_auth_params(
+        protocol=AUTHENTICATION_PROTOCOL,
+        user_id=APN_USERNAME,
+        password=APN_PASSWORD
     ):
         print('Failed to set PDP context authentication protocol')
 
@@ -180,27 +270,28 @@ async def setup():
     if not await lte_connect():
         return False
     
-    if not await modem.tls_config_profile(
-        profile_id=1,
-        tls_validation=WalterModemTlsValidation.NONE,
-        tls_version=WalterModemTlsVersion.TLS_VERSION_13
-    ):
-        print('Failed to configure TLS profile')
-        return False
+    if use_tls:
+        if not await modem.tls_config_profile(
+            profile_id=1,
+            tls_validation=WalterModemTlsValidation.NONE,
+            tls_version=WalterModemTlsVersion.TLS_VERSION_13
+        ):
+            print('Failed to configure TLS profile')
+            return False
     
     print('Configurng MQTT')
     if not await modem.mqtt_config(
-        user_name=config.MQTT_USERNAME,
-        password=config.MQTT_PASSWORD,
-        tls_profile_id=1
+        user_name=MQTT_USERNAME,
+        password=MQTT_PASSWORD,
+        tls_profile_id=1 if use_tls else None
     ):
         print('Failed to configure MQTT')
         return False
     
     print('Connecting to MQTT server')
     if not await modem.mqtt_connect(
-        server_name=config.MQTT_SERVER_ADDRESS,
-        port=int(config.MQTT_PORT),
+        server_name=MQTT_SERVER_ADDRESS,
+        port=int(MQTT_PORT),
     ):
         print('Failed to connect to MQTT server')
         return False
@@ -226,22 +317,26 @@ async def main():
         if not await setup():
             print('Failed to complete setup, raising runtime error to stop the script')
             raise RuntimeError()
+
+        payload = MESSAGE.encode() if isinstance(MESSAGE, str) else MESSAGE
         
         if not await modem.mqtt_publish(
             topic=topic,
-            data=config.MESSAGE,
-            qos=config.PUBLISH_QOS
+            data=payload,
+            qos=PUBLISH_QOS
         ):
             print('Failed to publish message')
-        print('Message Published')
+            raise RuntimeError()
+        print('Message published')
 
         if await modem.mqtt_subscribe(
             topic=topic,
-            qos=config.SUBSCRIBE_QOS
+            qos=SUBSCRIBE_QOS
         ):
             print(f'Subscribed to topic: "{topic}"')
         else:
             print('Failed to subscribe to topic, raising runtime error to stop the script')
+            raise RuntimeError()
 
         while True:
             await loop()

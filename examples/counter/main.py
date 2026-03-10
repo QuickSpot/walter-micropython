@@ -24,7 +24,56 @@ from walter_modem.coreStructs import (
     WalterModemRsp
 )
 
-import config # type: ignore
+#region CONFIG VARIABLES
+
+# IMPORTANT
+# This is an example sketch with verbose comments and logging,
+# in production codde such verbose comments could be left out to reduce codesize.
+
+CELL_APN = ''
+"""
+The cellular Access Point Name (APN).
+Set to the APN provided by your network provider.
+Leave blank for automatic APN detection only if your provider supports it
+"""
+
+APN_USERNAME = ''
+"""
+The username for APN authentication.
+Typically, this is not required and should be left blank.
+Only provide a username if your network provider explicitly mandates it.
+"""
+
+APN_PASSWORD = ''
+"""
+The password for APN authentication.
+This is generally unnecessary and should remain blank.
+Set a password only if it is specifically required by your network provider.
+"""
+
+AUTHENTICATION_PROTOCOL = WalterModemPDPAuthProtocol.NONE
+"""
+The authentication protocol to use if requiren.
+Leave as none when no username/password is set.
+"""
+
+SIM_PIN = None
+"""
+Optional: Set this only if your SIM card requires a PIN for activation. 
+Most IoT SIMs do not need this.
+"""
+
+SERVER_ADDRESS = 'walterdemo.quickspot.io'
+"""
+The address of the Walter Demo server.
+"""
+
+SERVER_PORT = 1999
+"""
+The UDP port of the Walter Demo server.
+"""
+
+#endregion
 
 modem = Modem(SocketMixin, load_default_power_saving_mixin=False)
 """
@@ -149,7 +198,7 @@ async def unlock_sim() -> bool:
 
     # Give the modem time to detect the SIM
     await asyncio.sleep(2)
-    if await modem.unlock_sim(pin=config.SIM_PIN):
+    if await modem.unlock_sim(pin=SIM_PIN):
         print('  - SIM unlocked')
     else:
         print('  - Failed to unlock SIM card')
@@ -173,20 +222,20 @@ async def setup():
         print('Modem communication error')
         return False
 
-    if config.SIM_PIN != None and not await unlock_sim():
+    if SIM_PIN != None and not await unlock_sim():
         return False
     
     if not await modem.pdp_context_create(
-        apn=config.CELL_APN,
+        apn=CELL_APN,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.pdp_set_auth_params(
-        protocol=config.AUTHENTICATION_PROTOCOL,
-        user_id=config.APN_USERNAME,
-        password=config.APN_PASSWORD
+    if APN_USERNAME and not await modem.pdp_set_auth_params(
+        protocol=AUTHENTICATION_PROTOCOL,
+        user_id=APN_USERNAME,
+        password=APN_PASSWORD
     ):
         print('Failed to set PDP context authentication parameters')
 
@@ -195,18 +244,15 @@ async def setup():
         return False
    
     print('Creating socket')
-    if await modem.socket_create(rsp=modem_rsp):
-        socket_id = modem_rsp.socket_id
-    else:
+    if not await modem.socket_config(ctx_id=1, pdp_ctx_id=1, rsp=modem_rsp):
         print('Failed to create socket')
         return False
     
     print('Connecting socket')
-    if not await modem.socket_connect(
-        remote_host=config.SERVER_ADDRESS,
-        remote_port=config.SERVER_PORT,
-        local_port=config.SERVER_PORT,
-        socket_id=socket_id
+    if not await modem.socket_dial(
+        ctx_id=1,
+        remote_addr=SERVER_ADDRESS,
+        remote_port=SERVER_PORT,
     ):
         print('Failed to connect socket')
         return False
@@ -221,7 +267,7 @@ async def loop():
     data_buffer.append(counter & 0xff)
 
     print('Attempting to transmit data')
-    if not await modem.socket_send(data=data_buffer, socket_id=socket_id):
+    if not await modem.socket_send(ctx_id=1, data=data_buffer):
         print('Failed to transmit data')
         return False
     
