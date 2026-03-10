@@ -198,7 +198,7 @@ async def unlock_sim() -> bool:
 
     # Give the modem time to detect the SIM
     await asyncio.sleep(2)
-    if await modem.unlock_sim(pin=config.SIM_PIN):
+    if await modem.unlock_sim(pin=SIM_PIN):
         print('  - SIM unlocked')
     else:
         print('  - Failed to unlock SIM card')
@@ -222,20 +222,20 @@ async def setup():
         print('Modem communication error')
         return False
 
-    if config.SIM_PIN != None and not await unlock_sim():
+    if SIM_PIN != None and not await unlock_sim():
         return False
     
     if not await modem.pdp_context_create(
-        apn=config.CELL_APN,
+        apn=CELL_APN,
         rsp=modem_rsp
     ):
         print('Failed to create socket')
         return False
    
-    if config.APN_USERNAME and not await modem.pdp_set_auth_params(
-        protocol=config.AUTHENTICATION_PROTOCOL,
-        user_id=config.APN_USERNAME,
-        password=config.APN_PASSWORD
+    if APN_USERNAME and not await modem.pdp_set_auth_params(
+        protocol=AUTHENTICATION_PROTOCOL,
+        user_id=APN_USERNAME,
+        password=APN_PASSWORD
     ):
         print('Failed to set PDP context authentication parameters')
 
@@ -244,18 +244,15 @@ async def setup():
         return False
    
     print('Creating socket')
-    if await modem.socket_create(rsp=modem_rsp):
-        socket_id = modem_rsp.socket_id
-    else:
+    if not await modem.socket_config(ctx_id=1, pdp_ctx_id=1, rsp=modem_rsp):
         print('Failed to create socket')
         return False
     
     print('Connecting socket')
-    if not await modem.socket_connect(
-        remote_host=config.SERVER_ADDRESS,
-        remote_port=config.SERVER_PORT,
-        local_port=config.SERVER_PORT,
-        socket_id=socket_id
+    if not await modem.socket_dial(
+        ctx_id=1,
+        remote_addr=SERVER_ADDRESS,
+        remote_port=SERVER_PORT,
     ):
         print('Failed to connect socket')
         return False
@@ -270,7 +267,7 @@ async def loop():
     data_buffer.append(counter & 0xff)
 
     print('Attempting to transmit data')
-    if not await modem.socket_send(data=data_buffer, socket_id=socket_id):
+    if not await modem.socket_send(ctx_id=1, data=data_buffer):
         print('Failed to transmit data')
         return False
     
