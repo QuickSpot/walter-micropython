@@ -106,11 +106,6 @@ The modem response object that is (re-)used
 when we need information from the modem.
 """
 
-socket_id: int
-"""
-Variable to store the socket_id once made.
-"""
-
 async def wait_for_network_reg_state(timeout: int, *states: WalterModemNetworkRegState) -> bool:
     """
     Wait for the modem network registration state to reach the desired state(s).
@@ -236,11 +231,10 @@ async def lte_transmit(socket_id: int, address: str, port: int, buffer: bytearra
 
     :return bool: True on success, False on failure
     """
-    if not await modem.socket_connect(
-        remote_host=address,
+    if not await modem.socket_dial(
+        ctx_id=socket_id,
+        remote_addr=address,
         remote_port=port,
-        socket_id=socket_id,
-        local_port=port
     ):
         print('  - Failed to connect to UDP socket')
         return False
@@ -248,15 +242,14 @@ async def lte_transmit(socket_id: int, address: str, port: int, buffer: bytearra
     print(f'  - Connected to UDP server: {address}:{port}')
 
     if not await modem.socket_send(
-        data=buffer,
-        socket_id=1,
-        rai=WalterModemRai.NO_INFO
+        ctx_id=1,
+        data=buffer
     ):
         print('  - Failed to transmit to UDP socket')
         return False
     
     if not await modem.socket_close(
-        socket_id=socket_id
+        ctx_id=socket_id
     ):
         print('  - Failed to close UDP socket')
         return False
@@ -408,9 +401,7 @@ async def setup():
         return False
    
     print('Creating socket')
-    if await modem.socket_create(rsp=modem_rsp):
-        socket_id = modem_rsp.socket_id
-    else:
+    if not await modem.socket_config(ctx_id=1, pdp_ctx_id=1, rsp=modem_rsp):
         print('Failed to create socket')
         return False
     
@@ -527,7 +518,7 @@ async def loop():
 
     print('Transmitting data to server')
     await lte_transmit(
-        socket_id=socket_id,
+        socket_id=1,
         address=SERVER_ADDRESS,
         port=SERVER_PORT,
         buffer=data_buffer
