@@ -1,0 +1,53 @@
+name: Update Package JSON on walter_modem Changes
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'walter_modem/**'
+      - '.github/workflows/update-package-json.yml'
+
+jobs:
+  validate-and-update:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Validate and update package.json
+        id: validate
+        run: |
+          python .github/scripts/validate-package-json.py
+          EXIT_CODE=$?
+          echo "changes_made=$EXIT_CODE" >> $GITHUB_OUTPUT
+          exit 0
+      
+      - name: Commit and push changes
+        if: steps.validate.outputs.changes_made == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json
+          git commit -m "Chore: sync package.json with walter_modem files"
+          git push
+      
+      - name: Comment on PR if changes made
+        if: steps.validate.outputs.changes_made == '1' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '✓ package.json has been automatically updated to sync with walter_modem folder changes'
+            })
