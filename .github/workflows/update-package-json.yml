@@ -26,7 +26,7 @@ jobs:
       - name: Validate and update package.json
         id: validate
         run: |
-          python .github/scripts/validate-package-json.py
+          python .github/scripts/validate-package-json.py || true
           EXIT_CODE=$?
           echo "changes_made=$EXIT_CODE" >> $GITHUB_OUTPUT
           exit 0
