@@ -1,3 +1,4 @@
+# pyright: reportAttributeAccessIssue=false, reportOptionalMemberAccess=false, reportArgumentType=false, reportCallIssue=false, reportGeneralTypeIssues=false
 import asyncio
 import micropython # type: ignore
 micropython.opt_level(1)
@@ -16,7 +17,7 @@ from walter_modem.mixins.coap import (
     WalterModemCoapType,
     WalterModemCoapResponseCode,
     WalterModemCoapOptionAction,
-    WalterModemCoapOption,
+    WalterModemCoapOptionCode,
     WalterModemCoapContentType,
     WalterModemCoapContextState,
     WalterModemCoapResponse,
@@ -242,14 +243,14 @@ class TestCoapSetOptions(
         self.assert_false(await modem.coap_set_options(
             ctx_id=-1,
             action=WalterModemCoapOptionAction.READ,
-            option=WalterModemCoapOption.URI_PATH
+            option=WalterModemCoapOptionCode.URI_PATH
         ))
     
     async def test_fails_above_max_ctx_id(self):
         self.assert_false(await modem.coap_set_options(
             ctx_id=3,
             action=WalterModemCoapOptionAction.READ,
-            option=WalterModemCoapOption.URI_PATH
+            option=WalterModemCoapOptionCode.URI_PATH
         ))
     
     async def test_rsp_result_no_such_profile_on_invalid_ctx_id(self):
@@ -257,7 +258,7 @@ class TestCoapSetOptions(
         await modem.coap_set_options(
             ctx_id=7,
             action=WalterModemCoapOptionAction.READ,
-            option=WalterModemCoapOption.URI_PATH,
+            option=WalterModemCoapOptionCode.URI_PATH,
             rsp=modem_rsp
         )
 
@@ -269,7 +270,7 @@ class TestCoapSetOptions(
         self.assert_false(await modem.coap_set_options(
             ctx_id=0,
             action=WalterModemCoapOptionAction.SET,
-            option=WalterModemCoapOption.CONTENT_TYPE,
+            option=WalterModemCoapOptionCode.CONTENT_TYPE,
             value=(WalterModemCoapContentType.TEXT_PLAIN, WalterModemCoapContentType.IMAGE_JPEG)
         ))
     
@@ -277,7 +278,7 @@ class TestCoapSetOptions(
         self.assert_false(await modem.coap_set_options(
             ctx_id=0,
             action=WalterModemCoapOptionAction.SET,
-            option=WalterModemCoapOption.URI_PATH,
+            option=WalterModemCoapOptionCode.URI_PATH,
             value=('Why', 'did', 'the', 'modem', 'break', 'up?', '...', 'signal', 'loss', ':)')
         ))
     
@@ -290,7 +291,7 @@ class TestCoapSetOptions(
             lambda: modem.coap_set_options(
                 ctx_id=0,
                 action=WalterModemCoapOptionAction.SET,
-                option=WalterModemCoapOption.URI_PATH,
+                option=WalterModemCoapOptionCode.URI_PATH,
                 value=('.well-known','core')
             )
         )
@@ -303,7 +304,7 @@ class TestCoapSetOptions(
         self.assert_true(await modem.coap_set_options(
             ctx_id=0,
             action=WalterModemCoapOptionAction.SET,
-            option=WalterModemCoapOption.CONTENT_TYPE,
+            option=WalterModemCoapOptionCode.CONTENT_TYPE,
             value=WalterModemCoapContentType.TEXT_PLAIN
         ))
 
@@ -317,7 +318,7 @@ class TestCoapSetOptions(
         self.assert_true(await modem.coap_set_options(
             ctx_id=0,
             action=WalterModemCoapOptionAction.DELETE,
-            option=WalterModemCoapOption.CONTENT_TYPE
+            option=WalterModemCoapOptionCode.CONTENT_TYPE
         ))
     
     # Action: READ
@@ -328,7 +329,7 @@ class TestCoapSetOptions(
         self.assert_true(await modem.coap_set_options(
             ctx_id=0,
             action=WalterModemCoapOptionAction.READ,
-            option=WalterModemCoapOption.CONTENT_TYPE
+            option=WalterModemCoapOptionCode.CONTENT_TYPE
         ))
 
         await modem._run_cmd('AT+SQNCOAPOPT=0,1,12', b'OK')
@@ -340,7 +341,7 @@ class TestCoapSetOptions(
         await modem.coap_set_options(
             ctx_id=0,
             action=WalterModemCoapOptionAction.READ,
-            option=WalterModemCoapOption.URI_PATH,
+            option=WalterModemCoapOptionCode.URI_PATH,
             rsp=modem_rsp
         )
         
@@ -361,7 +362,7 @@ class TestCoapSetOptions(
         self.assert_true(await modem.coap_set_options(
             ctx_id=0,
             action=WalterModemCoapOptionAction.EXTEND,
-            option=WalterModemCoapOption.URI_PATH,
+            option=WalterModemCoapOptionCode.URI_PATH,
             value='yes'
         ))
 
@@ -421,7 +422,7 @@ class TestCoapSetHeader(
             msg_id=-1
         ))
 
-    async def test_fails_below_min_msg_id(self):
+    async def test_fails_above_max_msg_id(self):
         self.assert_false(await modem.coap_set_header(
             ctx_id=0,
             msg_id=65536
@@ -604,8 +605,13 @@ class TestCoapSend(
         ))
 
     async def test_get_test_endpoint_rang_205_content(self):
-        while len(modem.coap_context_states[0].rings) <= 0:
-            await asyncio.sleep(3)
+        for _ in range(20):
+            if len(modem.coap_context_states[0].rings) > 0:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.assert_true(False)
+            return
         
         ring = modem.coap_context_states[0].rings.pop()
         self.assert_equal(
@@ -629,8 +635,13 @@ class TestCoapSend(
         ))
 
     async def test_post_test_endpoint_rang_201_created(self):
-        while len(modem.coap_context_states[0].rings) <= 0:
-            await asyncio.sleep(3)
+        for _ in range(20):
+            if len(modem.coap_context_states[0].rings) > 0:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.assert_true(False)
+            return
         
         ring = modem.coap_context_states[0].rings.pop()
         self.assert_equal(
@@ -653,8 +664,13 @@ class TestCoapSend(
         ))
 
     async def test_put_test_endpoint_rang_204_changed(self):
-        while len(modem.coap_context_states[0].rings) <= 0:
-            await asyncio.sleep(3)
+        for _ in range(20):
+            if len(modem.coap_context_states[0].rings) > 0:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.assert_true(False)
+            return
         
         ring = modem.coap_context_states[0].rings.pop()
         self.assert_equal(
@@ -676,8 +692,13 @@ class TestCoapSend(
         ))
 
     async def test_delete_test_endpoint_rang_202_deleted(self):
-        while len(modem.coap_context_states[0].rings) <= 0:
-            await asyncio.sleep(3)
+        for _ in range(20):
+            if len(modem.coap_context_states[0].rings) > 0:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.assert_true(False)
+            return
         
         ring = modem.coap_context_states[0].rings.pop()
         self.assert_equal(
@@ -822,8 +843,13 @@ class TestCoapReceiveData(
         await modem._run_cmd('AT+SQNCOAPOPT=0,0,11,"test"',b'OK')
         await modem.coap_send(0,WalterModemCoapType.CON,WalterModemCoapMethod.GET)
 
-        while len(modem.coap_context_states[0].rings) <= 0:
-            await asyncio.sleep(3)
+        for _ in range(20):
+            if len(modem.coap_context_states[0].rings) > 0:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.assert_true(False)
+            return
         ring = modem.coap_context_states[0].rings.pop()
 
         await self.assert_sends_at_command(
@@ -842,8 +868,13 @@ class TestCoapReceiveData(
         await modem._run_cmd('AT+SQNCOAPOPT=0,0,11,"test"',b'OK')
         await modem.coap_send(0,WalterModemCoapType.CON,WalterModemCoapMethod.GET)
 
-        while len(modem.coap_context_states[0].rings) <= 0:
-            await asyncio.sleep(3)
+        for _ in range(20):
+            if len(modem.coap_context_states[0].rings) > 0:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.assert_true(False)
+            return
         ring = modem.coap_context_states[0].rings.pop()
 
         modem_rsp = WalterModemRsp()
@@ -929,8 +960,13 @@ class TestCoapReceiveOptions(
         await modem._run_cmd('AT+SQNCOAPOPT=0,0,11,"test"',b'OK')
         await modem.coap_send(0,WalterModemCoapType.CON,WalterModemCoapMethod.GET)
 
-        while len(modem.coap_context_states[0].rings) <= 0:
-            await asyncio.sleep(3)
+        for _ in range(20):
+            if len(modem.coap_context_states[0].rings) > 0:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.assert_true(False)
+            return
         ring = modem.coap_context_states[0].rings.pop()
 
         await self.assert_sends_at_command(
@@ -948,8 +984,13 @@ class TestCoapReceiveOptions(
         await modem._run_cmd('AT+SQNCOAPOPT=0,0,11,"test"',b'OK')
         await modem.coap_send(0,WalterModemCoapType.CON,WalterModemCoapMethod.GET)
 
-        while len(modem.coap_context_states[0].rings) <= 0:
-            await asyncio.sleep(3)
+        for _ in range(20):
+            if len(modem.coap_context_states[0].rings) > 0:
+                break
+            await asyncio.sleep(1)
+        else:
+            self.assert_true(False)
+            return
         ring = modem.coap_context_states[0].rings.pop()
 
         modem_rsp = WalterModemRsp()

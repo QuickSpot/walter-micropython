@@ -854,7 +854,7 @@ class Modem():
     async def coap_set_options(self,
         ctx_id: int,
         action: WalterModemCoapOptionAction,
-        option: WalterModemCoapOption,
+        option: WalterModemCoapOptionCode,
         value: str | WalterModemCoapContentType | tuple[str] | None = None,
         rsp: WalterModemRsp | None = None,
     ) -> bool:
@@ -877,7 +877,7 @@ class Modem():
                 Context profile identifier (0, 1, 2)
             action (WalterModemCoapOptionAction):
                 Action to perform
-            option (WalterModemCoapOption):
+            option (WalterModemCoapOptionCode):
                 The option to perform the action on
             value (str | WalterModemCoapContentType | tuple[str], optional):
                 The value(s) of the options.
