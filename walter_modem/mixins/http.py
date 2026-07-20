@@ -230,7 +230,7 @@ class HTTPMixin(ModemCore):
         uri: str,
         query_cmd: int = WalterModemHttpQueryCmd.GET,
         extra_header_line: str = None,
-        rsp: WalterModemRsp = None,
+        rsp: WalterModemRsp = None
     ) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
