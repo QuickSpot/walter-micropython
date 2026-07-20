@@ -230,7 +230,7 @@ class HTTPMixin(ModemCore):
         uri: str,
         query_cmd: int = WalterModemHttpQueryCmd.GET,
         extra_header_line: str = None,
-        rsp: WalterModemRsp = None
+        rsp: WalterModemRsp = None,
     ) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -263,7 +263,8 @@ class HTTPMixin(ModemCore):
         data,
         send_cmd = WalterModemHttpSendCmd.POST,
         post_param = WalterModemHttpPostParam.UNSPECIFIED,
-        rsp: WalterModemRsp = None
+        rsp: WalterModemRsp = None,
+        extra_header_line: str = None,
     ) -> bool:
         if profile_id > _HTTP_MAX_CTX_ID:
             if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
@@ -294,8 +295,9 @@ class HTTPMixin(ModemCore):
         else:
             return await self._run_cmd(
                 rsp=rsp,
-                at_cmd='AT+SQNHTTPSND={},{},{},{},\"{}\"'.format(
-                    profile_id, send_cmd, modem_string(uri), len(data), post_param
+                at_cmd='AT+SQNHTTPSND={},{},{},{},"{}"{}'.format(
+                    profile_id, send_cmd, modem_string(uri), len(data), post_param,
+                    f',"{extra_header_line}"' if extra_header_line else ''
                 ),
                 at_rsp=b'OK',
                 data=data,
