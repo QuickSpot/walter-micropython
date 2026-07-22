@@ -69,7 +69,7 @@ class WalterModemCoapOptionAction(Enum):
     READ = 2
     EXTEND = 3
 
-class WalterModemCoapOption(Enum):
+class WalterModemCoapOptionCode(Enum):
     IF_MATCH = 1
     URI_HOST = 3
     ETAG = 4
@@ -152,8 +152,8 @@ class WalterModemCoapResponse:
 
 class WalterModemCoapOption:
     def __init__(self, ctx_id, option, value):
-        self.ctx_id: int = ctx_id,
-        self.option: WalterModemCoapOption = option,
+        self.ctx_id: int = ctx_id
+        self.option: int = option
         self.value: str = value
 
 #endregion
@@ -172,12 +172,12 @@ _COAP_RECV_OPT_MAX_OPTS = const(32)
 _COAP_HEADER_MAX_TOKEN_STR_LEN = const(16)
 
 _COAP_REPEATABLE_OPTIONS = (
-    WalterModemCoapOption.IF_MATCH,
-    WalterModemCoapOption.ETAG,
-    WalterModemCoapOption.LOCATION_PATH,
-    WalterModemCoapOption.URI_PATH,
-    WalterModemCoapOption.URI_QUERY,
-    WalterModemCoapOption.LOCATION_QUERY
+    WalterModemCoapOptionCode.IF_MATCH,
+    WalterModemCoapOptionCode.ETAG,
+    WalterModemCoapOptionCode.LOCATION_PATH,
+    WalterModemCoapOptionCode.URI_PATH,
+    WalterModemCoapOptionCode.URI_QUERY,
+    WalterModemCoapOptionCode.LOCATION_QUERY
 )
 
 #endregion
@@ -196,7 +196,7 @@ class CoapMixin(ModemCore):
                 for _ in range(_COAP_MIN_CTX_ID, _COAP_MAX_CTX_ID + 1)
             )
 
-            self.__queue_rsp_rsp_handlers = (
+            self.__queue_rsp_rsp_handlers = (  # type: ignore
                 self.__queue_rsp_rsp_handlers + (
                     (b'+SQNCOAPCLOSED: ', self.__handle_coap_closed),
                     (b'+SQNCOAP: ERROR', self.__handle_coap_error),
@@ -222,20 +222,20 @@ class CoapMixin(ModemCore):
 
     async def coap_context_create(self,
         ctx_id: int,
-        server_address: str = None,
-        server_port: int = None,
-        local_port: int = None,
+        server_address: str | None = None,
+        server_port: int | None = None,
+        local_port: int | None = None,
         timeout: int = 20,
         dtls: bool = False,
-        secure_profile_id: int = None,
-        rsp: WalterModemRsp = None
+        secure_profile_id: int | None = None,
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE  # type: ignore
             return False
 
         if timeout < _COAP_MIN_TIMEOUT or _COAP_MAX_TIMEOUT < timeout:
-            if rsp: rsp.result = WalterModemState.ERROR
+            if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
             return False
 
         async def complete_handler(result, rsp, complete_handler_arg):
@@ -260,10 +260,10 @@ class CoapMixin(ModemCore):
 
     async def coap_context_close(self,
         ctx_id: int,
-        rsp: WalterModemRsp = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE  # type: ignore
             return False
 
         return await self._run_cmd(
@@ -275,26 +275,26 @@ class CoapMixin(ModemCore):
     async def coap_set_options(self,
         ctx_id: int,
         action: WalterModemCoapOptionAction,
-        option: WalterModemCoapOption,
-        value: str | WalterModemCoapContentType | tuple[str] = None,
-        rsp: WalterModemRsp = None,
+        option: WalterModemCoapOptionCode,
+        value: str | WalterModemCoapContentType | tuple[str] | None = None,
+        rsp: WalterModemRsp | None = None,
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE  # type: ignore
             return False
         
         if isinstance(value, tuple):
             if len(value) > 0 and option not in _COAP_REPEATABLE_OPTIONS:
-                if rsp: rsp.result = WalterModemState.ERROR
+                if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
                 return False
 
             if len(value) > 6:
-                if rsp: rsp.result = WalterModemState.ERROR
+                if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
                 return False
 
             value = ','.join(modem_string(v) for v in value)
         else:
-            value = modem_string(value)
+            value = modem_string(value)  # type: ignore
         
         return await self._run_cmd(
             rsp=rsp,
@@ -307,61 +307,62 @@ class CoapMixin(ModemCore):
     
     async def coap_set_header(self,
         ctx_id: int,
-        msg_id: int = None,
-        token: str = None,
-        rsp: WalterModemRsp = None
+        msg_id: int | None = None,
+        token: str | None = None,
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE  # type: ignore
             return False
         
         if msg_id != None and (msg_id < _COAP_MIN_MSG_ID or _COAP_MAX_MSG_ID < msg_id):
-            if rsp: rsp.result = WalterModemState.ERROR
+            if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
             return False
         
         if token != None:
             if _COAP_HEADER_MAX_TOKEN_STR_LEN < len(token):
-                if rsp: rsp.result = WalterModemState.ERROR
+                if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
                 return False
             
             if token != 'NO_TOKEN':
                 try:
                     int(token, 16)
                 except ValueError:
-                    if rsp: rsp.result = WalterModemState.ERROR
+                    if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
                     return False
         
         await self._run_cmd(
             rsp=rsp,
-            at_cmd=f'AT+SQNCOAPHDR={ctx_id},{msg_id},{modem_string(token) if token != None else ''}',
+            at_cmd=f'AT+SQNCOAPHDR={ctx_id},{msg_id},{modem_string(token) if token != None else ""}',
             at_rsp=b'OK'
         )
+        return True
     
     async def coap_send(self,
         ctx_id: int,
         m_type: WalterModemCoapType,
         method: WalterModemCoapMethod,
         data: bytes | bytearray | str | None = None,
-        length: int = None,
-        path: str = None,
-        content_type: WalterModemCoapContentType = None,
-        rsp: WalterModemRsp = None,
+        length: int | None = None,
+        path: str | None = None,
+        content_type: WalterModemCoapContentType | None = None,
+        rsp: WalterModemRsp | None = None,
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE  # type: ignore
             return False
         
         if isinstance(data, str):
             data = data.encode('utf-8')
         elif data is not None and not isinstance(data, (bytes, bytearray)):
-            if rsp: rsp.result = WalterModemState.ERROR
+            if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
             return False
         
         if length is None:
             length = 0 if data is None else len(data)
         
         if length < _COAP_MIN_BYTES_LEN or _COAP_MAX_BYTES_LEN < length:
-            if rsp: rsp.result = WalterModemState.ERROR
+            if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
             return False
         
         if path is not None:
@@ -370,9 +371,9 @@ class CoapMixin(ModemCore):
             while len(path_parts) > 0:
                 if not await self.coap_set_options(
                     ctx_id=ctx_id,
-                    action=WalterModemCoapOptionAction.SET,
-                    option=WalterModemCoapOption.URI_PATH,
-                    value=tuple(path_parts[:6]),
+                    action=WalterModemCoapOptionAction.SET,  # type: ignore
+                    option=WalterModemCoapOptionCode.URI_PATH,  # type: ignore
+                    value=tuple(path_parts[:6]),  # type: ignore
                     rsp=rsp
                 ):
                     return False
@@ -381,8 +382,8 @@ class CoapMixin(ModemCore):
         if isinstance(content_type, WalterModemCoapContentType):
             if not await self.coap_set_options(
                 ctx_id=ctx_id,
-                action=WalterModemCoapOptionAction.SET,
-                option=WalterModemCoapOption.CONTENT_TYPE,
+                action=WalterModemCoapOptionAction.SET,  # type: ignore
+                option=WalterModemCoapOptionCode.CONTENT_TYPE,  # type: ignore
                 value=content_type,
                 rsp=rsp
             ):
@@ -398,24 +399,28 @@ class CoapMixin(ModemCore):
     
     async def coap_receive_data(self,
         ctx_id: int,
-        msg_id: int,
-        length: int,
+        msg_id: int | None,
+        length: int | None,
         max_bytes = 1024,
-        rsp: WalterModemRsp = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE  # type: ignore
+            return False
+
+        if msg_id is None or length is None:
+            if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
             return False
 
         if max_bytes < _COAP_MIN_BYTES_LEN or _COAP_MAX_BYTES_LEN < max_bytes:
-            if rsp: rsp.result = WalterModemState.ERROR
+            if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
             return False
         
-        if length < 0:
-            if rsp: rsp.result = WalterModemState.ERROR
+        if length < 0:  # type: ignore
+            if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
             return False
         
-        self.__parser_data.raw_chunk_size = min(length, max_bytes)
+        self.__parser_data.raw_chunk_size = min(length or 0, max_bytes)
         
         return await self._run_cmd(
             rsp=rsp,
@@ -425,16 +430,16 @@ class CoapMixin(ModemCore):
     
     async def coap_receive_options(self,
         ctx_id: int,
-        msg_id: int,
+        msg_id: int | None,
         max_options = 32,
-        rsp: WalterModemRsp = None
+        rsp: WalterModemRsp | None = None
     ) -> bool:
         if ctx_id < _COAP_MIN_CTX_ID or _COAP_MAX_CTX_ID < ctx_id:
-            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE
+            if rsp: rsp.result = WalterModemState.NO_SUCH_PROFILE  # type: ignore
             return False
         
         if max_options < _COAP_RECV_OPT_MIN_OPTS or _COAP_RECV_OPT_MAX_OPTS < max_options:
-            if rsp: rsp.result = WalterModemState.ERROR
+            if rsp: rsp.result = WalterModemState.ERROR  # type: ignore
             return False
         
         return await self._run_cmd(
@@ -457,9 +462,17 @@ class CoapMixin(ModemCore):
     async def __handle_coap_closed(self, tx_stream, cmd, at_rsp):
         ctx_id, cause = at_rsp.split(b': ')[1].split(b',')
         ctx_id = int(ctx_id.decode())
+        cause = bytes(cause).strip(b'"')
         
         self.coap_context_states[ctx_id].connected = False
-        self.coap_context_states[ctx_id].cause = bytes(cause).strip(b'"')
+        if cause == WalterModemCoapCloseCause.USER:
+            self.coap_context_states[ctx_id].cause = WalterModemCoapCloseCause.USER  # type: ignore
+        elif cause == WalterModemCoapCloseCause.SERVER:
+            self.coap_context_states[ctx_id].cause = WalterModemCoapCloseCause.SERVER  # type: ignore
+        elif cause == WalterModemCoapCloseCause.NAT_TIMEOUT:
+            self.coap_context_states[ctx_id].cause = WalterModemCoapCloseCause.NAT_TIMEOUT  # type: ignore
+        else:
+            self.coap_context_states[ctx_id].cause = WalterModemCoapCloseCause.NETWORK  # type: ignore
 
         return WalterModemState.OK
     

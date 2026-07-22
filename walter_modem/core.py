@@ -634,7 +634,7 @@ class ModemCore:
 
     async def _run_cmd(self,
         at_cmd: str,
-        at_rsp: str | tuple[str], 
+        at_rsp: str | bytes | tuple[str, ...] | tuple[bytes, ...], 
         rsp: WalterModemRsp | None = None,
         ring_return: list | None = None,
         cmd_type: int = WalterModemCmdType.TX_WAIT,
